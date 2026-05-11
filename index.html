@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>АкБарак — Печать 24/7</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e8f4fd;display:flex;justify-content:center;font-family:'Nunito',sans-serif;min-height:100vh;padding:0}
+.phone{width:100%;max-width:420px;min-height:100vh;background:rgba(235,247,255,0.9);backdrop-filter:blur(20px);position:relative;border-left:1px solid rgba(255,255,255,0.8);border-right:1px solid rgba(255,255,255,0.8)}
+.screen{display:none;animation:fadeIn .2s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.status{padding:14px 24px 0;display:flex;justify-content:space-between}
+.status-time{font-size:14px;font-weight:800;color:#1a3a5c}
+.status-icons{font-size:12px;color:#1a3a5c}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 24px}
+.brand{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:#1a3a5c;letter-spacing:-0.5px}
+.brand span{color:#F5A623}
+.back-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.9);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a3a5c}
+.icon-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,184,0,0.3);font-size:16px;display:flex;align-items:center;justify-content:center}
+
+.hero{margin:0 24px 20px;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);border-radius:28px;padding:26px;position:relative;overflow:hidden}
+.hero::after{content:'🖨';position:absolute;right:-10px;bottom:-10px;font-size:90px;opacity:0.1;transform:rotate(-15deg)}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:100px;padding:5px 14px;font-size:12px;font-weight:800;color:rgba(255,255,255,0.7);letter-spacing:1px;margin-bottom:14px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 1.5s infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.hero-title{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:#fff;line-height:1.15;margin-bottom:6px;letter-spacing:-0.5px}
+.hero-title span{color:#F5A623}
+.hero-sub{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px}
+.hero-prices{display:flex;gap:8px}
+.hprice{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px 14px;text-align:center;flex:1}
+.hprice-amt{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#F5A623}
+.hprice-lbl{font-size:10px;color:rgba(255,255,255,0.45);margin-top:2px;font-weight:700}
+
+.sec-title{padding:0 24px 14px;font-size:13px;font-weight:800;color:#5a7fa0;letter-spacing:1.5px;text-transform:uppercase}
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 24px 20px}
+.svc-card{border-radius:22px;padding:22px 18px 18px;cursor:pointer;transition:transform .18s,box-shadow .18s;border:1.5px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.7);position:relative;overflow:hidden}
+.svc-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,100,200,0.12)}
+.svc-badge{position:absolute;top:14px;right:14px;background:#F5A623;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:100px;letter-spacing:0.5px}
+.svc-icon-wrap{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:14px}
+.svc-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#1a3a5c;margin-bottom:5px}
+.svc-desc{font-size:12px;color:#7a9ab8;line-height:1.5;font-weight:600}
+.svc-arr{position:absolute;bottom:16px;right:16px;font-size:14px;color:#b0c8e0}
+
+.stats{display:flex;gap:10px;padding:0 24px 28px}
+.stat{flex:1;background:rgba(255,255,255,0.65);border:1.5px solid rgba(255,255,255,0.8);border-radius:16px;padding:14px 12px;text-align:center}
+.stat-n{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#1a3a5c}
+.stat-l{font-size:11px;color:#7a9ab8;margin-top:3px;font-weight:700}
+
+.upload-zone{margin:0 24px 20px;border:2.5px dashed rgba(26,58,92,0.2);border-radius:24px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(255,255,255,0.5);position:relative}
+.upload-zone:hover,.upload-zone.dragover{border-color:#F5A623;background:rgba(255,251,236,0.8)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:48px;margin-bottom:12px}
+.upload-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#1a3a5c;margin-bottom:6px}
+.upload-sub{font-size:13px;color:#7a9ab8;font-weight:600}
+.upload-formats{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.fmt-badge{background:rgba(26,58,92,0.08);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;color:#1a3a5c}
+
+.file-preview{margin:0 24px 16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(255,255,255,0.9);border-radius:18px;padding:16px 20px;display:none;align-items:center;gap:14px}
+.file-preview.show{display:flex}
+.file-ico{width:44px;height:44px;border-radius:12px;background:rgba(245,166,35,0.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.file-name{font-size:14px;font-weight:800;color:#1a3a5c;word-break:break-all}
+.file-size{font-size:12px;color:#7a9ab8;margin-top:2px;font-weight:600}
+.file-del{margin-left:auto;width:30px;height:30px;border-radius:50%;background:#fee2e2;border:none;color:#ef4444;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+.settings-wrap{margin:0 24px;background:rgba(255,255,255,0.65);border:1.5px solid rgba(255,255,255,0.8);border-radius:22px;overflow:hidden}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(200,225,240,0.5)}
+.set-row:last-child{border-bottom:none}
+.set-lbl{font-size:14px;font-weight:800;color:#1a3a5c}
+.pill-group{display:flex;background:rgba(200,225,240,0.4);border-radius:12px;padding:3px;gap:2px}
+.pill{padding:8px 14px;border-radius:10px;border:none;background:transparent;color:#7a9ab8;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
+.pill.on{background:#1a3a5c;color:#fff}
+.ctr{display:flex;align-items:center;gap:14px}
+.ctr-btn{width:36px;height:36px;border-radius:50%;background:rgba(200,225,240,0.5);border:1.5px solid rgba(255,255,255,0.8);color:#1a3a5c;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800}
+.ctr-val{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#1a3a5c;min-width:28px;text-align:center}
+
+.total-wrap{margin:16px 24px;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);border-radius:22px;padding:22px 24px;display:flex;align-items:center;justify-content:space-between}
+.t-lbl{font-size:11px;color:rgba(255,255,255,0.4);font-weight:800;letter-spacing:1px;margin-bottom:6px}
+.t-amt{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#fff}
+.t-sub{font-size:11px;color:rgba(255,255,255,0.3);margin-top:4px;font-weight:600}
+.t-icon{font-size:44px;opacity:0.4}
+
+.cta{padding:0 24px 28px}
+.cta-btn{width:100%;padding:20px;border-radius:18px;border:none;background:#1a3a5c;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;cursor:pointer;transition:all .2s;letter-spacing:-0.3px}
+.cta-btn:hover{background:#F5A623;transform:translateY(-2px)}
+.cta-btn.gold{background:#F5A623;color:#fff}
+.cta-btn:disabled{background:#ccc;cursor:not-allowed;transform:none}
+
+.tg-input-wrap{margin:0 24px 16px}
+.tg-input{width:100%;padding:16px 20px;border-radius:16px;border:1.5px solid rgba(255,255,255,0.8);background:rgba(255,255,255,0.7);font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:#1a3a5c;outline:none}
+.tg-input:focus{border-color:#F5A623;background:rgba(255,251,236,0.8)}
+.tg-input::placeholder{color:#b0c8e0}
+
+.pay-list{display:flex;flex-direction:column;gap:10px;padding:0 24px}
+.pay-item{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.8);border-radius:20px;padding:18px 20px;cursor:pointer;transition:all .18s}
+.pay-item:hover{border-color:#F5A623;background:rgba(255,251,236,0.85);transform:translateX(4px)}
+.pay-logo{width:52px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0}
+.pay-name{font-size:15px;font-weight:800;color:#1a3a5c}
+.pay-num{font-size:12px;color:#7a9ab8;margin-top:2px;font-weight:600}
+.pay-arr{margin-left:auto;color:#b0c8e0;font-size:18px}
+
+.success-wrap{padding:48px 24px 40px;text-align:center}
+.print-anim{font-size:60px;animation:shake 1.5s ease-in-out infinite;display:block;margin-bottom:20px}
+@keyframes shake{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(-10px)}}
+.s-circle{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:40px;position:relative}
+.s-circle::after{content:'';position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(245,166,35,0.4)}
+.s-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:#1a3a5c;margin-bottom:10px}
+.s-sub{font-size:14px;color:#7a9ab8;line-height:1.8;margin-bottom:28px;font-weight:600}
+.order-chip{display:inline-flex;align-items:center;gap:12px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.9);border-radius:100px;padding:12px 24px;margin-bottom:32px}
+.o-lbl{font-size:12px;color:#7a9ab8;font-weight:800}
+.o-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#F5A623;letter-spacing:2px}
+
+.photo-list{display:flex;flex-direction:column;gap:10px;padding:0 24px}
+.photo-item{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.8);border-radius:20px;padding:18px 20px;cursor:pointer;transition:all .18s}
+.photo-item:hover{border-color:#F5A623;background:rgba(255,251,236,0.85)}
+.photo-ico{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.photo-name{font-size:15px;font-weight:800;color:#1a3a5c}
+.photo-sub{font-size:12px;color:#7a9ab8;margin-top:2px;font-weight:600}
+.photo-price{margin-left:auto;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#F5A623}
+.page-title{padding:0 24px 16px;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#1a3a5c}
+.page-sub{padding:0 24px 20px;font-size:14px;color:#7a9ab8;font-weight:600}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- HOME -->
+  <div id="s-home" class="screen active">
+    <div class="status"><span class="status-time" id="clock">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="hdr"><div class="brand">Ак<span>Барак</span></div><div class="icon-btn">🔔</div></div>
+    <div class="hero">
+      <div class="hero-tag"><span class="live-dot"></span> ОНЛАЙН · 24/7</div>
+      <div class="hero-title">Печать<br><span>без очередей</span></div>
+      <div class="hero-sub">Загрузи файл — получай за 2 минуты</div>
+      <div class="hero-prices">
+        <div class="hprice"><div class="hprice-amt">5 с</div><div class="hprice-lbl">Ч/Б</div></div>
+        <div class="hprice"><div class="hprice-amt">10 с</div><div class="hprice-lbl">Цвет</div></div>
+        <div class="hprice"><div class="hprice-amt">6 с</div><div class="hprice-lbl">Копия</div></div>
+        <div class="hprice"><div class="hprice-amt">6 с</div><div class="hprice-lbl">Скан</div></div>
+      </div>
+    </div>
+    <div class="sec-title">Услуги</div>
+    <div class="svc-grid">
+      <div class="svc-card" onclick="go('s-print')">
+        <div class="svc-badge">ХИТ</div>
+        <div class="svc-icon-wrap" style="background:rgba(245,166,35,0.12)">📄</div>
+        <div class="svc-name">Печать</div>
+        <div class="svc-desc">PDF, Word,<br>Фото</div>
+        <div class="svc-arr">→</div>
+      </div>
+      <div class="svc-card" onclick="go('s-copy')">
+        <div class="svc-icon-wrap" style="background:rgba(99,102,241,0.1)">📋</div>
+        <div class="svc-name">Копия</div>
+        <div class="svc-desc">Ксерокс<br>документов</div>
+        <div class="svc-arr">→</div>
+      </div>
+      <div class="svc-card" onclick="go('s-photo')">
+        <div class="svc-icon-wrap" style="background:rgba(239,68,68,0.1)">🪪</div>
+        <div class="svc-name">Фото</div>
+        <div class="svc-desc">Паспорт,<br>10×15</div>
+        <div class="svc-arr">→</div>
+      </div>
+      <div class="svc-card" onclick="go('s-scan')">
+        <div class="svc-icon-wrap" style="background:rgba(34,197,94,0.1)">🔍</div>
+        <div class="svc-name">Скан</div>
+        <div class="svc-desc">В PDF<br>или JPG</div>
+        <div class="svc-arr">→</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n">1.2к</div><div class="stat-l">Заказов</div></div>
+      <div class="stat"><div class="stat-n">4.9★</div><div class="stat-l">Рейтинг</div></div>
+      <div class="stat"><div class="stat-n">~2 мин</div><div class="stat-l">Ожидание</div></div>
+    </div>
+  </div>
+
+  <!-- PRINT -->
+  <div id="s-print" class="screen">
+    <div class="status"><span class="status-time" id="clock2">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Загрузи файл</div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt" onchange="handleFile(this)">
+      <div class="upload-icon">📎</div>
+      <div class="upload-title">Нажми чтобы выбрать</div>
+      <div class="upload-sub">или перетащи файл сюда</div>
+      <div class="upload-formats">
+        <span class="fmt-badge">PDF</span>
+        <span class="fmt-badge">DOC</span>
+        <span class="fmt-badge">DOCX</span>
+        <span class="fmt-badge">JPG</span>
+        <span class="fmt-badge">PNG</span>
+      </div>
+    </div>
+
+    <div class="file-preview" id="file-preview">
+      <div class="file-ico" id="file-ico">📄</div>
+      <div>
+        <div class="file-name" id="file-name">документ.pdf</div>
+        <div class="file-size" id="file-size">2.4 МБ</div>
+      </div>
+      <button class="file-del" onclick="removeFile()">✕</button>
+    </div>
+
+    <div class="settings-wrap">
+      <div class="set-row">
+        <span class="set-lbl">Цвет</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPrint(this,5)">Ч/Б · 5с</button>
+          <button class="pill" onclick="setPrint(this,10)">Цвет · 10с</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Стороны</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPill2(this)">Одна</button>
+          <button class="pill" onclick="setPill2(this)">Двойная</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Страниц</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adj('pages',-1)">−</button>
+          <span class="ctr-val" id="v-pages">1</span>
+          <button class="ctr-btn" onclick="adj('pages',1)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Копий</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adj('copies',-1)">−</button>
+          <span class="ctr-val" id="v-copies">1</span>
+          <button class="ctr-btn" onclick="adj('copies',1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-total">5 сом</div>
+        <div class="t-sub" id="v-detail">1 стр × 1 коп × 5 сом</div>
+      </div>
+      <div class="t-icon">🧾</div>
+    </div>
+    <div class="cta"><button class="cta-btn gold" id="pay-btn" onclick="go('s-pay')">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- COPY -->
+  <div id="s-copy" class="screen">
+    <div class="status"><span class="status-time">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Копия</div>
+    <div class="page-sub">Положи документ лицом вниз на стекло сканера</div>
+    <div class="settings-wrap">
+      <div class="set-row">
+        <span class="set-lbl">Тип копии</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setCopy(this,6)">Ч/Б · 6с</button>
+          <button class="pill" onclick="setCopy(this,12)">Цвет · 12с</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Стороны</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPill2(this)">Одна</button>
+          <button class="pill" onclick="setPill2(this)">Двойная</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Страниц</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adjCopy('cpages',-1)">−</button>
+          <span class="ctr-val" id="v-cpages">1</span>
+          <button class="ctr-btn" onclick="adjCopy('cpages',1)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Копий</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adjCopy('ccopies',-1)">−</button>
+          <span class="ctr-val" id="v-ccopies">1</span>
+          <button class="ctr-btn" onclick="adjCopy('ccopies',1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-ctotal">6 сом</div>
+        <div class="t-sub" id="v-cdetail">1 стр × 1 коп × 6 сом</div>
+      </div>
+      <div class="t-icon">📋</div>
+    </div>
+    <div class="cta"><button class="cta-btn gold" onclick="go('s-pay')">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- SCAN -->
+  <div id="s-scan" class="screen">
+    <div class="status"><span class="status-time">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Скан</div>
+    <div class="page-sub">Положи документ на стекло. Файл придёт в Телеграм.</div>
+    <div class="tg-input-wrap">
+      <input class="tg-input" type="text" placeholder="Твой Телеграм: @username" id="tg-username">
+    </div>
+    <div class="settings-wrap">
+      <div class="set-row">
+        <span class="set-lbl">Тип скана</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setScan(this,6)">Ч/Б · 6с</button>
+          <button class="pill" onclick="setScan(this,12)">Цвет · 12с</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Формат</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPill2(this)">PDF</button>
+          <button class="pill" onclick="setPill2(this)">JPG</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Страниц</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adjScan(-1)">−</button>
+          <span class="ctr-val" id="v-spages">1</span>
+          <button class="ctr-btn" onclick="adjScan(1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-stotal">6 сом</div>
+        <div class="t-sub" id="v-sdetail">1 стр × 6 сом</div>
+      </div>
+      <div class="t-icon">🔍</div>
+    </div>
+    <div class="cta"><button class="cta-btn gold" onclick="go('s-pay')">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- PHOTO -->
+  <div id="s-photo" class="screen">
+    <div class="status"><span class="status-time">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Формат фото</div>
+    <div class="photo-list">
+      <div class="photo-item" onclick="go('s-pay')">
+        <div class="photo-ico" style="background:#FFF8EC">🪪</div>
+        <div><div class="photo-name">Паспортное</div><div class="photo-sub">3.5×4.5 · 4 штуки</div></div>
+        <div class="photo-price">50 сом</div>
+      </div>
+      <div class="photo-item" onclick="go('s-pay')">
+        <div class="photo-ico" style="background:#EEF9FF">🖼</div>
+        <div><div class="photo-name">Фото 10×15</div><div class="photo-sub">Глянцевая бумага</div></div>
+        <div class="photo-price">15 сом</div>
+      </div>
+      <div class="photo-item" onclick="go('s-pay')">
+        <div class="photo-ico" style="background:#F5F0FF">📸</div>
+        <div><div class="photo-name">Фото 15×21</div><div class="photo-sub">Глянцевая бумага</div></div>
+        <div class="photo-price">25 сом</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAY -->
+  <div id="s-pay" class="screen">
+    <div class="status"><span class="status-time">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="hdr"><button class="back-btn" onclick="history.go(-1)">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div style="padding:0 24px 24px;text-align:center">
+      <div style="font-size:12px;font-weight:800;color:#7a9ab8;letter-spacing:1.5px;margin-bottom:8px">К ОПЛАТЕ</div>
+      <div style="font-family:'Syne',sans-serif;font-size:48px;font-weight:800;color:#1a3a5c" id="v-pay">5 сом</div>
+    </div>
+    <div class="sec-title">Способ оплаты</div>
+    <div class="pay-list">
+      <div class="pay-item" onclick="uploadAndPay(this.querySelector('.pay-name').textContent)">
+        <div class="pay-logo" style="background:#E8F8EE;color:#00a651">МБ</div>
+        <div><div class="pay-name">МБанк</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </div>
+      <div class="pay-item" onclick="uploadAndPay(this.querySelector('.pay-name').textContent)">
+        <div class="pay-logo" style="background:#FFEAEA;color:#e31e24">ЭЛ</div>
+        <div><div class="pay-name">Элсом</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </div>
+      <div class="pay-item" onclick="uploadAndPay(this.querySelector('.pay-name').textContent)">
+        <div class="pay-logo" style="background:rgba(200,225,240,0.5);font-size:20px">💵</div>
+        <div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div>
+        <div class="pay-arr">→</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="s-success" class="screen">
+    <div class="status"><span class="status-time">9:41</span><span class="status-icons">WiFi 🔋</span></div>
+    <div class="success-wrap">
+      <span class="print-anim">🖨</span>
+      <div class="s-circle">✅</div>
+      <div class="s-title">Печатаем!</div>
+      <div class="s-sub">Оплата подтверждена.<br>Документ уже в очереди.<br>Готово через <b style="color:#1a3a5c">1–2 минуты</b> 📄</div>
+      <div class="order-chip">
+        <div class="o-lbl">Заказ</div>
+        <div class="o-num" id="order-num">#0001</div>
+      </div>
+      <div class="cta"><button class="cta-btn" onclick="go('s-home')">На главную</button></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let state={price:5,copies:1,pages:1};
+let cstate={price:6,ccopies:1,cpages:1};
+let sstate={price:6,spages:1};
+let orderNum = Math.floor(Math.random()*9000)+1000;
+
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  syncPay();
+  if(id==='s-success'){
+    document.getElementById('order-num').textContent='#'+orderNum;
+    orderNum++;
+  }
+}
+
+function updateClock(){
+  const now=new Date();
+  const t=now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+  document.querySelectorAll('.status-time').forEach(el=>el.textContent=t);
+}
+updateClock();setInterval(updateClock,30000);
+
+function handleFile(input){
+  const file=input.files[0];
+  if(!file)return;
+  const icons={'pdf':'📕','doc':'📘','docx':'📘','jpg':'🖼','jpeg':'🖼','png':'🖼','txt':'📝'};
+  const ext=file.name.split('.').pop().toLowerCase();
+  document.getElementById('file-ico').textContent=icons[ext]||'📄';
+  document.getElementById('file-name').textContent=file.name;
+  document.getElementById('file-size').textContent=(file.size/1024/1024).toFixed(1)+' МБ';
+  document.getElementById('file-preview').classList.add('show');
+  document.getElementById('upload-zone').style.opacity='0.5';
+}
+
+function removeFile(){
+  document.getElementById('file-input').value='';
+  document.getElementById('file-preview').classList.remove('show');
+  document.getElementById('upload-zone').style.opacity='1';
+}
+
+function adj(k,d){
+  state[k]=Math.max(1,Math.min(k==='copies'?20:200,state[k]+d));
+  document.getElementById('v-'+k).textContent=state[k];
+  recalcPrint();
+}
+function adjCopy(k,d){
+  cstate[k]=Math.max(1,Math.min(20,cstate[k]+d));
+  document.getElementById('v-'+k).textContent=cstate[k];
+  recalcCopy();
+}
+function adjScan(d){
+  sstate.spages=Math.max(1,Math.min(100,sstate.spages+d));
+  document.getElementById('v-spages').textContent=sstate.spages;
+  recalcScan();
+}
+function setPrint(btn,p){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');state.price=p;recalcPrint();
+}
+function setCopy(btn,p){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');cstate.price=p;recalcCopy();
+}
+function setScan(btn,p){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');sstate.price=p;recalcScan();
+}
+function setPill2(btn){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+function recalcPrint(){
+  const t=state.price*state.copies*state.pages;
+  document.getElementById('v-total').textContent=t+' сом';
+  document.getElementById('v-detail').textContent=state.pages+' стр × '+state.copies+' коп × '+state.price+' сом';
+  document.getElementById('v-pay').textContent=t+' сом';
+}
+function recalcCopy(){
+  const t=cstate.price*cstate.ccopies*cstate.cpages;
+  document.getElementById('v-ctotal').textContent=t+' сом';
+  document.getElementById('v-cdetail').textContent=cstate.cpages+' стр × '+cstate.ccopies+' коп × '+cstate.price+' сом';
+  document.getElementById('v-pay').textContent=t+' сом';
+}
+function recalcScan(){
+  const t=sstate.price*sstate.spages;
+  document.getElementById('v-stotal').textContent=t+' сом';
+  document.getElementById('v-sdetail').textContent=sstate.spages+' стр × '+sstate.price+' сом';
+  document.getElementById('v-pay').textContent=t+' сом';
+}
+function syncPay(){
+  document.getElementById('v-pay').textContent=(state.price*state.copies*state.pages)+' сом';
+}
+</script>
+</body>
+</html>
+<!-- SERVER UPLOAD SCRIPT -->
+<script>
+const SERVER = "https://akbarak-production.up.railway.app";
+
+async function uploadAndPay(payMethod) {
+  const fileInput = document.getElementById("file-input");
+  if (!fileInput.files[0]) {
+    alert("Сначала выбери файл!");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+  formData.append("print_type", document.querySelector("#s-print .pill.on")?.textContent.includes("Ч/Б") ? "bw" : "color");
+  formData.append("copies", document.getElementById("v-copies").textContent);
+  formData.append("pages", document.getElementById("v-pages").textContent);
+  formData.append("total", document.getElementById("v-total").textContent.replace(" сом",""));
+  formData.append("payment", payMethod);
+  formData.append("user_name", "Клиент с сайта");
+
+  try {
+    const resp = await fetch(SERVER + "/upload", {method:"POST", body:formData});
+    const data = await resp.json();
+    if (data.success) {
+      go("s-success");
+    } else {
+      alert("Ошибка: " + data.error);
+    }
+  } catch(e) {
+    alert("Ошибка соединения с сервером");
+  }
+}
+</script>
