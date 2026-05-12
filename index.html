@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>АкБарак — Печать 24/7</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#e8f4fd;display:flex;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-height:100vh}
+.phone{width:100%;max-width:420px;min-height:100vh;background:rgba(235,247,255,0.92);border-left:1px solid rgba(255,255,255,0.8);border-right:1px solid rgba(255,255,255,0.8)}
+.screen{display:none;animation:fadeIn .2s ease}
+.screen.active{display:block;padding-bottom:32px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 24px}
+.brand{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:24px;font-weight:800;color:#1a3a5c}
+.brand span{color:#F5A623}
+.back-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.8);border:none;font-size:18px;cursor:pointer;color:#1a3a5c;display:flex;align-items:center;justify-content:center}
+.hdr-right{display:flex;gap:10px;align-items:center}
+.bell-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,184,0,0.3);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.bell-badge{position:absolute;top:6px;right:6px;width:8px;height:8px;background:#F5A623;border-radius:50%;border:1.5px solid #e8f4fd}
+
+/* NOTIFICATION PANEL */
+.notif-panel{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:420px;background:#fff;border-radius:0 0 24px 24px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:100;display:none;padding:20px 24px 24px}
+.notif-panel.show{display:block}
+.notif-title{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:18px;font-weight:800;color:#1a3a5c;margin-bottom:16px;display:flex;justify-content:space-between}
+.notif-close{font-size:20px;cursor:pointer;color:#aaa}
+.notif-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.notif-item:last-child{border-bottom:none}
+.notif-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.notif-text{font-size:13px;color:#333;font-weight:600;line-height:1.5}
+.notif-time{font-size:11px;color:#aaa;margin-top:2px}
+.notif-empty{text-align:center;padding:24px;color:#aaa;font-size:14px}
+
+/* HERO */
+.hero{margin:0 24px 20px;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);border-radius:28px;padding:26px;position:relative;overflow:hidden}
+.hero::after{content:'🖨';position:absolute;right:-10px;bottom:-10px;font-size:90px;opacity:0.1;transform:rotate(-15deg)}
+.live-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:100px;padding:5px 14px;font-size:12px;font-weight:800;color:rgba(255,255,255,0.7);margin-bottom:14px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 1.5s infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.hero-title{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:28px;font-weight:800;color:#fff;line-height:1.15;margin-bottom:6px}
+.hero-title span{color:#F5A623}
+.hero-sub{font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px}
+.hero-prices{display:flex;gap:8px}
+.hp{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:10px;text-align:center;flex:1}
+.hp-amt{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#F5A623}
+.hp-lbl{font-size:10px;color:rgba(255,255,255,0.45);margin-top:2px;font-weight:700}
+
+/* SERVICES */
+.sec-title{padding:0 24px 14px;font-size:12px;font-weight:800;color:#5a7fa0;letter-spacing:1.5px;text-transform:uppercase}
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 24px 20px}
+.svc-card{border-radius:22px;padding:20px 16px 16px;cursor:pointer;transition:transform .18s;border:1.5px solid rgba(255,255,255,0.7);background:rgba(255,255,255,0.7);position:relative;overflow:hidden}
+.svc-card:hover{transform:translateY(-3px)}
+.svc-badge{position:absolute;top:12px;right:12px;background:#F5A623;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:100px}
+.svc-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:12px}
+.svc-name{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#1a3a5c;margin-bottom:4px}
+.svc-desc{font-size:11px;color:#7a9ab8;line-height:1.5;font-weight:600}
+.svc-arr{position:absolute;bottom:14px;right:14px;font-size:14px;color:#b0c8e0}
+
+/* STATS */
+.stats{display:flex;gap:10px;padding:0 24px 28px}
+.stat{flex:1;background:rgba(255,255,255,0.65);border:1.5px solid rgba(255,255,255,0.8);border-radius:16px;padding:14px 12px;text-align:center}
+.stat-n{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:18px;font-weight:800;color:#1a3a5c}
+.stat-l{font-size:11px;color:#7a9ab8;margin-top:3px;font-weight:700}
+
+/* PAGE ELEMENTS */
+.page-title{padding:0 24px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;color:#1a3a5c}
+.page-sub{padding:0 24px 16px;font-size:14px;color:#7a9ab8;font-weight:600;line-height:1.6}
+
+/* INSTRUCTION CARD */
+.instr-card{margin:0 24px 16px;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);border-radius:22px;padding:20px}
+.instr-step{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+.instr-step:last-child{margin-bottom:0}
+.instr-num{width:32px;height:32px;border-radius:50%;background:#F5A623;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.instr-text{font-size:13px;color:rgba(255,255,255,0.85);font-weight:600;line-height:1.6;padding-top:6px}
+.instr-text b{color:#F5A623}
+
+/* UPLOAD */
+.upload-zone{margin:0 24px 16px;border:2.5px dashed rgba(26,58,92,0.2);border-radius:24px;padding:28px 20px;text-align:center;background:rgba(255,255,255,0.5);position:relative;cursor:pointer}
+.upload-zone:hover{border-color:#F5A623;background:rgba(255,251,236,0.8)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:40px;margin-bottom:10px}
+.upload-title{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#1a3a5c;margin-bottom:4px}
+.upload-sub{font-size:12px;color:#7a9ab8;font-weight:600}
+.fmts{display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.fmt{background:rgba(26,58,92,0.08);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:800;color:#1a3a5c}
+
+/* FILE PREVIEW */
+.file-preview{margin:0 24px 16px;background:rgba(255,255,255,0.8);border:1.5px solid rgba(255,255,255,0.9);border-radius:18px;padding:14px 18px;display:none;align-items:center;gap:12px}
+.file-preview.show{display:flex}
+.f-ico{width:42px;height:42px;border-radius:12px;background:rgba(245,166,35,0.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.f-name{font-size:13px;font-weight:800;color:#1a3a5c;word-break:break-all}
+.f-size{font-size:11px;color:#7a9ab8;margin-top:2px;font-weight:600}
+.f-del{margin-left:auto;width:28px;height:28px;border-radius:50%;background:#fee2e2;border:none;color:#ef4444;font-size:14px;cursor:pointer}
+
+/* SETTINGS */
+.settings-wrap{margin:0 24px;background:rgba(255,255,255,0.65);border:1.5px solid rgba(255,255,255,0.8);border-radius:22px;overflow:hidden}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid rgba(200,225,240,0.5)}
+.set-row:last-child{border-bottom:none}
+.set-lbl{font-size:14px;font-weight:800;color:#1a3a5c}
+.pill-group{display:flex;background:rgba(200,225,240,0.4);border-radius:12px;padding:3px;gap:2px}
+.pill{padding:7px 12px;border-radius:10px;border:none;background:transparent;color:#7a9ab8;font-size:12px;font-weight:800;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;transition:all .15s}
+.pill.on{background:#1a3a5c;color:#fff}
+.ctr{display:flex;align-items:center;gap:12px}
+.ctr-btn{width:34px;height:34px;border-radius:50%;background:rgba(200,225,240,0.5);border:1.5px solid rgba(255,255,255,0.8);color:#1a3a5c;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1}
+.ctr-val{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:18px;font-weight:800;color:#1a3a5c;min-width:26px;text-align:center}
+
+/* TOTAL */
+.total-wrap{margin:14px 24px;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);border-radius:22px;padding:20px 22px;display:flex;align-items:center;justify-content:space-between}
+.t-lbl{font-size:11px;color:rgba(255,255,255,0.4);font-weight:800;letter-spacing:1px;margin-bottom:5px}
+.t-amt{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:34px;font-weight:800;color:#fff}
+.t-sub{font-size:11px;color:rgba(255,255,255,0.3);margin-top:3px;font-weight:600}
+.t-icon{font-size:40px;opacity:0.4}
+
+/* CTA */
+.cta{padding:0 24px 8px}
+.cta-btn{width:100%;padding:18px;border-radius:18px;border:none;background:#F5A623;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#fff;cursor:pointer;transition:all .2s}
+.cta-btn:hover{opacity:0.9;transform:translateY(-2px)}
+.cta-btn.dark{background:#1a3a5c}
+
+/* PAY SCREEN */
+.pay-total-wrap{padding:0 24px 24px;text-align:center}
+.pay-total-lbl{font-size:12px;font-weight:800;color:#7a9ab8;letter-spacing:1.5px;margin-bottom:8px}
+.pay-total-amt{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:48px;font-weight:800;color:#1a3a5c}
+
+.pay-list{display:flex;flex-direction:column;gap:10px;padding:0 24px}
+.pay-btn{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.8);border-radius:20px;padding:16px 18px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
+.pay-btn:hover{border-color:#F5A623;background:rgba(255,251,236,0.85)}
+.pay-logo{width:50px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0}
+.pay-name{font-size:15px;font-weight:800;color:#1a3a5c}
+.pay-num{font-size:12px;color:#7a9ab8;margin-top:2px;font-weight:600}
+.pay-arr{margin-left:auto;color:#b0c8e0;font-size:18px}
+
+/* LOADING */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(26,58,92,0.6);align-items:center;justify-content:center;z-index:200}
+.loading-overlay.show{display:flex}
+.loading-box{background:#fff;border-radius:24px;padding:32px;text-align:center;max-width:260px}
+.loading-spinner{font-size:48px;display:block;margin-bottom:16px;animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.loading-text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#1a3a5c}
+
+/* SUCCESS */
+.success-wrap{padding:48px 24px 40px;text-align:center}
+.print-anim{font-size:60px;animation:shake 1.5s ease-in-out infinite;display:block;margin-bottom:20px}
+@keyframes shake{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg) translateY(-8px)}}
+.s-circle{width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#1a3a5c,#0d2a4a);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:40px}
+.s-title{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:26px;font-weight:800;color:#1a3a5c;margin-bottom:10px}
+.s-sub{font-size:14px;color:#7a9ab8;line-height:1.8;margin-bottom:24px;font-weight:600}
+.order-chip{display:inline-flex;align-items:center;gap:12px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.9);border-radius:100px;padding:12px 24px;margin-bottom:28px}
+.o-lbl{font-size:12px;color:#7a9ab8;font-weight:800}
+.o-num{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;color:#F5A623;letter-spacing:2px}
+
+/* PHOTO */
+.photo-list{display:flex;flex-direction:column;gap:10px;padding:0 24px}
+.photo-btn{display:flex;align-items:center;gap:16px;background:rgba(255,255,255,0.7);border:1.5px solid rgba(255,255,255,0.8);border-radius:20px;padding:16px 18px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
+.photo-btn:hover{border-color:#F5A623;background:rgba(255,251,236,0.85)}
+.photo-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.photo-name{font-size:15px;font-weight:800;color:#1a3a5c}
+.photo-sub{font-size:12px;color:#7a9ab8;margin-top:2px;font-weight:600}
+.photo-price{margin-left:auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#F5A623}
+
+/* PHOTO UPLOAD */
+.photo-upload-wrap{margin:0 24px 16px;position:relative}
+.photo-upload-zone{border:2.5px dashed rgba(26,58,92,0.2);border-radius:24px;padding:28px 20px;text-align:center;background:rgba(255,255,255,0.5);position:relative;cursor:pointer}
+.photo-upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
+/* TG INPUT */
+.tg-wrap{padding:0 24px 16px}
+.tg-input{width:100%;padding:15px 18px;border-radius:16px;border:1.5px solid rgba(255,255,255,0.8);background:rgba(255,255,255,0.7);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:700;color:#1a3a5c;outline:none}
+.tg-input:focus{border-color:#F5A623}
+.tg-input::placeholder{color:#b0c8e0}
+
+.spacer{height:16px}
+
+.menu-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.7);border:none;font-size:20px;cursor:pointer;color:#1a3a5c;display:flex;align-items:center;justify-content:center}
+.menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:150}
+.menu-overlay.show{display:block}
+.menu-panel{position:fixed;top:0;right:-320px;width:300px;height:100vh;background:#fff;z-index:200;transition:right .3s ease;box-shadow:-8px 0 32px rgba(0,0,0,0.15);display:flex;flex-direction:column}
+.menu-panel.show{right:0}
+.menu-top{display:flex;align-items:center;justify-content:space-between;padding:24px;border-bottom:1px solid #f0f0f0}
+.menu-brand{font-size:22px;font-weight:800;color:#1a3a5c}
+.menu-brand span{color:#F5A623}
+.menu-close{width:36px;height:36px;border-radius:50%;background:#f5f5f5;border:none;font-size:18px;cursor:pointer;color:#333}
+.menu-items{padding:16px;flex:1}
+.menu-item{padding:16px 20px;border-radius:14px;font-size:15px;font-weight:700;color:#1a3a5c;cursor:pointer;margin-bottom:6px;transition:background .15s}
+.menu-item:hover{background:#f0f7ff}
+.menu-divider{height:1px;background:#f0f0f0;margin:16px 0}
+.menu-contact{padding:8px 20px;font-size:13px;font-weight:600;color:#7a9ab8}
+
+.file-preview-img{margin:0 24px 16px;border-radius:18px;overflow:hidden;background:#fff;border:1.5px solid rgba(255,255,255,0.8);display:none}
+.file-preview-img.show{display:block}
+.preview-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #f0f0f0}
+.preview-title{font-size:13px;font-weight:800;color:#1a3a5c}
+.preview-badge{background:rgba(26,58,92,0.08);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:800;color:#1a3a5c}
+.preview-img{width:100%;max-height:320px;object-fit:contain;display:block;background:#f8f8f8}
+.preview-pdf-wrap{width:100%;height:320px;background:#f8f8f8;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.preview-pdf-icon{font-size:48px}
+.preview-pdf-name{font-size:13px;font-weight:700;color:#1a3a5c;text-align:center;padding:0 16px}
+.preview-pdf-size{font-size:12px;color:#7a9ab8}
+.preview-footer{padding:10px 16px;font-size:12px;color:#7a9ab8;font-weight:600;background:#fafafa}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js">
+let pdfDoc = null;
+let pdfPage = 1;
+let pdfTotal = 1;
+
+async function loadPDF(arrayBuffer){
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfDoc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    pdfTotal = pdfDoc.numPages;
+    pdfPage = 1;
+    // Автоматически обновляем кол-во страниц
+    state.pages = pdfTotal;
+    document.getElementById('v-pages').textContent = pdfTotal;
+    recalcPrint();
+    renderPDFPage(pdfPage);
+  } catch(e){
+    console.error('PDF error:', e);
+  }
+}
+
+async function renderPDFPage(num){
+  if(!pdfDoc) return;
+  const page = await pdfDoc.getPage(num);
+  const canvas = document.getElementById('pdf-canvas');
+  const ctx = canvas.getContext('2d');
+  const viewport = page.getViewport({scale: canvas.offsetWidth / page.getViewport({scale:1}).width});
+  canvas.height = viewport.height;
+  canvas.width = viewport.width;
+  await page.render({canvasContext: ctx, viewport}).promise;
+  document.getElementById('pdf-page-info').textContent = num + ' / ' + pdfTotal;
+}
+
+function prevPage(){
+  if(pdfPage > 1){ pdfPage--; renderPDFPage(pdfPage); }
+}
+
+function nextPage(){
+  if(pdfPage < pdfTotal){ pdfPage++; renderPDFPage(pdfPage); }
+}
+</script>
+</head>
+<body>
+<div class="phone">
+
+
+  <!-- МЕНЮ -->
+  <div class="menu-overlay" id="menu-overlay" onclick="toggleMenu()"></div>
+  <div class="menu-panel" id="menu-panel">
+    <div class="menu-top">
+      <div class="menu-brand">Ак<span>Барак</span></div>
+      <button class="menu-close" onclick="toggleMenu()">✕</button>
+    </div>
+    <div class="menu-items">
+      <div class="menu-item" onclick="toggleMenu();go('s-home')">🏠 Главная</div>
+      <div class="menu-item" onclick="toggleMenu();go('s-how')">📖 Инструкция</div>
+      <div class="menu-item" onclick="toggleMenu();go('s-partner')">🤝 Сотрудничество</div>
+      <div class="menu-item" onclick="toggleMenu();go('s-about')">ℹ️ О нас</div>
+      <div class="menu-divider"></div>
+      <div class="menu-contact">📞 0773 731 212</div>
+      <div class="menu-contact">📍 КГМА, Корпус 1</div>
+    </div>
+  </div>
+
+  <!-- ИНСТРУКЦИЯ -->
+  <div id="s-how" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Как пользоваться</div>
+    <div style="padding:0 24px">
+      <div class="instr-card" style="margin:0 0 16px">
+        <div class="instr-step"><div class="instr-num">1</div><div class="instr-text">Выбери услугу на главном экране: <b>Печать, Копия, Скан или Фото</b></div></div>
+        <div class="instr-step"><div class="instr-num">2</div><div class="instr-text">Загрузи файл или следуй инструкции для копии/скана</div></div>
+        <div class="instr-step"><div class="instr-num">3</div><div class="instr-text">Выбери настройки и нажми <b>Перейти к оплате</b></div></div>
+        <div class="instr-step"><div class="instr-num">4</div><div class="instr-text">Переведи деньги через <b>МБанк или Элсом</b> на номер 0773 731 212</div></div>
+        <div class="instr-step"><div class="instr-num">5</div><div class="instr-text">Забери готовый документ у принтера через <b>1-2 минуты</b></div></div>
+      </div>
+      <div style="background:rgba(245,166,35,0.1);border:1.5px solid rgba(245,166,35,0.3);border-radius:16px;padding:16px 20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:800;color:#1a3a5c;margin-bottom:4px">💡 Совет</div>
+        <div style="font-size:13px;color:#5a7fa0;line-height:1.6;font-weight:600">Если возникли проблемы — позвони нам: <b style="color:#1a3a5c">0773 731 212</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СОТРУДНИЧЕСТВО -->
+  <div id="s-partner" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Сотрудничество</div>
+    <div style="padding:0 24px">
+      <div class="instr-card" style="margin:0 0 16px">
+        <div style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.7;font-weight:600">Хочешь открыть терминал АкБарак в своём заведении или университете?<br><br>Мы предлагаем:<br>• Установку и настройку терминала<br>• Техническую поддержку<br>• Выгодные условия партнёрства</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.7);border-radius:20px;padding:20px;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:800;color:#1a3a5c;margin-bottom:12px">Свяжитесь с нами</div>
+        <div style="font-size:14px;color:#5a7fa0;font-weight:600;line-height:2">📞 0773 731 212<br>✉️ akbarak@gmail.com<br>📍 Бишкек, КГМА</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- О НАС -->
+  <div id="s-about" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">О нас</div>
+    <div style="padding:0 24px">
+      <div class="instr-card" style="margin:0 0 16px">
+        <div style="font-size:14px;color:rgba(255,255,255,0.8);line-height:1.8;font-weight:600">АкБарак — первый автономный терминал печати в Кыргызстане.<br><br>Мы создали сервис чтобы студенты могли печатать документы быстро, дёшево и без очередей — 24 часа в сутки, 7 дней в неделю.</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div style="flex:1;background:rgba(255,255,255,0.7);border-radius:16px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:#1a3a5c">24/7</div>
+          <div style="font-size:11px;color:#7a9ab8;font-weight:700;margin-top:4px">Работаем</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,0.7);border-radius:16px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:#1a3a5c">5 с</div>
+          <div style="font-size:11px;color:#7a9ab8;font-weight:700;margin-top:4px">От 5 сом</div>
+        </div>
+        <div style="flex:1;background:rgba(255,255,255,0.7);border-radius:16px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:#1a3a5c">2 мин</div>
+          <div style="font-size:11px;color:#7a9ab8;font-weight:700;margin-top:4px">Ожидание</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-box">
+      <span class="loading-spinner">⏳</span>
+      <div class="loading-text">Отправляем заказ...</div>
+    </div>
+  </div>
+
+  <!-- УВЕДОМЛЕНИЯ -->
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-title">
+      Уведомления
+      <span class="notif-close" onclick="toggleNotif()">✕</span>
+    </div>
+    <div id="notif-list">
+      <div class="notif-empty">Уведомлений пока нет</div>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div id="s-home" class="screen active">
+    <div class="hdr">
+      <div class="brand">Ак<span>Барак</span></div>
+      <div class="hdr-right"><button class="menu-btn" onclick="toggleMenu()">☰</button>
+        <div class="bell-btn" onclick="toggleNotif()">
+          🔔
+          <div class="bell-badge" id="bell-badge" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hero">
+      <div class="live-tag"><span class="live-dot"></span> ОНЛАЙН · 24/7</div>
+      <div class="hero-title">Печать<br><span>без очередей</span></div>
+      <div class="hero-sub">Загрузи файл — получай за 2 минуты</div>
+      <div class="hero-prices">
+        <div class="hp"><div class="hp-amt">5 с</div><div class="hp-lbl">Ч/Б</div></div>
+        <div class="hp"><div class="hp-amt">10 с</div><div class="hp-lbl">Цвет</div></div>
+        <div class="hp"><div class="hp-amt">6 с</div><div class="hp-lbl">Копия</div></div>
+        <div class="hp"><div class="hp-amt">6 с</div><div class="hp-lbl">Скан</div></div>
+      </div>
+    </div>
+    <div class="sec-title">Услуги</div>
+    <div class="svc-grid">
+      <div class="svc-card" onclick="go('s-print')">
+        <div class="svc-badge">ХИТ</div>
+        <div class="svc-ico" style="background:rgba(245,166,35,0.12)">📄</div>
+        <div class="svc-name">Печать</div>
+        <div class="svc-desc">PDF, Word, Фото</div>
+        <div class="svc-arr">→</div>
+      </div>
+      <div class="svc-card" onclick="go('s-copy')">
+        <div class="svc-ico" style="background:rgba(99,102,241,0.1)">📋</div>
+        <div class="svc-name">Копия</div>
+        <div class="svc-desc">Ксерокс документов</div>
+        <div class="svc-arr">→</div>
+      </div>
+      <div class="svc-card" onclick="go('s-photo')">
+        <div class="svc-ico" style="background:rgba(239,68,68,0.1)">🪪</div>
+        <div class="svc-name">Фото</div>
+        <div class="svc-desc">Паспорт, 10×15</div>
+        <div class="svc-arr">→</div>
+      </div>
+      <div class="svc-card" onclick="go('s-scan')">
+        <div class="svc-ico" style="background:rgba(34,197,94,0.1)">🔍</div>
+        <div class="svc-name">Скан</div>
+        <div class="svc-desc">В PDF или JPG</div>
+        <div class="svc-arr">→</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="stat-orders">0</div><div class="stat-l">Заказов</div></div>
+      <div class="stat"><div class="stat-n">4.9★</div><div class="stat-l">Рейтинг</div></div>
+      <div class="stat"><div class="stat-n">~2 мин</div><div class="stat-l">Ожидание</div></div>
+    </div>
+  </div>
+
+  <!-- ПЕЧАТЬ -->
+  <div id="s-print" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Загрузи файл</div>
+    <div class="page-sub">Поддерживаемые форматы: PDF, DOC, DOCX, JPG, PNG</div>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt" onchange="handleFile(this)">
+      <div class="upload-icon">📎</div>
+      <div class="upload-title">Нажми чтобы выбрать</div>
+      <div class="upload-sub">или перетащи файл сюда</div>
+      <div class="fmts">
+        <span class="fmt">PDF</span><span class="fmt">DOC</span><span class="fmt">DOCX</span><span class="fmt">JPG</span><span class="fmt">PNG</span>
+      </div>
+    </div>
+
+
+    <!-- ПРЕДПРОСМОТР -->
+    <div class="file-preview-img" id="file-preview-img">
+      <div class="preview-header">
+        <span class="preview-title">Предпросмотр</span>
+        <span class="preview-badge" id="preview-badge">JPG</span>
+      </div>
+      <img id="preview-img-el" class="preview-img" style="display:none">
+      <div id="preview-pdf-el" style="display:none">
+        <canvas id="pdf-canvas" style="width:100%;display:block;background:#f8f8f8"></canvas>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:#f8f8f8;border-top:1px solid #eee">
+          <button onclick="prevPage()" style="width:36px;height:36px;border-radius:50%;background:#1a3a5c;border:none;color:#fff;font-size:16px;cursor:pointer">‹</button>
+          <span id="pdf-page-info" style="font-size:13px;font-weight:700;color:#1a3a5c">1 / 1</span>
+          <button onclick="nextPage()" style="width:36px;height:36px;border-radius:50%;background:#1a3a5c;border:none;color:#fff;font-size:16px;cursor:pointer">›</button>
+        </div>
+      </div>
+      <div class="preview-footer" id="preview-footer">Проверь что файл правильный перед печатью</div>
+    </div>
+    <div class="file-preview" id="file-preview">
+      <div class="f-ico" id="f-ico">📄</div>
+      <div style="flex:1;min-width:0">
+        <div class="f-name" id="f-name">файл</div>
+        <div class="f-size" id="f-size">0 МБ</div>
+      </div>
+      <button class="f-del" onclick="removeFile()">✕</button>
+    </div>
+
+    <div class="settings-wrap">
+      <div class="set-row">
+        <span class="set-lbl">Цвет</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setColor(this,'bw',5)">Ч/Б · 5с</button>
+          <button class="pill" onclick="setColor(this,'color',10)">Цвет · 10с</button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <span class="set-lbl">На листе</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPagesPerSheet(this,1)">1</button>
+          <button class="pill" onclick="setPagesPerSheet(this,2)">2</button>
+          <button class="pill" onclick="setPagesPerSheet(this,4)">4</button>
+          <button class="pill" onclick="setPagesPerSheet(this,6)">6</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Страниц</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adj('pages',-1)">−</button>
+          <span class="ctr-val" id="v-pages">1</span>
+          <button class="ctr-btn" onclick="adj('pages',1)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Копий</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adj('copies',-1)">−</button>
+          <span class="ctr-val" id="v-copies">1</span>
+          <button class="ctr-btn" onclick="adj('copies',1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-total">5 сом</div>
+        <div class="t-sub" id="v-detail">1 стр × 1 коп × 5 сом</div>
+      </div>
+      <div class="t-icon">🧾</div>
+    </div>
+    <div class="cta"><button class="cta-btn" onclick="go('s-pay-print')">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- ОПЛАТА ПЕЧАТЬ -->
+  <div id="s-pay-print" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-print')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="pay-total-wrap">
+      <div class="pay-total-lbl">К ОПЛАТЕ</div>
+      <div class="pay-total-amt" id="v-pay-print">5 сом</div>
+    </div>
+    <div class="sec-title">Способ оплаты</div>
+    <div class="pay-list">
+      <button class="pay-btn" onclick="submitPrint('МБанк')">
+        <div class="pay-logo" style="background:#E8F8EE;color:#00a651">МБ</div>
+        <div><div class="pay-name">МБанк</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitPrint('Элсом')">
+        <div class="pay-logo" style="background:#FFEAEA;color:#e31e24">ЭЛ</div>
+        <div><div class="pay-name">Элсом</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitPrint('Наличными')">
+        <div class="pay-logo" style="background:rgba(200,225,240,0.5);font-size:20px">💵</div>
+        <div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- КОПИЯ -->
+  <div id="s-copy" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Копия документа</div>
+
+    <div class="instr-card">
+      <div class="instr-step">
+        <div class="instr-num">1</div>
+        <div class="instr-text">Подними <b>крышку сканера</b> на принтере</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">2</div>
+        <div class="instr-text">Положи документ <b>лицом вниз</b> на стекло, совмести с правым верхним углом</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">3</div>
+        <div class="instr-text">Закрой крышку и <b>не двигай</b> документ</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">4</div>
+        <div class="instr-text">Выбери настройки и нажми <b>оплатить</b></div>
+      </div>
+    </div>
+
+    <div class="settings-wrap">
+      <div class="set-row">
+        <span class="set-lbl">Тип</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setCopy(this,6)">Ч/Б · 6с</button>
+          <button class="pill" onclick="setCopy(this,12)">Цвет · 12с</button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <span class="set-lbl">На листе</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPagesPerSheet(this,1)">1</button>
+          <button class="pill" onclick="setPagesPerSheet(this,2)">2</button>
+          <button class="pill" onclick="setPagesPerSheet(this,4)">4</button>
+          <button class="pill" onclick="setPagesPerSheet(this,6)">6</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Страниц</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adjC('cpages',-1)">−</button>
+          <span class="ctr-val" id="v-cpages">1</span>
+          <button class="ctr-btn" onclick="adjC('cpages',1)">+</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Копий</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adjC('ccopies',-1)">−</button>
+          <span class="ctr-val" id="v-ccopies">1</span>
+          <button class="ctr-btn" onclick="adjC('ccopies',1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-ctotal">6 сом</div>
+        <div class="t-sub" id="v-cdetail">1 стр × 1 коп × 6 сом</div>
+      </div>
+      <div class="t-icon">📋</div>
+    </div>
+    <div class="cta"><button class="cta-btn" onclick="go('s-pay-copy')">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- ОПЛАТА КОПИЯ -->
+  <div id="s-pay-copy" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-copy')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="pay-total-wrap">
+      <div class="pay-total-lbl">К ОПЛАТЕ</div>
+      <div class="pay-total-amt" id="v-pay-copy">6 сом</div>
+    </div>
+    <div class="sec-title">Способ оплаты</div>
+    <div class="pay-list">
+      <button class="pay-btn" onclick="submitCopy('МБанк')">
+        <div class="pay-logo" style="background:#E8F8EE;color:#00a651">МБ</div>
+        <div><div class="pay-name">МБанк</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitCopy('Элсом')">
+        <div class="pay-logo" style="background:#FFEAEA;color:#e31e24">ЭЛ</div>
+        <div><div class="pay-name">Элсом</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitCopy('Наличными')">
+        <div class="pay-logo" style="background:rgba(200,225,240,0.5);font-size:20px">💵</div>
+        <div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- СКАН -->
+  <div id="s-scan" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Сканирование</div>
+
+    <div class="instr-card">
+      <div class="instr-step">
+        <div class="instr-num">1</div>
+        <div class="instr-text">Подними <b>крышку сканера</b> на принтере</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">2</div>
+        <div class="instr-text">Положи документ <b>лицом вниз</b>, совмести с правым верхним углом стекла</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">3</div>
+        <div class="instr-text">Закрой крышку. Скан придёт тебе в <b>Телеграм</b></div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">4</div>
+        <div class="instr-text">Введи свой <b>Телеграм username</b> ниже</div>
+      </div>
+    </div>
+
+    <div class="tg-wrap">
+      <input class="tg-input" type="text" placeholder="@твой_username в Телеграм" id="tg-user">
+    </div>
+
+    <div class="settings-wrap">
+      <div class="set-row">
+        <span class="set-lbl">Тип скана</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setScan(this,6)">Ч/Б · 6с</button>
+          <button class="pill" onclick="setScan(this,12)">Цвет · 12с</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Формат</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPill2(this)">PDF</button>
+          <button class="pill" onclick="setPill2(this)">JPG</button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <span class="set-lbl">На листе</span>
+        <div class="pill-group">
+          <button class="pill on" onclick="setPagesPerSheet(this,1)">1</button>
+          <button class="pill" onclick="setPagesPerSheet(this,2)">2</button>
+          <button class="pill" onclick="setPagesPerSheet(this,4)">4</button>
+          <button class="pill" onclick="setPagesPerSheet(this,6)">6</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-lbl">Страниц</span>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="adjS(-1)">−</button>
+          <span class="ctr-val" id="v-spages">1</span>
+          <button class="ctr-btn" onclick="adjS(1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-stotal">6 сом</div>
+        <div class="t-sub" id="v-sdetail">1 стр × 6 сом</div>
+      </div>
+      <div class="t-icon">🔍</div>
+    </div>
+    <div class="cta"><button class="cta-btn" onclick="go('s-pay-scan')">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- ОПЛАТА СКАН -->
+  <div id="s-pay-scan" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-scan')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="pay-total-wrap">
+      <div class="pay-total-lbl">К ОПЛАТЕ</div>
+      <div class="pay-total-amt" id="v-pay-scan">6 сом</div>
+    </div>
+    <div class="sec-title">Способ оплаты</div>
+    <div class="pay-list">
+      <button class="pay-btn" onclick="submitScan('МБанк')">
+        <div class="pay-logo" style="background:#E8F8EE;color:#00a651">МБ</div>
+        <div><div class="pay-name">МБанк</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitScan('Элсом')">
+        <div class="pay-logo" style="background:#FFEAEA;color:#e31e24">ЭЛ</div>
+        <div><div class="pay-name">Элсом</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitScan('Наличными')">
+        <div class="pay-logo" style="background:rgba(200,225,240,0.5);font-size:20px">💵</div>
+        <div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ФОТО — ВЫБОР ФОРМАТА -->
+  <div id="s-photo" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title">Фото на документы</div>
+    <div class="page-sub">Выбери формат — затем загрузи фото</div>
+    <div class="photo-list">
+      <button class="photo-btn" onclick="selectPhoto('Паспортное 3.5×4.5 см', 50)">
+        <div class="photo-ico" style="background:#FFF8EC">🪪</div>
+        <div><div class="photo-name">Паспортное</div><div class="photo-sub">3.5×4.5 · 4 штуки</div></div>
+        <div class="photo-price" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#F5A623;margin-left:auto">50 сом</div>
+      </button>
+      <button class="photo-btn" onclick="selectPhoto('Фото 10×15 см', 15)">
+        <div class="photo-ico" style="background:#EEF9FF">🖼</div>
+        <div><div class="photo-name">Фото 10×15</div><div class="photo-sub">Глянцевая бумага</div></div>
+        <div class="photo-price" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#F5A623;margin-left:auto">15 сом</div>
+      </button>
+      <button class="photo-btn" onclick="selectPhoto('Фото 15×21 см', 25)">
+        <div class="photo-ico" style="background:#F5F0FF">📸</div>
+        <div><div class="photo-name">Фото 15×21</div><div class="photo-sub">Глянцевая бумага</div></div>
+        <div class="photo-price" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:16px;font-weight:800;color:#F5A623;margin-left:auto">25 сом</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ФОТО — ЗАГРУЗКА -->
+  <div id="s-photo-upload" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-photo')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="page-title" id="photo-format-title">Паспортное фото</div>
+    <div class="page-sub">Загрузи своё фото для печати</div>
+
+    <div class="instr-card">
+      <div class="instr-step">
+        <div class="instr-num">1</div>
+        <div class="instr-text">Фото должно быть <b>чёткое</b>, хорошего освещения</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">2</div>
+        <div class="instr-text">Формат: <b>JPG или PNG</b>, размер до 10 МБ</div>
+      </div>
+      <div class="instr-step">
+        <div class="instr-num">3</div>
+        <div class="instr-text">После оплаты забери <b>готовые фото</b> у принтера</div>
+      </div>
+    </div>
+
+    <div class="upload-zone" id="photo-zone">
+      <input type="file" id="photo-input" accept=".jpg,.jpeg,.png" onchange="handlePhoto(this)">
+      <div class="upload-icon">📸</div>
+      <div class="upload-title">Нажми чтобы выбрать фото</div>
+      <div class="upload-sub">JPG, PNG · до 10 МБ</div>
+    </div>
+
+    <div class="file-preview" id="photo-preview">
+      <div class="f-ico">📸</div>
+      <div style="flex:1;min-width:0">
+        <div class="f-name" id="photo-name">фото.jpg</div>
+        <div class="f-size" id="photo-size">0 МБ</div>
+      </div>
+      <button class="f-del" onclick="removePhoto()">✕</button>
+    </div>
+
+    <div class="total-wrap">
+      <div>
+        <div class="t-lbl">ИТОГО</div>
+        <div class="t-amt" id="v-photo-total">50 сом</div>
+        <div class="t-sub" id="v-photo-detail">Паспортное фото · 4 шт</div>
+      </div>
+      <div class="t-icon">🪪</div>
+    </div>
+    <div class="cta"><button class="cta-btn" onclick="goPayPhoto()">Перейти к оплате →</button></div>
+  </div>
+
+  <!-- ОПЛАТА ФОТО -->
+  <div id="s-pay-photo" class="screen">
+    <div class="hdr"><button class="back-btn" onclick="go('s-photo-upload')">←</button><div class="brand">Ак<span>Барак</span></div><div style="width:40px"></div></div>
+    <div class="pay-total-wrap">
+      <div class="pay-total-lbl">К ОПЛАТЕ</div>
+      <div class="pay-total-amt" id="v-pay-photo">50 сом</div>
+    </div>
+    <div class="sec-title">Способ оплаты</div>
+    <div class="pay-list">
+      <button class="pay-btn" onclick="submitPhoto('МБанк')">
+        <div class="pay-logo" style="background:#E8F8EE;color:#00a651">МБ</div>
+        <div><div class="pay-name">МБанк</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitPhoto('Элсом')">
+        <div class="pay-logo" style="background:#FFEAEA;color:#e31e24">ЭЛ</div>
+        <div><div class="pay-name">Элсом</div><div class="pay-num">0773 731 212</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+      <button class="pay-btn" onclick="submitPhoto('Наличными')">
+        <div class="pay-logo" style="background:rgba(200,225,240,0.5);font-size:20px">💵</div>
+        <div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div>
+        <div class="pay-arr">→</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div id="s-success" class="screen">
+    <div class="success-wrap">
+      <span class="print-anim">🖨</span>
+      <div class="s-circle">✅</div>
+      <div class="s-title">Заказ принят!</div>
+      <div class="s-sub" id="success-msg">Переведи оплату и покажи оператору.<br>Готово через <b style="color:#1a3a5c">1–2 минуты</b> 📄</div>
+      <div class="order-chip">
+        <div class="o-lbl">Заказ</div>
+        <div class="o-num" id="order-num">#0001</div>
+      </div>
+      <div class="cta"><button class="cta-btn dark" onclick="go('s-home')">На главную</button></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+function toggleMenu(){
+  document.getElementById('menu-panel').classList.toggle('show');
+  document.getElementById('menu-overlay').classList.toggle('show');
+}
+
+let pagesPerSheet = 1;
+function setPagesPerSheet(btn, n){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  pagesPerSheet = n;
+}
+const SERVER = "https://akbarak-production.up.railway.app";
+let state = {price:5, type:'bw', copies:1, pages:1};
+let cstate = {price:6, ccopies:1, cpages:1};
+let sstate = {price:6, spages:1};
+let photoState = {format:'', price:0};
+let orderCount = Math.floor(Math.random()*900)+100;
+let notifications = [];
+
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  syncPayTotals();
+}
+
+function toggleNotif(){
+  const p = document.getElementById('notif-panel');
+  p.classList.toggle('show');
+  document.getElementById('bell-badge').style.display = 'none';
+}
+
+function addNotif(text, icon='🔔'){
+  const now = new Date();
+  const time = now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+  notifications.unshift({text, icon, time});
+  const list = document.getElementById('notif-list');
+  list.innerHTML = notifications.map(n=>`
+    <div class="notif-item">
+      <div class="notif-ico" style="background:#f0f7ff">${n.icon}</div>
+      <div>
+        <div class="notif-text">${n.text}</div>
+        <div class="notif-time">${n.time}</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('bell-badge').style.display = 'block';
+}
+
+function handleFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const icons = {pdf:'📕',doc:'📘',docx:'📘',jpg:'🖼',jpeg:'🖼',png:'🖼',txt:'📝'};
+  const ext = file.name.split('.').pop().toLowerCase();
+  document.getElementById('f-ico').textContent = icons[ext]||'📄';
+  document.getElementById('f-name').textContent = file.name;
+  document.getElementById('f-size').textContent = (file.size/1024/1024).toFixed(1)+' МБ';
+  document.getElementById('file-preview').classList.add('show');
+  document.getElementById('upload-zone').style.opacity = '0.5';
+
+  // Предпросмотр
+  const previewWrap = document.getElementById('file-preview-img');
+  const imgEl = document.getElementById('preview-img-el');
+  const pdfEl = document.getElementById('preview-pdf-el');
+  document.getElementById('preview-badge').textContent = ext.toUpperCase();
+
+  if(['jpg','jpeg','png','gif','webp'].includes(ext)){
+    const reader = new FileReader();
+    reader.onload = e => {
+      imgEl.src = e.target.result;
+      imgEl.style.display = 'block';
+      pdfEl.style.display = 'none';
+      previewWrap.classList.add('show');
+    };
+    reader.readAsDataURL(file);
+  } else if(ext === 'pdf'){
+    imgEl.style.display = 'none';
+    pdfEl.style.display = 'block';
+    document.getElementById('preview-footer').textContent = 'Листай страницы кнопками ‹ ›';
+    previewWrap.classList.add('show');
+    const reader = new FileReader();
+    reader.onload = e => loadPDF(e.target.result);
+    reader.readAsArrayBuffer(file);
+  } else {
+    imgEl.style.display = 'none';
+    pdfEl.style.display = 'none';
+    previewWrap.classList.remove('show');
+  }
+}
+
+function removeFile(){
+  document.getElementById('file-input').value = '';
+  document.getElementById('file-preview').classList.remove('show');
+  document.getElementById('file-preview-img').classList.remove('show');
+  document.getElementById('upload-zone').style.opacity = '1';
+}
+
+function handlePhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  document.getElementById('photo-name').textContent = file.name;
+  document.getElementById('photo-size').textContent = (file.size/1024/1024).toFixed(1)+' МБ';
+  document.getElementById('photo-preview').classList.add('show');
+  document.getElementById('photo-zone').style.opacity = '0.5';
+}
+
+function removePhoto(){
+  document.getElementById('photo-input').value = '';
+  document.getElementById('photo-preview').classList.remove('show');
+  document.getElementById('photo-zone').style.opacity = '1';
+}
+
+function selectPhoto(format, price){
+  photoState.format = format;
+  photoState.price = price;
+  document.getElementById('photo-format-title').textContent = format;
+  document.getElementById('v-photo-total').textContent = price+' сом';
+  document.getElementById('v-photo-detail').textContent = format;
+  document.getElementById('v-pay-photo').textContent = price+' сом';
+  go('s-photo-upload');
+}
+
+function goPayPhoto(){
+  const input = document.getElementById('photo-input');
+  if(!input.files[0]){
+    alert('Сначала загрузи фото!');
+    return;
+  }
+  go('s-pay-photo');
+}
+
+function setColor(btn, type, price){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  state.type = type;
+  state.price = price;
+  recalcPrint();
+}
+
+function adj(k, d){
+  state[k] = Math.max(1, Math.min(k==='copies'?20:200, state[k]+d));
+  document.getElementById('v-'+k).textContent = state[k];
+  recalcPrint();
+}
+
+function adjC(k, d){
+  cstate[k] = Math.max(1, Math.min(20, cstate[k]+d));
+  document.getElementById('v-'+k).textContent = cstate[k];
+  recalcCopy();
+}
+
+function adjS(d){
+  sstate.spages = Math.max(1, Math.min(100, sstate.spages+d));
+  document.getElementById('v-spages').textContent = sstate.spages;
+  recalcScan();
+}
+
+function setCopy(btn, p){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  cstate.price = p;
+  recalcCopy();
+}
+
+function setScan(btn, p){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  sstate.price = p;
+  recalcScan();
+}
+
+function setPill2(btn){
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function recalcPrint(){
+  const t = state.price * state.copies * state.pages;
+  document.getElementById('v-total').textContent = t+' сом';
+  document.getElementById('v-detail').textContent = state.pages+' стр × '+state.copies+' коп × '+state.price+' сом';
+  document.getElementById('v-pay-print').textContent = t+' сом';
+}
+
+function recalcCopy(){
+  const t = cstate.price * cstate.ccopies * cstate.cpages;
+  document.getElementById('v-ctotal').textContent = t+' сом';
+  document.getElementById('v-cdetail').textContent = cstate.cpages+' стр × '+cstate.ccopies+' коп × '+cstate.price+' сом';
+  document.getElementById('v-pay-copy').textContent = t+' сом';
+}
+
+function recalcScan(){
+  const t = sstate.price * sstate.spages;
+  document.getElementById('v-stotal').textContent = t+' сом';
+  document.getElementById('v-sdetail').textContent = sstate.spages+' стр × '+sstate.price+' сом';
+  document.getElementById('v-pay-scan').textContent = t+' сом';
+}
+
+function syncPayTotals(){
+  document.getElementById('v-pay-print').textContent = (state.price*state.copies*state.pages)+' сом';
+  document.getElementById('v-pay-copy').textContent = (cstate.price*cstate.ccopies*cstate.cpages)+' сом';
+  document.getElementById('v-pay-scan').textContent = (sstate.price*sstate.spages)+' сом';
+}
+
+function showSuccess(type){
+  orderCount++;
+  const num = '#'+String(orderCount).padStart(4,'0');
+  document.getElementById('order-num').textContent = num;
+  const msgs = {
+    print: 'Переведи оплату на указанный номер.<br>Забери документ у принтера через <b style="color:#1a3a5c">1–2 минуты</b> 🖨',
+    copy: 'Переведи оплату.<br>Копия начнётся автоматически через <b style="color:#1a3a5c">1–2 минуты</b> 📋',
+    scan: 'Переведи оплату.<br>Скан придёт тебе в <b style="color:#1a3a5c">Телеграм</b> через 2 минуты 📱',
+    photo: 'Переведи оплату.<br>Фото будут готовы через <b style="color:#1a3a5c">3–5 минут</b> 🪪'
+  };
+  document.getElementById('success-msg').innerHTML = msgs[type]||msgs.print;
+  addNotif(`Заказ ${num} принят! Ожидай выполнения.`, '✅');
+  document.getElementById('stat-orders').textContent = orderCount-100;
+  go('s-success');
+}
+
+async function submitPrint(payment){
+  const fileInput = document.getElementById('file-input');
+  if(!fileInput.files[0]){
+    alert('Сначала загрузи файл!');
+    go('s-print');
+    return;
+  }
+  document.getElementById('loading').classList.add('show');
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  formData.append('print_type', state.type);
+  formData.append('copies', state.copies);
+  formData.append('pages', state.pages);
+  formData.append('total', state.price*state.copies*state.pages);
+  formData.append('payment', payment);
+  try {
+    await fetch(SERVER+'/upload', {method:'POST', body:formData});
+  } catch(e){}
+  document.getElementById('loading').classList.remove('show');
+  showSuccess('print');
+}
+
+async function submitCopy(payment){
+  document.getElementById('loading').classList.add('show');
+  const total = cstate.price*cstate.ccopies*cstate.cpages;
+  try {
+    await fetch(SERVER+'/order', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'copy', price:cstate.price, pages:cstate.cpages, copies:cstate.ccopies, total, payment})
+    });
+  } catch(e){}
+  document.getElementById('loading').classList.remove('show');
+  showSuccess('copy');
+}
+
+async function submitScan(payment){
+  const tg = document.getElementById('tg-user').value.trim();
+  if(!tg){alert('Введи свой Телеграм username!');return;}
+  document.getElementById('loading').classList.add('show');
+  const total = sstate.price*sstate.spages;
+  try {
+    await fetch(SERVER+'/order', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({type:'scan', price:sstate.price, pages:sstate.spages, total, payment, tg_user:tg})
+    });
+  } catch(e){}
+  document.getElementById('loading').classList.remove('show');
+  showSuccess('scan');
+}
+
+async function submitPhoto(payment){
+  const photoInput = document.getElementById('photo-input');
+  if(!photoInput.files[0]){
+    alert('Сначала загрузи фото!');
+    go('s-photo-upload');
+    return;
+  }
+  document.getElementById('loading').classList.add('show');
+  const formData = new FormData();
+  formData.append('file', photoInput.files[0]);
+  formData.append('print_type', 'color');
+  formData.append('copies', 1);
+  formData.append('pages', 1);
+  formData.append('total', photoState.price);
+  formData.append('payment', payment);
+  formData.append('photo_format', photoState.format);
+  try {
+    await fetch(SERVER+'/upload', {method:'POST', body:formData});
+  } catch(e){}
+  document.getElementById('loading').classList.remove('show');
+  showSuccess('photo');
+}
+</script>
+</body>
+</html>
