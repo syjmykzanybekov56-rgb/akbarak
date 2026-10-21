@@ -450,11 +450,6 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         <div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div>
         <div class="pay-go">→</div>
       </button>
-      <button class="pay-method" onclick="submitPrint('Наличными')">
-        <div class="pay-logo" style="background:rgba(255,255,255,0.06);font-size:20px">💵</div>
-        <div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div>
-        <div class="pay-go">→</div>
-      </button>
     </div>
   </div>
 
@@ -545,7 +540,6 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="sec-ttl">Способ оплаты</div>
     <div class="pay-methods">
       <button class="pay-method" onclick="submitCopy('gopay')"><div class="pay-logo" style="background:rgba(245,166,35,0.15);color:#F5A623">💳</div><div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div><div class="pay-go">→</div></button>
-      <button class="pay-method" onclick="submitCopy('Наличными')"><div class="pay-logo" style="background:rgba(255,255,255,0.06);font-size:20px">💵</div><div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div><div class="pay-go">→</div></button>
     </div>
   </div>
 
@@ -607,7 +601,6 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="sec-ttl">Способ оплаты</div>
     <div class="pay-methods">
       <button class="pay-method" onclick="submitScan('gopay')"><div class="pay-logo" style="background:rgba(245,166,35,0.15);color:#F5A623">💳</div><div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div><div class="pay-go">→</div></button>
-      <button class="pay-method" onclick="submitScan('Наличными')"><div class="pay-logo" style="background:rgba(255,255,255,0.06);font-size:20px">💵</div><div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div><div class="pay-go">→</div></button>
     </div>
   </div>
 
@@ -682,7 +675,6 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="sec-ttl">Способ оплаты</div>
     <div class="pay-methods">
       <button class="pay-method" onclick="submitPhoto('gopay')"><div class="pay-logo" style="background:rgba(245,166,35,0.15);color:#F5A623">💳</div><div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div><div class="pay-go">→</div></button>
-      <button class="pay-method" onclick="submitPhoto('Наличными')"><div class="pay-logo" style="background:rgba(255,255,255,0.06);font-size:20px">💵</div><div><div class="pay-name">Наличными</div><div class="pay-num">У терминала</div></div><div class="pay-go">→</div></button>
     </div>
   </div>
 
@@ -1037,10 +1029,10 @@ function calcRange(val){
 }
 
 function recalcPrint(){
-  const sheetsNeeded = Math.ceil(state.pages / pagesPerSheet);
-  const t = Math.ceil(state.price * state.copies * sheetsNeeded);
+  const nFiles = Math.max(1, (document.getElementById('file-input')?.files?.length) || 1);
+  const t = state.price * state.copies * state.pages * nFiles;
   document.getElementById('v-total').textContent=t+' сом';
-  const detail = state.pages+' стр / '+pagesPerSheet+' на листе = '+sheetsNeeded+' листов × '+state.copies+' коп × '+state.price+' сом';
+  const detail = state.pages+' стр × '+state.copies+' коп × '+state.price+' сом'+(nFiles>1?' × '+nFiles+' файла':'');
   document.getElementById('v-detail').textContent=detail;
   document.getElementById('v-pay-print').innerHTML=t+' <span>сом</span>';
 }
@@ -1074,15 +1066,16 @@ function showSuccess(type){
     document.getElementById('scan-download-btn').href = '#';
     document.getElementById('scan-download-btn').textContent = 'Ожидаем скан...';
     // Опрашиваем сервер каждые 5 секунд
-    const scanOrderId = orderCount;
+    let saved = {}; try{ saved = JSON.parse(localStorage.getItem('akbarak_scan')||'{}'); }catch(e){}
+    const scanOrderId = saved.id, scanToken = saved.token;
     const checkScan = setInterval(async () => {
       try {
-        const r = await fetch(SERVER+'/scan_status/'+scanOrderId);
+        const r = await fetch(SERVER+'/scan_status/'+scanOrderId+'?token='+encodeURIComponent(scanToken));
         const d = await r.json();
         if(d.ready){
           clearInterval(checkScan);
           const btn = document.getElementById('scan-download-btn');
-          btn.href = SERVER+'/scan_download/'+scanOrderId;
+          btn.href = SERVER+'/scan_download/'+scanOrderId+'?token='+encodeURIComponent(scanToken);
           btn.textContent = 'Скачать скан';
           btn.style.background = '#22c55e';
         }
@@ -1098,6 +1091,27 @@ function showSuccess(type){
 // Если payment === 'gopay': создаёт платёж в GoPay и переводит на страницу оплаты.
 // Печать запустится автоматически на сервере, как только GoPay подтвердит оплату —
 // возвращаться на сайт после оплаты не обязательно.
+const TERMINAL = new URLSearchParams(location.search).get('t') || '';
+
+// Отправляет заказ на сервер. Возвращает данные или null (и показывает ошибку).
+async function sendOrder(url, opts){
+  try{
+    const resp = await fetch(SERVER+url, opts);
+    const data = await resp.json().catch(()=>({}));
+    if(resp.ok && data.order_id) return data;
+    alert(data.error || 'Не удалось оформить заказ. Попробуй ещё раз.');
+  }catch(e){
+    alert('Нет связи с сервером. Проверь интернет и попробуй ещё раз.');
+  }
+  return null;
+}
+
+async function finishOrder(data, type){
+  const ok = await goToGoPayCheckout(data.order_id);
+  document.getElementById('loading').classList.remove('show');
+  if(!ok) return;            // остаёмся на экране оплаты
+}
+
 async function goToGoPayCheckout(orderId){
   document.getElementById('loading-txt') && (document.getElementById('loading-txt').textContent = 'Готовим оплату...');
   try{
@@ -1108,7 +1122,7 @@ async function goToGoPayCheckout(orderId){
       return true;
     }
   }catch(e){}
-  alert('Не получилось открыть оплату. Попробуй ещё раз или выбери «Наличными».');
+  alert('Не получилось открыть оплату. Попробуй ещё раз.');
   return false;
 }
 
@@ -1131,39 +1145,19 @@ async function submitPrint(payment){
   const rangeVal = document.getElementById('page-range')?.value?.trim();
   if(rangeVal) fd.append('page_range', rangeVal);
 
-  let orderId = null;
-  try{
-    const resp = await fetch(SERVER+'/upload',{method:'POST',body:fd});
-    const data = await resp.json();
-    orderId = data.order_id;
-  }catch(e){}
+  if(TERMINAL) fd.append('terminal', TERMINAL);
 
-  if(payment === 'gopay' && orderId){
-    const ok = await goToGoPayCheckout(orderId);
-    document.getElementById('loading').classList.remove('show');
-    if(ok) return; // идём на страницу GoPay, экран успеха не нужен
-  }
-  document.getElementById('loading').classList.remove('show');
-  showSuccess('print');
+  const data = await sendOrder('/upload',{method:'POST',body:fd});
+  if(!data){ document.getElementById('loading').classList.remove('show'); return; }
+  await finishOrder(data, 'print');
 }
 
 async function submitCopy(payment){
   document.getElementById('loading').classList.add('show');
   const total=cstate.price*cstate.ccopies*cstate.cpages;
-  let orderId = null;
-  try{
-    const resp = await fetch(SERVER+'/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'copy',price:cstate.price,pages:cstate.cpages,copies:cstate.ccopies,total,payment})});
-    const data = await resp.json();
-    orderId = data.order_id;
-  }catch(e){}
-
-  if(payment === 'gopay' && orderId){
-    const ok = await goToGoPayCheckout(orderId);
-    document.getElementById('loading').classList.remove('show');
-    if(ok) return;
-  }
-  document.getElementById('loading').classList.remove('show');
-  showSuccess('copy');
+  const data = await sendOrder('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'copy',color:cstate.price>=12,pages:cstate.cpages,copies:cstate.ccopies,payment,terminal:TERMINAL})});
+  if(!data){ document.getElementById('loading').classList.remove('show'); return; }
+  await finishOrder(data, 'copy');
 }
 
 let lastScanOrderId = null;
@@ -1171,21 +1165,11 @@ let lastScanOrderId = null;
 async function submitScan(payment){
   document.getElementById('loading').classList.add('show');
   const total=sstate.price*sstate.spages;
-  let orderId = null;
-  try{
-    const resp = await fetch(SERVER+'/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'scan',price:sstate.price,pages:sstate.spages,total,payment})});
-    const data = await resp.json();
-    orderId = data.order_id;
-    lastScanOrderId = orderId || orderCount+1;
-  }catch(e){}
-
-  if(payment === 'gopay' && orderId){
-    const ok = await goToGoPayCheckout(orderId);
-    document.getElementById('loading').classList.remove('show');
-    if(ok) return;
-  }
-  document.getElementById('loading').classList.remove('show');
-  showSuccess('scan');
+  const data = await sendOrder('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'scan',color:sstate.price>=12,pages:sstate.spages,payment,terminal:TERMINAL})});
+  if(!data){ document.getElementById('loading').classList.remove('show'); return; }
+  lastScanOrderId = data.order_id;
+  try{ localStorage.setItem('akbarak_scan', JSON.stringify({id:data.order_id, token:data.token})); }catch(e){}
+  await finishOrder(data, 'scan');
 }
 
 async function submitPhoto(payment){
@@ -1200,20 +1184,11 @@ async function submitPhoto(payment){
   fd.append('total',photoState.price);
   fd.append('payment',payment);
   fd.append('photo_format',photoState.format);
-  let orderId = null;
-  try{
-    const resp = await fetch(SERVER+'/upload',{method:'POST',body:fd});
-    const data = await resp.json();
-    orderId = data.order_id;
-  }catch(e){}
+  if(TERMINAL) fd.append('terminal', TERMINAL);
 
-  if(payment === 'gopay' && orderId){
-    const ok = await goToGoPayCheckout(orderId);
-    document.getElementById('loading').classList.remove('show');
-    if(ok) return;
-  }
-  document.getElementById('loading').classList.remove('show');
-  showSuccess('photo');
+  const data = await sendOrder('/upload',{method:'POST',body:fd});
+  if(!data){ document.getElementById('loading').classList.remove('show'); return; }
+  await finishOrder(data, 'photo');
 }
 </script>
 </body>
