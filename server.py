@@ -10,6 +10,8 @@
                        при каждом обновлении кода.
     TG_BOT_TOKEN       токен Telegram-бота для уведомлений (необязательно)
     TG_CHAT_ID         ваш chat_id в Telegram (необязательно)
+    COLOR_ENABLED      "1" — разрешить цветную печать и фото (по умолчанию выключено:
+                       Pantum M6500W печатает только ч/б)
     CASH_ENABLED       "1" — разрешить оплату наличными (по умолчанию выключено:
                        купюроприёмника нет, иначе печать бесплатная)
     FILE_TTL_HOURS     через сколько часов удалять файлы (по умолчанию 24)
@@ -57,6 +59,8 @@ WORKER_KEY = os.getenv("WORKER_KEY", "")
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN", "")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID", "")
 CASH_ENABLED = os.getenv("CASH_ENABLED", "0") == "1"
+COLOR_ENABLED = os.getenv("COLOR_ENABLED", "0") == "1"
+NO_COLOR_MSG = "Цветная печать и фото пока недоступны — сейчас только ч/б"
 FILE_TTL_HOURS = int(os.getenv("FILE_TTL_HOURS", "24"))
 DEFAULT_TERMINAL = os.getenv("DEFAULT_TERMINAL", "kgma-1")
 
@@ -305,6 +309,8 @@ def upload():
         client_pages = clamp(request.form.get("pages"), 1, MAX_PAGES, 1)
         page_range = (request.form.get("page_range") or "").strip() or None
 
+        if (photo_format or request.form.get("print_type") == "color") and not COLOR_ENABLED:
+            return jsonify({"error": NO_COLOR_MSG}), 400
         if photo_format:
             unit = photo_price(photo_format)
             if unit is None:
@@ -383,8 +389,10 @@ def order():
             return jsonify({"error": err}), 400
 
         color = bool(data.get("color")) or clamp(data.get("price"), 0, 1000, 0) >= PRICES[f"{order_type}_color"]
+        if color and not COLOR_ENABLED:
+            return jsonify({"error": NO_COLOR_MSG}), 400
         print_type = "color" if color else "bw"
-        pages = clamp(data.get("pages"), 1, 100, 1)
+        pages = 1  # сканер берёт со стекла один лист за раз
         copies = clamp(data.get("copies"), 1, 20, 1) if order_type == "copy" else 1
         total = PRICES[f"{order_type}_{print_type}"] * pages * copies
         token = secrets.token_urlsafe(16)

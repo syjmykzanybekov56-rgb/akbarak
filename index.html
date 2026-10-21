@@ -371,15 +371,6 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
           <button class="pill" onclick="setColor(this,'color',10)">Цвет · 10с</button>
         </div>
       </div>
-      <div class="set-row">
-        <span class="set-lbl">На листе</span>
-        <div class="pills">
-          <button class="pill on" onclick="setLayout(this,1)">1</button>
-          <button class="pill" onclick="setLayout(this,2)">2</button>
-          <button class="pill" onclick="setLayout(this,4)">4</button>
-          <button class="pill" onclick="setLayout(this,6)">6</button>
-        </div>
-      </div>
       <div class="set-row column">
         <span class="set-lbl">Диапазон страниц</span>
         <input class="range-input" id="page-range" type="text" placeholder="Все страницы (или: 1-5, 1,3,5)" oninput="calcRange(this.value)">
@@ -765,6 +756,25 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const SERVER = "https://akbarak-production.up.railway.app";
+
+// Какие услуги доступны на текущем принтере.
+// Pantum M6500W — только ч/б: цвет и фото выключены. Поставите цветной принтер —
+// включите здесь (true) и на сервере переменную COLOR_ENABLED=1.
+const FEATURES = { color: false, photo: false };
+
+document.addEventListener('DOMContentLoaded', () => {
+  if(!FEATURES.color){
+    document.querySelectorAll('button.pill').forEach(b => {
+      const a = b.getAttribute('onclick') || '';
+      if(a.includes("'color'") || a.includes('setCopy(this,12)') || a.includes('setScan(this,12)')) b.style.display = 'none';
+    });
+  }
+  if(!FEATURES.photo){
+    document.querySelectorAll('.svc-card').forEach(c => {
+      if((c.getAttribute('onclick') || '').includes("'s-photo'")) c.style.display = 'none';
+    });
+  }
+});
 let state = {price:5, type:'bw', copies:1, pages:1};
 let cstate = {price:6, ccopies:1, cpages:1};
 let sstate = {price:6, spages:1};
@@ -990,12 +1000,12 @@ function adj(k,d){
   recalcPrint();
 }
 function adjC(k,d){
-  cstate[k]=Math.max(1,Math.min(20,cstate[k]+d));
+  cstate[k]=Math.max(1,Math.min(k==='cpages'?1:20,cstate[k]+d)); // со стекла — один лист
   document.getElementById('v-'+k).textContent=cstate[k];
   recalcCopy();
 }
 function adjS(d){
-  sstate.spages=Math.max(1,Math.min(100,sstate.spages+d));
+  sstate.spages=1; // со стекла сканируется один лист
   document.getElementById('v-spages').textContent=sstate.spages;
   recalcScan();
 }
