@@ -157,6 +157,14 @@ def init_db():
         except sqlite3.OperationalError:
             pass
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS kiosk_sessions (
+            id TEXT PRIMARY KEY,
+            terminal_id TEXT,
+            created_at TEXT,
+            order_id INTEGER
+        )
+    """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS terminals (
             id TEXT PRIMARY KEY,
             last_seen TEXT,
@@ -306,6 +314,12 @@ def upload():
 
         photo_format = (request.form.get("photo_format") or "").strip()
         terminal = (request.form.get("terminal") or DEFAULT_TERMINAL)[:40]
+        session_id = (request.form.get("session") or "").strip()[:64]
+        if session_id:
+            sess = _kiosk_session(session_id)
+            if not sess:
+                return jsonify({"error": "Код на экране устарел. Отсканируйте QR на экране терминала ещё раз."}), 400
+            terminal = sess["terminal_id"]
         copies = clamp(request.form.get("copies"), 1, 50, 1)
         client_pages = clamp(request.form.get("pages"), 1, MAX_PAGES, 1)
         page_range = (request.form.get("page_range") or "").strip() or None
@@ -361,6 +375,8 @@ def upload():
                     (file.filename, file_path, print_type, pages, copies, total, payment, rng, status,
                      now(), group_id, terminal, order_type, photo_format or None, token))
                 order_ids.append(cur.lastrowid)
+            if session_id:
+                conn.execute("UPDATE kiosk_sessions SET order_id=? WHERE id=?", (order_ids[0], session_id))
             conn.commit()
         except ValueError as e:
             conn.rollback()
@@ -375,6 +391,112 @@ def upload():
     except Exception as e:
         log.exception("upload")
         return jsonify({"error": str(e)}), 500
+
+
+# ─────────────────────── Экран терминала: заказ через экран ───────────────────────
+# Экран создаёт сессию и показывает QR. Студент сканирует его, выбирает файл в телефоне,
+# и заказ появляется на экране: там выбирают число копий и оплачивают по QR.
+
+KIOSK_SESSION_MIN = 30
+
+
+def _kiosk_session(session_id):
+    conn = db()
+    row = conn.execute("SELECT * FROM kiosk_sessions WHERE id=? AND created_at >= ?",
+                       (session_id, ago(minutes=KIOSK_SESSION_MIN))).fetchone()
+    conn.close()
+    return row
+
+
+def _group_by_token(order_id, token):
+    conn = db()
+    row = conn.execute("SELECT group_id, access_token FROM orders WHERE id=?", (order_id,)).fetchone()
+    if not row or not row["access_token"] or not secrets.compare_digest(token or "", row["access_token"]):
+        conn.close()
+        return None, None
+    return conn, row["group_id"]
+
+
+@app.route("/kiosk/session", methods=["POST"])
+def kiosk_session_new():
+    data = request.get_json(silent=True) or {}
+    terminal = (data.get("terminal") or DEFAULT_TERMINAL)[:40]
+    sid = secrets.token_urlsafe(12)
+    conn = db()
+    conn.execute("DELETE FROM kiosk_sessions WHERE created_at < ?", (ago(hours=24),))
+    conn.execute("INSERT INTO kiosk_sessions (id, terminal_id, created_at) VALUES (?,?,?)", (sid, terminal, now()))
+    conn.commit()
+    conn.close()
+    return jsonify({"session": sid, "expires_min": KIOSK_SESSION_MIN})
+
+
+@app.route("/kiosk/session/<session_id>", methods=["GET"])
+def kiosk_session_get(session_id):
+    sess = _kiosk_session(session_id[:64])
+    if not sess:
+        return jsonify({"state": "expired"})
+    if not sess["order_id"]:
+        return jsonify({"state": "waiting"})
+    conn = db()
+    first = conn.execute("SELECT group_id, access_token FROM orders WHERE id=?", (sess["order_id"],)).fetchone()
+    items = conn.execute("SELECT id, file_name, pages, copies, total, status, print_type FROM orders "
+                         "WHERE group_id=? ORDER BY id", (first["group_id"],)).fetchall()
+    conn.close()
+    return jsonify({
+        "state": "uploaded",
+        "order_id": sess["order_id"],
+        "token": first["access_token"],
+        "files": [{"name": i["file_name"], "pages": i["pages"]} for i in items],
+        "copies": items[0]["copies"] if items else 1,
+        "unit": PRICES["print_" + (items[0]["print_type"] if items else "bw")],
+        "total": sum(i["total"] for i in items),
+    })
+
+
+@app.route("/kiosk/options/<int:order_id>", methods=["POST"])
+def kiosk_options(order_id):
+    """Изменить число копий на экране — только пока заказ не оплачен."""
+    data = request.get_json(silent=True) or {}
+    conn, group_id = _group_by_token(order_id, data.get("token"))
+    if not conn:
+        return jsonify({"error": "Заказ не найден"}), 404
+    try:
+        copies = clamp(data.get("copies"), 1, 50, 1)
+        items = conn.execute("SELECT id, pages, print_type, order_type FROM orders "
+                             "WHERE group_id=? AND status='pending_payment'", (group_id,)).fetchall()
+        if not items:
+            return jsonify({"error": "Заказ уже оплачен"}), 409
+        total = 0
+        for i in items:
+            if i["order_type"] == "photo":
+                continue
+            unit = PRICES[f"{i['order_type'] if i['order_type'] in ('copy', 'scan') else 'print'}_{i['print_type']}"]
+            item_total = unit * (i["pages"] or 1) * copies
+            total += item_total
+            conn.execute("UPDATE orders SET copies=?, total=? WHERE id=?", (copies, item_total, i["id"]))
+        conn.commit()
+        return jsonify({"success": True, "copies": copies, "total": total})
+    finally:
+        conn.close()
+
+
+@app.route("/kiosk/cancel/<int:order_id>", methods=["POST"])
+def kiosk_cancel(order_id):
+    """Студент передумал на экране — отменяем неоплаченный заказ и удаляем файлы."""
+    data = request.get_json(silent=True) or {}
+    conn, group_id = _group_by_token(order_id, data.get("token"))
+    if not conn:
+        return jsonify({"error": "Заказ не найден"}), 404
+    try:
+        rows = conn.execute("SELECT id, file_path FROM orders WHERE group_id=? AND status='pending_payment'",
+                            (group_id,)).fetchall()
+        for r in rows:
+            _remove(r["file_path"])
+            conn.execute("UPDATE orders SET status='cancelled', file_path=NULL WHERE id=?", (r["id"],))
+        conn.commit()
+        return jsonify({"success": True})
+    finally:
+        conn.close()
 
 
 @app.route("/order", methods=["POST"])

@@ -963,7 +963,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if(id && token){ rememberOrder(id, token); openStatus(id, token, true); return; }
   // QR с экрана терминала может сразу открыть нужную услугу: ?s=print|copy|scan
   const svc = q.get('s');
-  if(['print','copy','scan'].includes(svc)){ go('s-' + svc); return; }
+  if(['print','copy','scan','partner'].includes(svc)){ go('s-' + svc); return; }
   let saved = null; try{ saved = JSON.parse(localStorage.getItem('akbarak_last')||'null'); }catch(e){}
   if(saved && saved.id && saved.token && Date.now() - (saved.ts || 0) < 24*60*60*1000){
     openStatus(saved.id, saved.token, false);

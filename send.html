@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2340">
+<title>АкБарак — отправить файл на экран</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#081830;--ink:#0E2340;--navy:#0F2747;--navy2:#163562;--gold:#E0B44C;--gold-d:#B8892A;
+        --dim:#9FB2CE;--ok:#3DDC84;--bad:#F2545B;--disp:"Unbounded","Manrope",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;font-family:"Manrope",system-ui,sans-serif;color:#fff;
+    background:radial-gradient(120% 60% at 0% 0%,var(--navy2),transparent 60%),linear-gradient(180deg,var(--ink),var(--night));
+    padding:24px 20px calc(32px + env(safe-area-inset-bottom))}
+  .wrap{max-width:460px;margin:0 auto}
+  .logo{display:flex;align-items:center;gap:10px;font-family:"Inter","Manrope",sans-serif;font-weight:800;font-size:22px;letter-spacing:-.03em}
+  .logo svg{width:34px;height:34px} .logo .a{color:var(--gold)}
+  h1{font-family:var(--disp);font-weight:800;font-size:28px;line-height:1.12;letter-spacing:-.02em;margin:34px 0 12px}
+  p.lead{color:var(--dim);font-weight:600;font-size:16px;line-height:1.5}
+  .pick{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;margin:28px 0 16px;padding:34px 20px;
+    border-radius:14px;background:#fff;color:var(--navy);text-align:center;cursor:pointer;position:relative;overflow:hidden;
+    box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .pick::before{content:"";position:absolute;right:0;top:0;width:44px;height:44px;background:linear-gradient(225deg,var(--ink) 50%,var(--gold) 50%)}
+  .pick svg{width:56px;height:56px}
+  .pick b{font-family:var(--disp);font-weight:800;font-size:19px}
+  .pick span{font-size:13px;font-weight:700;color:#6B7C95}
+  .pick input{display:none}
+  .files{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .files li{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;background:rgba(255,255,255,.07);font-weight:700;font-size:14px}
+  .files li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .files li small{color:var(--dim);font-weight:600}
+  .send{width:100%;padding:18px;border:0;border-radius:999px;background:var(--gold);color:var(--night);font:inherit;font-weight:800;font-size:17px;cursor:pointer}
+  .send:disabled{opacity:.4}
+  .bar{height:6px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:14px;display:none}
+  .bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .2s}
+  .err{display:none;margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(242,84,91,.14);color:#FFC9CC;font-weight:700;font-size:14px;line-height:1.45}
+  .note{margin-top:22px;color:var(--dim);font-size:13px;font-weight:600;line-height:1.5}
+  .done{display:none;text-align:center;padding-top:40px}
+  .done .ok{width:96px;height:96px;margin:0 auto 22px;border-radius:50%;background:rgba(61,220,132,.15);display:grid;place-items:center}
+  .done .ok svg{width:46px;height:46px}
+  .done h1{margin-top:0}
+  .alt{display:inline-block;margin-top:28px;color:var(--gold);font-weight:800;font-size:15px;text-decoration:none;border-bottom:2px solid rgba(224,180,76,.4);padding-bottom:2px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <clipPath id="tc"><circle cx="124" cy="146" r="38"/></clipPath>
+  <symbol id="mark" viewBox="0 0 240 240">
+    <path d="M58 20 H152 L192 60 V222 H58 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M152 20 L152 60 L192 60 Z" fill="#E0B44C" stroke="#E0B44C" stroke-width="10" stroke-linejoin="round"/>
+    <circle cx="124" cy="146" r="52" fill="#0F2747"/><circle cx="124" cy="146" r="44" fill="none" stroke="#E0B44C" stroke-width="5.5"/>
+    <g clip-path="url(#tc)" fill="none" stroke="#E0B44C" stroke-width="4.6" stroke-linecap="round">
+      <path d="M80 135 Q124 125 168 135"/><path d="M80 146 L168 146"/><path d="M80 157 Q124 167 168 157"/>
+      <path d="M113 102 Q103 146 113 190"/><path d="M124 102 L124 190"/><path d="M135 102 Q145 146 135 190"/></g>
+  </symbol></defs></svg>
+
+<div class="wrap">
+  <div class="logo"><svg><use href="#mark"/></svg><div><span class="a">Ак</span>Барак</div></div>
+
+  <section id="form">
+    <h1>Отправь файл на экран терминала</h1>
+    <p class="lead">Выбери документ — он появится на экране. Там выберешь число копий и оплатишь.</p>
+
+    <label class="pick">
+      <svg viewBox="0 0 64 64"><g fill="none" stroke="#0F2747" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 6h26l10 10v42H14z"/><path d="M40 6v10h10"/></g>
+        <path d="M32 46V26M24 34l8-8 8 8" fill="none" stroke="#E0B44C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <b id="pickTitle">Выбрать файл</b>
+      <span>PDF, Word, TXT или фото, можно несколько</span>
+      <input type="file" id="file" multiple accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+    </label>
+    <ul class="files" id="files"></ul>
+    <button class="send" id="send" disabled>Отправить на экран</button>
+    <div class="bar" id="bar"><i id="barFill"></i></div>
+    <div class="err" id="err"></div>
+    <p class="note">На экране видно только название файла и число страниц — содержимое никто не увидит. После печати файл удаляется.</p>
+  </section>
+
+  <section class="done" id="done">
+    <div class="ok"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#3DDC84" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h1>Файл на экране</h1>
+    <p class="lead">Посмотри на экран терминала: выбери число копий и нажми «Оплатить».</p>
+    <a class="alt" id="alt" href="#">Оплатить с телефона</a>
+  </section>
+</div>
+
+<script>
+const SERVER = "https://akbarak-production.up.railway.app";
+const SITE = location.origin;
+const q = new URLSearchParams(location.search);
+const SESSION = q.get('k'), TERMINAL = q.get('t') || '';
+if(!SESSION) location.replace(SITE + '/' + (TERMINAL ? '?t=' + encodeURIComponent(TERMINAL) : ''));
+
+const $ = id => document.getElementById(id);
+const fmtSize = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' МБ' : Math.max(1, Math.round(b / 1024)) + ' КБ';
+
+$('file').addEventListener('change', () => {
+  const fs = [...$('file').files];
+  $('files').innerHTML = fs.map(f => '<li><span>' + f.name.replace(/</g, '&lt;') + '</span><small>' + fmtSize(f.size) + '</small></li>').join('');
+  $('pickTitle').textContent = fs.length ? 'Выбрать другой' : 'Выбрать файл';
+  $('send').disabled = !fs.length;
+  $('err').style.display = 'none';
+});
+
+function fail(msg){ $('err').textContent = msg; $('err').style.display = 'block'; $('send').disabled = false; $('bar').style.display = 'none'; }
+
+$('send').addEventListener('click', () => {
+  const fs = [...$('file').files];
+  if(!fs.length) return;
+  const fd = new FormData();
+  fs.forEach(f => fd.append('file', f));
+  fd.append('payment', 'gopay'); fd.append('print_type', 'bw');
+  fd.append('copies', '1'); fd.append('pages', '1');
+  fd.append('terminal', TERMINAL); fd.append('session', SESSION);
+
+  $('send').disabled = true; $('bar').style.display = 'block'; $('barFill').style.width = '0';
+  const x = new XMLHttpRequest();
+  x.open('POST', SERVER + '/upload');
+  x.upload.onprogress = e => { if(e.lengthComputable) $('barFill').style.width = (e.loaded / e.total * 100) + '%'; };
+  x.onload = () => {
+    let d = {}; try{ d = JSON.parse(x.responseText); }catch(e){}
+    if(x.status !== 200 || !d.success) return fail(d.error || 'Не получилось отправить файл. Попробуй ещё раз.');
+    $('alt').href = SITE + '/?order=' + d.order_id + '&token=' + encodeURIComponent(d.token) + (TERMINAL ? '&t=' + encodeURIComponent(TERMINAL) : '');
+    $('form').style.display = 'none'; $('done').style.display = 'block';
+  };
+  x.onerror = () => fail('Нет связи. Проверь интернет и попробуй ещё раз.');
+  x.send(fd);
+});
+</script>
+</body>
+</html>
