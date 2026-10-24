@@ -608,6 +608,29 @@ def failed(order_id):
     return jsonify({"success": True})
 
 
+@app.route("/terminal_info/<terminal_id>", methods=["GET"])
+def terminal_info(terminal_id):
+    """Открытая информация для экрана терминала: на связи ли принтер и сколько напечатано сегодня."""
+    offset = timedelta(hours=int(os.getenv("TZ_OFFSET_HOURS", "6")))  # Бишкек UTC+6
+    local_now = datetime.now() + offset
+    day_start = (local_now.replace(hour=0, minute=0, second=0, microsecond=0) - offset).strftime(TIME_FMT)
+    conn = db()
+    try:
+        term = conn.execute("SELECT last_seen, printer_status FROM terminals WHERE id=?",
+                            (terminal_id[:40],)).fetchone()
+        row = conn.execute(
+            "SELECT COALESCE(SUM(pages * copies), 0) AS sheets, COUNT(*) AS orders FROM orders "
+            "WHERE terminal_id=? AND status IN ('done','scan_ready') AND created_at >= ?",
+            (terminal_id[:40], day_start)).fetchone()
+    finally:
+        conn.close()
+    online = bool(term and term["last_seen"] and term["last_seen"] >= ago(minutes=2))
+    printer = (term["printer_status"] if term else None) or "ok"
+    return jsonify({"online": online, "printer_ok": online and printer == "ok",
+                    "printer": printer if online else "терминал не на связи",
+                    "sheets_today": row["sheets"], "orders_today": row["orders"]})
+
+
 @app.route("/heartbeat", methods=["POST"])
 @require_worker
 def heartbeat():
