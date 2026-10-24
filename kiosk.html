@@ -5,141 +5,176 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>АкБарак — терминал</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#0F2747; --deep:#0A1B33; --navy2:#173663; --gold:#E0B44C; --gold2:#B8892A;
-    --paper:#FFFFFF; --mist:#C9D3E2; --muted:#8FA3C0; --ok:#22C55E; --warn:#F59E0B; --bad:#EF4444;
+    --night:#081830; --ink:#0E2340; --navy:#0F2747; --navy2:#163562;
+    --gold:#E0B44C; --gold-d:#B8892A; --paper:#FFFFFF; --paper-shade:#E6ECF4;
+    --text-dim:#9FB2CE; --line:#D5DDE8;
+    --ok:#3DDC84; --warn:#F5B841; --bad:#F2545B;
+    --disp:"Unbounded", "Manrope", system-ui, sans-serif;
+    --body:"Manrope", system-ui, sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;overflow:hidden;background:var(--deep);color:#fff;
-    font-family:Inter,system-ui,sans-serif;user-select:none;-webkit-user-select:none;
-    touch-action:manipulation;cursor:default}
-  body{font-size:clamp(14px,1.05vw,22px)}
-  .screen{position:fixed;inset:0;transition:opacity .6s ease}
-  .hidden{opacity:0;pointer-events:none}
-  .bg{background:radial-gradient(120% 90% at 20% 10%,var(--navy2) 0%,var(--navy) 45%,var(--deep) 100%)}
-  .bg::after{content:"";position:absolute;inset:0;pointer-events:none;
-    background-image:radial-gradient(rgba(255,255,255,.035) 1px,transparent 1px);background-size:6px 6px}
+  html,body{height:100%;overflow:hidden;background:var(--night);color:#fff;font-family:var(--body);
+    user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  .view{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease}
+  .view.on{opacity:1;pointer-events:auto}
+  .room{background:
+      radial-gradient(70vw 60vh at 78% 30%, rgba(224,180,76,.10), transparent 60%),
+      radial-gradient(90vw 80vh at 10% 0%, var(--navy2), transparent 60%),
+      linear-gradient(180deg, var(--ink), var(--night))}
 
-  /* ───── Главный экран ───── */
-  #main{display:grid;grid-template-rows:auto 1fr auto;padding:2.2vh 3vw}
-  .top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
-  .brand{display:flex;align-items:center;gap:1vw}
-  .brand svg{width:4.2vw;height:4.2vw;min-width:44px;min-height:44px}
-  .word{font-weight:900;letter-spacing:-.03em;line-height:1}
-  .word .a{color:var(--gold)} .word .b{color:#fff}
-  .brand .word{font-size:2.6vw}
-  .brand .tag{font-size:.75vw;letter-spacing:.3em;color:var(--muted);font-weight:700;margin-top:.4vh}
-  .topr{display:flex;align-items:center;gap:1.4vw}
-  .clock{text-align:right}
-  .clock b{display:block;font-size:2vw;font-weight:800;letter-spacing:-.02em}
-  .clock span{font-size:.85vw;color:var(--muted);font-weight:600}
-  .pill{display:flex;align-items:center;gap:.6vw;padding:.9vh 1.1vw;border-radius:999px;font-weight:800;font-size:.95vw;
-    background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#86EFAC}
-  .pill i{width:.7vw;height:.7vw;min-width:9px;min-height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:pulse 2s infinite}
-  .pill.warn{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.4);color:#FCD34D} .pill.warn i{background:var(--warn);animation:none}
-  .pill.bad{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4);color:#FCA5A5} .pill.bad i{background:var(--bad);animation:none}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 12px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+  /* ── шапка ── */
+  .bar{position:absolute;left:3.2vw;right:3.2vw;top:3.4vh;display:flex;align-items:center;justify-content:space-between;z-index:4}
+  .logo{display:flex;align-items:center;gap:1vw}
+  .logo svg{width:3.6vw;height:3.6vw}
+  .wm{font-family:"Inter","Manrope",sans-serif;font-weight:800;letter-spacing:-.035em;font-size:2.3vw;line-height:1}
+  .wm .a{color:var(--gold)}
+  .right{display:flex;align-items:center;gap:2vw}
+  .chip{display:flex;align-items:center;gap:.7vw;font-weight:700;font-size:1.05vw;color:#CFF7DF}
+  .chip i{width:.75vw;height:.75vw;border-radius:50%;background:var(--ok);box-shadow:0 0 0 .35vw rgba(61,220,132,.18)}
+  .chip.warn{color:#FFE7B0} .chip.warn i{background:var(--warn);box-shadow:0 0 0 .35vw rgba(245,184,65,.18)}
+  .chip.bad{color:#FFC9CC} .chip.bad i{background:var(--bad);box-shadow:0 0 0 .35vw rgba(242,84,91,.18)}
+  .clock{font-family:var(--disp);font-weight:700;font-size:1.9vw;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 
-  .mid{display:grid;grid-template-columns:1.25fr 1fr;gap:3vw;align-items:center;position:relative;z-index:1}
-  h1{font-size:4.6vw;font-weight:900;letter-spacing:-.04em;line-height:1.02}
-  h1 em{font-style:normal;color:var(--gold)}
-  .lead{font-size:1.35vw;color:var(--mist);margin:1.6vh 0 3.4vh;font-weight:600;line-height:1.5;max-width:40vw}
-  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1vw;margin-bottom:3.2vh}
-  .step{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:1.2vw;padding:2vh 1.1vw}
-  .step .n{width:2.3vw;height:2.3vw;min-width:28px;min-height:28px;border-radius:50%;background:var(--gold);color:var(--deep);
-    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.1vw;margin-bottom:1.4vh}
-  .step b{display:block;font-size:1.2vw;font-weight:800;margin-bottom:.6vh}
-  .step span{font-size:.92vw;color:var(--muted);font-weight:600;line-height:1.45}
-  .svcs{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1vw}
-  .svc{background:linear-gradient(160deg,rgba(224,180,76,.14),rgba(224,180,76,.04));border:1px solid rgba(224,180,76,.28);
-    border-radius:1.2vw;padding:1.8vh 1.1vw;cursor:pointer;transition:transform .15s}
-  .svc:active{transform:scale(.97)}
-  .svc .ic{font-size:1.9vw}
-  .svc b{display:block;font-size:1.25vw;font-weight:800;margin:.6vh 0 .2vh}
-  .svc .p{font-size:1.9vw;font-weight:900;color:var(--gold);letter-spacing:-.02em}
-  .svc .p small{font-size:.85vw;color:var(--muted);font-weight:700;letter-spacing:0}
+  /* ── принтерная щель и лист ── */
+  .feeder{position:absolute;display:flex;flex-direction:column;align-items:center}
+  .slot{width:100%;height:2.4vh;border-radius:1.2vh;background:linear-gradient(180deg,#02070F,#0B1A31);
+    box-shadow:inset 0 .4vh .8vh rgba(0,0,0,.7), 0 .15vh 0 rgba(255,255,255,.08);position:relative;z-index:2}
+  .slot::after{content:"";position:absolute;left:6%;right:6%;bottom:-.2vh;height:.25vh;border-radius:1vh;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.75}
+  .tray{width:88%;margin-top:-1.2vh;overflow:hidden;padding:0 2vw 4vh;flex:1;display:flex;justify-content:center}
+  .sheet{position:relative;background:var(--paper);color:var(--navy);aspect-ratio:1/1.414;height:100%;
+    border-radius:.3vw;box-shadow:0 2.4vh 5vh rgba(0,0,0,.45),0 .3vh .6vh rgba(0,0,0,.25);
+    transform:translateY(-104%);overflow:hidden}
+  .sheet::before{content:"";position:absolute;right:0;top:0;width:12%;aspect-ratio:1;
+    background:linear-gradient(225deg,var(--night) 50%,var(--gold) 50%);}
+  .sheet.in{animation:feed 2.6s cubic-bezier(.45,.05,.3,1) forwards}
+  .sheet.shown{transform:none}
+  .sheet.out{animation:eject 1s cubic-bezier(.6,0,.8,.4) forwards}
+  @keyframes feed{
+    0%{transform:translateY(-104%)} 18%{transform:translateY(-80%)} 26%{transform:translateY(-78%)}
+    48%{transform:translateY(-44%)} 56%{transform:translateY(-42%)} 80%{transform:translateY(-8%)} 100%{transform:none}}
+  @keyframes eject{to{transform:translateY(110%) rotate(1.5deg);opacity:0}}
+  .ink{position:absolute;inset:9% 9% 8%;display:flex;flex-direction:column}
+  .ink > *{opacity:0}
+  .sheet.in .ink > *, .sheet.shown .ink > *{animation:inkin .35s ease forwards;animation-delay:calc(.9s + var(--i,0) * .22s)}
+  .sheet.shown .ink > *{animation-delay:0s}
+  @keyframes inkin{from{opacity:0;clip-path:inset(0 100% 0 0)}to{opacity:1;clip-path:inset(0 0 0 0)}}
+  .ln{height:1.1vh;border-radius:.6vh;background:var(--line);margin:1.1vh 0}
 
-  .qrcard{background:#fff;color:var(--navy);border-radius:2vw;padding:3vh 2.2vw 2.6vh;text-align:center;
-    box-shadow:0 3vh 8vh rgba(0,0,0,.35);position:relative;overflow:hidden;justify-self:center;width:min(30vw,62vh)}
-  .qrcard::before{content:"";position:absolute;right:0;top:0;width:4vw;height:4vw;background:var(--gold);clip-path:polygon(0 0,100% 100%,100% 0)}
-  .qrcard .h{font-size:1.7vw;font-weight:900;letter-spacing:-.02em}
-  .qrcard .s{font-size:.95vw;color:#5A6B85;font-weight:600;margin:.6vh 0 2vh}
-  #qr,#qr2{display:flex;justify-content:center}
-  #qr img,#qr canvas{width:min(22vw,46vh)!important;height:min(22vw,46vh)!important;image-rendering:pixelated}
-  .qrcard .url{margin-top:1.8vh;font-weight:800;font-size:1.05vw;letter-spacing:.02em}
-  .qrcard .slogan{font-weight:900;font-style:italic;color:var(--gold2);font-size:1.3vw;margin-top:.4vh}
+  /* ── главный экран ── */
+  #home .stage{position:absolute;left:3.2vw;right:3.2vw;top:13vh;bottom:9vh;display:grid;grid-template-columns:1.45fr 1fr;gap:4vw}
+  .hello{display:flex;flex-direction:column;height:100%}
+  .hello .tiles{margin-top:auto}
+  .hello h1{font-family:var(--disp);font-weight:800;font-size:4.4vw;line-height:1.05;letter-spacing:-.03em;max-width:15ch}
+  .hello p{font-size:1.45vw;line-height:1.45;color:var(--text-dim);font-weight:600;margin:2.4vh 0 4.4vh;max-width:36ch}
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4vw}
+  .tile{position:relative;background:var(--paper);color:var(--navy);border-radius:.6vw;padding:3.2vh 1.6vw 2.8vh;text-align:left;
+    min-height:40vh;display:flex;flex-direction:column;justify-content:space-between;
+    box-shadow:0 1.6vh 3.2vh rgba(0,0,0,.35);transition:transform .12s ease, box-shadow .12s ease;overflow:hidden}
+  .tile::before{content:"";position:absolute;right:0;top:0;width:3.2vw;aspect-ratio:1;background:linear-gradient(225deg,var(--ink) 50%,var(--gold) 50%)}
+  .tile:active{transform:translateY(.5vh) scale(.985);box-shadow:0 .6vh 1.4vh rgba(0,0,0,.35)}
+  .tile svg{width:5.4vw;height:5.4vw}
+  .tile h2{font-family:var(--disp);font-weight:800;font-size:2.35vw;letter-spacing:-.02em;margin-top:1.4vh}
+  .tile .price{font-weight:800;font-size:1.25vw;color:#51627C;margin-top:.6vh}
+  .tile .price b{font-family:var(--disp);color:var(--navy);font-size:2vw;letter-spacing:-.02em}
+  .tile .go{display:flex;align-items:center;justify-content:space-between;margin-top:2vh;padding-top:1.6vh;border-top:2px solid var(--paper-shade);
+    font-weight:800;font-size:1.05vw;color:var(--gold-d)}
+  .tile .go span{width:2.6vw;height:2.6vw;border-radius:50%;background:var(--navy);display:grid;place-items:center}
+  .tile .go span svg{width:1.2vw;height:1.2vw}
 
-  .bottom{display:flex;align-items:center;gap:1.5vw;position:relative;z-index:1;background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.08);border-radius:1.2vw;padding:1.4vh 1.4vw;overflow:hidden}
-  .bottom .lbl{flex:none;font-weight:900;font-size:.85vw;letter-spacing:.2em;color:var(--gold)}
-  .ticker{flex:1;overflow:hidden;white-space:nowrap;mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
-  .ticker span{display:inline-block;padding-left:100%;animation:tick 38s linear infinite;font-weight:600;font-size:1.05vw;color:var(--mist)}
+  #home .feeder{right:3.2vw;top:13vh;bottom:6vh;width:30vw}
+  .qrsheet .ink{align-items:center;text-align:center;justify-content:center}
+  .qrsheet h3{font-family:var(--disp);font-weight:800;font-size:1.75vw;letter-spacing:-.02em;line-height:1.15}
+  .qrsheet .q{margin:3vh 0 2.6vh;display:flex;justify-content:center}
+  .qrsheet .q img,.qrsheet .q canvas{width:20vw !important;height:20vw !important;max-width:32vh;max-height:32vh;image-rendering:pixelated}
+  .qrsheet small{font-weight:700;font-size:1vw;color:#51627C;line-height:1.5}
+  .qrsheet .tag{font-family:var(--disp);font-weight:700;color:var(--gold-d);font-size:1.2vw;margin-top:1.4vh}
+
+  .foot{position:absolute;left:3.2vw;right:3.2vw;bottom:3vh;display:flex;align-items:center;gap:2vw;font-weight:700;font-size:1.05vw;color:var(--text-dim)}
+  .news{flex:1;overflow:hidden;white-space:nowrap;mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+  .news span{display:inline-block;padding-left:100%;animation:tick 42s linear infinite}
   @keyframes tick{to{transform:translateX(-100%)}}
-  .stat{flex:none;font-weight:800;font-size:1vw}
-  .stat b{color:var(--gold);font-size:1.3vw}
+  .count b{font-family:var(--disp);color:var(--gold);font-weight:700}
 
-  /* подсказка по услуге */
-  .modal{position:fixed;inset:0;background:rgba(5,14,28,.75);display:flex;align-items:center;justify-content:center;z-index:5;transition:opacity .25s}
-  .modal .box{background:var(--navy);border:1px solid rgba(224,180,76,.35);border-radius:2vw;padding:4vh 3vw;max-width:46vw;text-align:center}
-  .modal .ic{font-size:4vw}
-  .modal h2{font-size:2.4vw;font-weight:900;margin:1vh 0 2vh;letter-spacing:-.02em}
-  .modal ol{text-align:left;font-size:1.25vw;line-height:1.7;color:var(--mist);font-weight:600;padding-left:1.6vw}
-  .modal .ok{margin-top:3vh;background:var(--gold);color:var(--deep);border:none;border-radius:999px;padding:1.6vh 3vw;font:inherit;font-weight:900;font-size:1.2vw;cursor:pointer}
+  /* ── экран услуги ── */
+  #svc .stage{position:absolute;left:3.2vw;right:3.2vw;top:13vh;bottom:9vh;display:grid;grid-template-columns:1.45fr 1fr;gap:4vw}
+  .back{display:inline-flex;align-items:center;gap:1vw;font-weight:800;font-size:1.25vw;padding:1.4vh 1.6vw 1.4vh 1.2vw;border-radius:999px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+  .back svg{width:1.5vw;height:1.5vw}
+  .back:active{background:rgba(255,255,255,.16)}
+  .svchead{display:flex;align-items:baseline;gap:1.6vw;margin:3.6vh 0 4vh}
+  .svchead h1{font-family:var(--disp);font-weight:800;font-size:4.6vw;letter-spacing:-.03em;line-height:1}
+  .svchead .pr{font-weight:800;font-size:1.5vw;color:var(--gold)}
+  .flow{display:grid;grid-template-columns:15vw 1fr;gap:2.6vw;align-items:center}
+  .pic{width:15vw;height:15vw;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--navy2),var(--ink));
+    display:grid;place-items:center;border:1px solid rgba(255,255,255,.1);position:relative}
+  .pic svg{width:8.4vw;height:8.4vw;transition:opacity .3s, transform .3s}
+  .pic svg.swap{opacity:0;transform:scale(.85)}
+  .steps{list-style:none;display:flex;flex-direction:column;gap:1.4vh}
+  .steps li{display:grid;grid-template-columns:3.4vw 1fr;align-items:center;gap:1.2vw;padding:1.8vh 1.4vw;border-radius:.8vw;
+    font-weight:700;font-size:1.4vw;line-height:1.35;color:var(--text-dim);transition:all .35s ease;border:1px solid transparent}
+  .steps li b{width:3.4vw;height:3.4vw;border-radius:50%;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:1.35vw;
+    background:rgba(255,255,255,.08);color:#fff;transition:all .35s ease}
+  .steps li.now{background:rgba(255,255,255,.07);border-color:rgba(224,180,76,.45);color:#fff}
+  .steps li.now b{background:var(--gold);color:var(--night)}
+  .steps li.done b{background:rgba(61,220,132,.2);color:var(--ok)}
+  #svc .feeder{right:3.2vw;top:13vh;bottom:6vh;width:30vw}
+  .timer{position:absolute;left:3.2vw;right:3.2vw;bottom:3vh;display:flex;align-items:center;gap:1.4vw;font-weight:700;font-size:1.05vw;color:var(--text-dim)}
+  .timer .track{flex:none;width:18vw;height:.5vh;border-radius:1vh;background:rgba(255,255,255,.12);overflow:hidden}
+  .timer .fill{height:100%;background:var(--gold);transform-origin:left;width:100%}
 
-  /* ───── Заставка ───── */
-  #attract{z-index:3}
-  .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-    padding:6vh 8vw;opacity:0;transform:scale(1.03);transition:opacity .9s ease,transform 1.4s ease;z-index:1}
-  .slide.on{opacity:1;transform:none}
-  .slide .big{font-size:9vw;font-weight:900;letter-spacing:-.05em;line-height:1}
-  .slide .sl{font-size:3.6vw;font-weight:900;font-style:italic;color:var(--gold);margin-top:2vh}
-  .slide .t{font-size:1.2vw;letter-spacing:.35em;color:var(--muted);font-weight:700;margin-top:3vh}
-  .slide h2{font-size:4.8vw;font-weight:900;letter-spacing:-.04em;line-height:1.05}
-  .slide h2 em{font-style:normal;color:var(--gold)}
-  .slide p{font-size:1.8vw;color:var(--mist);font-weight:600;margin-top:2.4vh;line-height:1.5;max-width:60vw}
-  .flow{display:flex;align-items:center;gap:2.4vw;margin-top:5vh}
-  .flow .f{width:14vw;padding:3vh 1vw;border-radius:1.6vw;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
-    opacity:0;transform:translateY(3vh);transition:all .6s ease}
-  .slide.on .flow .f{opacity:1;transform:none}
-  .slide.on .flow .f:nth-child(3){transition-delay:.5s} .slide.on .flow .f:nth-child(5){transition-delay:1s}
-  .flow .f .e{font-size:4vw} .flow .f b{display:block;font-size:1.5vw;margin-top:1.4vh}
-  .flow .arr{font-size:2.6vw;color:var(--gold)}
-  .prices{display:flex;gap:2vw;margin-top:5vh}
-  .prices > div{width:17vw;padding:3.5vh 1vw;border-radius:1.6vw;background:linear-gradient(160deg,rgba(224,180,76,.18),rgba(224,180,76,.04));border:1px solid rgba(224,180,76,.3)}
-  .prices .e{font-size:3.4vw} .prices b{display:block;font-size:1.6vw;margin:1.2vh 0 .4vh}
-  .prices .p{font-size:4vw;font-weight:900;color:var(--gold);letter-spacing:-.03em}
-  .prices .p small{font-size:1.2vw;color:var(--muted);letter-spacing:0}
-  .notice{border:1px solid rgba(224,180,76,.4);background:rgba(224,180,76,.07);border-radius:2vw;padding:5vh 4vw;max-width:70vw}
-  .notice .k{font-size:1.1vw;letter-spacing:.3em;color:var(--gold);font-weight:800}
-  .counter{font-size:12vw;font-weight:900;color:var(--gold);letter-spacing:-.05em;line-height:1}
-  .corner{position:absolute;right:3vw;bottom:4vh;z-index:2;background:#fff;border-radius:1.2vw;padding:1.4vh;display:flex;align-items:center;gap:1vw;color:var(--navy)}
-  #qr2 img,#qr2 canvas{width:9vw!important;height:9vw!important}
-  .corner b{font-weight:900;font-size:1.2vw;display:block;max-width:9vw;text-align:left;line-height:1.2}
-  .touch{position:absolute;left:0;right:0;bottom:4vh;z-index:2;text-align:center;font-weight:800;font-size:1.3vw;color:var(--mist);animation:blink 2.4s ease-in-out infinite}
-  @keyframes blink{50%{opacity:.35}}
-  .dots{position:absolute;left:3vw;bottom:4.6vh;display:flex;gap:.6vw;z-index:2}
-  .dots i{width:.6vw;height:.6vw;min-width:7px;min-height:7px;border-radius:50%;background:rgba(255,255,255,.25)}
-  .dots i.on{background:var(--gold)}
+  /* ── заставка ── */
+  #attract .stage{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1.05fr}
+  .say{padding:16vh 0 10vh 6vw;display:flex;flex-direction:column;justify-content:space-between}
+  .say h2{font-family:var(--disp);font-weight:800;font-size:5vw;line-height:1.04;letter-spacing:-.035em;max-width:11ch;transition:opacity .5s}
+  .say p{font-size:1.6vw;line-height:1.45;color:var(--text-dim);font-weight:600;margin-top:3vh;max-width:30ch;transition:opacity .5s}
+  .say .fade{opacity:0}
+  .call{display:flex;align-items:center;gap:1.8vw}
+  .call .q{background:#fff;padding:1.2vh;border-radius:.6vw}
+  .call .q img,.call .q canvas{width:10vw !important;height:10vw !important}
+  .call b{display:block;font-family:var(--disp);font-weight:700;font-size:1.6vw;line-height:1.25}
+  .call span{display:block;font-weight:700;font-size:1.1vw;color:var(--gold);margin-top:1vh;animation:breathe 2.6s ease-in-out infinite}
+  @keyframes breathe{50%{opacity:.4}}
+  #attract .feeder{right:6vw;left:auto;top:13vh;bottom:0;width:40vw}
+  #attract .tray{padding-bottom:0}
 
-  @media (orientation:portrait){
-    body{font-size:2.2vw}
-    .mid{grid-template-columns:1fr}
-    .lead{max-width:none}
-    h1{font-size:8vw} .lead{font-size:2.6vw}
-    .brand .word{font-size:5vw} .brand svg{width:8vw;height:8vw} .brand .tag{font-size:1.4vw}
-    .step b,.svc b{font-size:2.4vw} .step span{font-size:1.9vw} .svc .p{font-size:3.6vw}
-    .qrcard{width:60vw} .qrcard .h{font-size:3.4vw} .qrcard .s,.qrcard .url{font-size:2vw}
-    #qr img,#qr canvas{width:44vw!important;height:44vw!important}
-    .clock b{font-size:4vw} .clock span,.pill{font-size:1.9vw}
-    .bottom .lbl,.stat,.ticker span{font-size:2vw}
+  /* содержимое листов в заставке */
+  .doc-h{font-family:var(--disp);font-weight:800;font-size:1.8vw;letter-spacing:-.02em;line-height:1.15;margin-bottom:1.6vh}
+  .doc-sub{font-weight:700;font-size:.95vw;color:#6B7C95;margin-bottom:2.4vh}
+  .stamp{margin-top:auto;align-self:flex-end;display:flex;align-items:center;gap:.8vw;border:.3vw solid var(--gold);color:var(--gold-d);
+    border-radius:.6vw;padding:1.2vh 1.2vw;transform:rotate(-6deg);font-weight:800;font-size:1.1vw}
+  .stamp svg{width:3vw;height:3vw}
+  .brandsheet{align-items:center;justify-content:center;text-align:center}
+  .brandsheet .mkbox{width:15vw;height:15vw;border-radius:50%;background:var(--navy);display:grid;place-items:center}
+  .brandsheet svg.mk{width:11vw;height:11vw}
+  .brandsheet .wm{font-size:4.4vw;margin-top:2vh}
+  .brandsheet .sl{font-family:var(--disp);font-weight:700;color:var(--gold-d);font-size:2.2vw;margin-top:1.6vh}
+  .prow{display:flex;align-items:baseline;justify-content:space-between;padding:2.6vh 0;border-bottom:2px dashed var(--line);font-weight:800;font-size:1.6vw}
+  .prow b{font-family:var(--disp);font-size:3vw;letter-spacing:-.03em}
+  .prow b small{font-family:var(--body);font-size:1.1vw;color:#6B7C95;letter-spacing:0;margin-left:.4vw}
+  .notice-body{font-weight:700;font-size:1.45vw;line-height:1.55;color:#33445E}
+  .big-n{font-family:var(--disp);font-weight:800;font-size:10vw;letter-spacing:-.05em;line-height:1;color:var(--navy);margin:auto 0 1vh}
+  .scanbox{position:relative;flex:1;margin-top:1vh;border-radius:.4vw;background:var(--paper-shade);overflow:hidden}
+  .scanbox .beam{position:absolute;left:0;right:0;height:1.2vh;background:linear-gradient(180deg,transparent,rgba(224,180,76,.95),transparent);
+    animation:beam 2.2s ease-in-out infinite alternate}
+  @keyframes beam{from{top:4%}to{top:92%}}
+  .scanbox{padding:1vh 2vw}
+  .scanbox .ln{margin:2vh 0;background:#C3CEDD}
+
+  @media (prefers-reduced-motion: reduce){
+    .sheet.in{animation:none;transform:none} .sheet.out{animation:none;opacity:0}
+    .sheet.in .ink > *{animation:none;opacity:1} .news span,.scanbox .beam,.call span{animation:none}
   }
 </style>
 </head>
 <body>
 
-<svg width="0" height="0" style="position:absolute">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <clipPath id="tc"><circle cx="124" cy="146" r="38"/></clipPath>
     <symbol id="mark" viewBox="0 0 240 240">
@@ -153,232 +188,328 @@
         <path d="M113 102 Q103 146 113 190"/><path d="M124 102 L124 190"/><path d="M135 102 Q145 146 135 190"/>
       </g>
     </symbol>
+    <symbol id="tunduk" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="44" fill="none" stroke="currentColor" stroke-width="7"/>
+      <g fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round">
+        <path d="M14 39 Q50 30 86 39"/><path d="M12 50 L88 50"/><path d="M14 61 Q50 70 86 61"/>
+        <path d="M39 14 Q30 50 39 86"/><path d="M50 12 L50 88"/><path d="M61 14 Q70 50 61 86"/>
+      </g>
+    </symbol>
+    <!-- иконки услуг -->
+    <symbol id="i-print" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M18 24V8h22l6 6v10"/><rect x="8" y="24" width="48" height="22" rx="4"/><path d="M18 38h28v18H18z" fill="#fff"/>
+      <path d="M24 45h16M24 50h10"/><circle cx="48" cy="31" r="1.6" fill="currentColor"/></g></symbol>
+    <symbol id="i-copy" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M12 16h26l8 8v32H12z"/><path d="M20 8h26l8 8v32" opacity=".55"/><path d="M19 32h20M19 39h20M19 46h12"/></g></symbol>
+    <symbol id="i-scan" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M8 18V10h8M48 10h8v8M56 46v8h-8M16 54H8v-8"/><path d="M18 18h22l6 6v22H18z"/></g>
+      <path d="M6 33h52" stroke="#E0B44C" stroke-width="3.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="18" y="6" width="28" height="52" rx="5"/><path d="M28 51h8"/></g>
+      <g fill="#E0B44C"><rect x="23" y="15" width="7" height="7" rx="1"/><rect x="34" y="15" width="7" height="7" rx="1"/><rect x="23" y="26" width="7" height="7" rx="1"/><rect x="35" y="27" width="3" height="3"/><rect x="38" y="30" width="3" height="3"/></g></symbol>
+    <symbol id="i-pay" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="6" y="16" width="52" height="34" rx="5"/><path d="M6 26h52"/><path d="M14 40h12"/></g>
+      <circle cx="47" cy="40" r="5" fill="#E0B44C"/></symbol>
+    <symbol id="i-out" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M6 14h52"/><path d="M14 14v40h28l8-8V14"/><path d="M22 26h20M22 33h20M22 40h12"/></g>
+      <path d="M42 54v-8h8" fill="#E0B44C"/></symbol>
+    <symbol id="i-lid" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M6 44h52v10H6z"/><path d="M6 44L18 14h40"/></g><path d="M14 40h28" stroke="#E0B44C" stroke-width="4" stroke-linecap="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="18" y="6" width="28" height="52" rx="5"/></g>
+      <path d="M32 18v20M24 30l8 8 8-8" fill="none" stroke="#E0B44C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H6M11 6l-6 6 6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
 </svg>
 
-<!-- ═════════════ ГЛАВНЫЙ ЭКРАН ═════════════ -->
-<section id="main" class="screen bg">
-  <div class="top">
-    <div class="brand">
-      <svg><use href="#mark"/></svg>
-      <div><div class="word"><span class="a">Ак</span><span class="b">Барак</span></div><div class="tag">ПЕЧАТЬ · КОПИЯ · СКАН</div></div>
-    </div>
-    <div class="topr">
-      <div class="pill" id="pill"><i></i><span id="pilltxt">Принтер готов</span></div>
-      <div class="clock"><b id="time">--:--</b><span id="date"></span></div>
+<!-- ═══════════ ГЛАВНЫЙ ЭКРАН ═══════════ -->
+<section id="home" class="view room on">
+  <header class="bar">
+    <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
+    <div class="right"><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+  </header>
+
+  <div class="stage">
+    <div class="hello">
+      <h1>Распечатай<br>с&nbsp;телефона</h1>
+      <p>Наведи камеру на код справа или выбери услугу — покажем, что делать.</p>
+      <div class="tiles">
+        <button class="tile" onclick="openSvc('print')">
+          <div><svg><use href="#i-print"/></svg><h2>Печать</h2><div class="price"><b>5</b> сом за страницу</div></div>
+          <div class="go">PDF, Word, фото<span><svg><use href="#i-arrow"/></svg></span></div>
+        </button>
+        <button class="tile" onclick="openSvc('copy')">
+          <div><svg><use href="#i-copy"/></svg><h2>Копия</h2><div class="price"><b>6</b> сом за страницу</div></div>
+          <div class="go">Ксерокс документа<span><svg><use href="#i-arrow"/></svg></span></div>
+        </button>
+        <button class="tile" onclick="openSvc('scan')">
+          <div><svg><use href="#i-scan"/></svg><h2>Скан</h2><div class="price"><b>6</b> сом за страницу</div></div>
+          <div class="go">Файл в телефон<span><svg><use href="#i-arrow"/></svg></span></div>
+        </button>
+      </div>
     </div>
   </div>
 
-  <div class="mid">
-    <div>
-      <h1>Печать<br><em>без очереди</em></h1>
-      <div class="lead">Закажите со своего телефона — без регистрации и приложений. Оплата МБанк, О!Деньги и другие.</div>
-      <div class="steps">
-        <div class="step"><div class="n">1</div><b>Сканируй QR</b><span>Наведи камеру телефона на код справа</span></div>
-        <div class="step"><div class="n">2</div><b>Загрузи и оплати</b><span>Выбери файл и услугу, оплати онлайн</span></div>
-        <div class="step"><div class="n">3</div><b>Забери лист</b><span>Принтер напечатает через несколько секунд</span></div>
-      </div>
-      <div class="svcs">
-        <div class="svc" onclick="hint('print')"><div class="ic">📄</div><b>Печать</b><div class="p">5 <small>сом / стр</small></div></div>
-        <div class="svc" onclick="hint('copy')"><div class="ic">📋</div><b>Копия</b><div class="p">6 <small>сом / стр</small></div></div>
-        <div class="svc" onclick="hint('scan')"><div class="ic">📠</div><b>Скан</b><div class="p">6 <small>сом / стр</small></div></div>
-      </div>
-    </div>
-    <div class="qrcard">
-      <div class="h">Сканируй — печатай</div>
-      <div class="s">Камера телефона → ссылка → готово</div>
-      <div id="qr"></div>
-      <div class="url" id="url">akbarak.vercel.app</div>
-      <div class="slogan">бар ак!</div>
-    </div>
+  <div class="feeder">
+    <div class="slot"></div>
+    <div class="tray"><div class="sheet qrsheet" id="homeSheet"><div class="ink">
+      <h3 style="--i:0">Сканируй<br>и печатай</h3>
+      <div class="q" id="qrHome" style="--i:1"></div>
+      <small style="--i:2">Без регистрации и приложений.<br>Оплата МБанк, О!Деньги и другие.</small>
+      <div class="tag" style="--i:3">бар ак!</div>
+    </div></div></div>
   </div>
 
-  <div class="bottom">
-    <div class="lbl">НОВОСТИ</div>
-    <div class="ticker"><span id="ticker"></span></div>
-    <div class="stat">Сегодня напечатано: <b id="sheets">0</b> л.</div>
-  </div>
+  <footer class="foot">
+    <div class="news"><span class="js-news"></span></div>
+    <div class="count">Сегодня напечатано <b class="js-sheets">0</b> листов</div>
+  </footer>
 </section>
 
-<!-- подсказка по услуге -->
-<div class="modal hidden" id="modal" onclick="closeHint(event)">
-  <div class="box">
-    <div class="ic" id="m-ic"></div>
-    <h2 id="m-title"></h2>
-    <ol id="m-steps"></ol>
-    <button class="ok" onclick="closeHint()">Понятно</button>
+<!-- ═══════════ ЭКРАН УСЛУГИ ═══════════ -->
+<section id="svc" class="view room">
+  <header class="bar">
+    <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
+    <div class="right"><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+  </header>
+  <div class="stage">
+    <div>
+      <button class="back" onclick="goHome()"><svg><use href="#i-back"/></svg>Все услуги</button>
+      <div class="svchead"><h1 id="svcTitle">Копия</h1><div class="pr" id="svcPrice"></div></div>
+      <div class="flow">
+        <div class="pic"><svg id="svcPic"><use href="#i-phone"/></svg></div>
+        <ol class="steps" id="svcSteps"></ol>
+      </div>
+    </div>
   </div>
-</div>
+  <div class="feeder">
+    <div class="slot"></div>
+    <div class="tray"><div class="sheet qrsheet" id="svcSheet"><div class="ink">
+      <h3 style="--i:0" id="svcQrTitle">Сканируй, чтобы заказать</h3>
+      <div class="q" id="qrSvc" style="--i:1"></div>
+      <small style="--i:2" id="svcQrNote"></small>
+    </div></div></div>
+  </div>
+  <div class="timer"><div class="track"><div class="fill" id="svcFill"></div></div><span id="svcLeft"></span></div>
+</section>
 
-<!-- ═════════════ ЗАСТАВКА ═════════════ -->
-<section id="attract" class="screen bg hidden">
-  <div id="slides"></div>
-  <div class="dots" id="dots"></div>
-  <div class="touch">👆 Коснитесь экрана, чтобы начать</div>
-  <div class="corner"><div id="qr2"></div><b>Сканируй<br>и печатай</b></div>
+<!-- ═══════════ ЗАСТАВКА ═══════════ -->
+<section id="attract" class="view room">
+  <header class="bar">
+    <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
+    <div class="right"><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+  </header>
+  <div class="stage">
+    <div class="say">
+      <div><h2 id="sayH"></h2><p id="sayP"></p></div>
+      <div class="call"><div class="q" id="qrAttract"></div><div><b>Сканируй<br>и печатай</b><span>или коснись экрана</span></div></div>
+    </div>
+  </div>
+  <div class="feeder">
+    <div class="slot"></div>
+    <div class="tray"><div class="sheet" id="docSheet"><div class="ink" id="docInk"></div></div></div>
+  </div>
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
-/* ─────────────── Настройки ─────────────── */
+/* ─────────── Настройки ─────────── */
+const Q = new URLSearchParams(location.search);
 const SERVER   = "https://akbarak-production.up.railway.app";
 const SITE     = "https://akbarak.vercel.app";
-const TERMINAL = new URLSearchParams(location.search).get('t') || 'kgma-1';
-const IDLE_SEC = Number(new URLSearchParams(location.search).get('idle')) || 60; // через сколько секунд включать заставку
-const SLIDE_SEC = 8;
+const TERMINAL = Q.get('t') || 'kgma-1';
+const IDLE_SEC = Number(Q.get('idle')) || 60;     // заставка через N секунд без касаний
+const SVC_SEC  = 40;                              // экран услуги закрывается сам через N секунд
+const DOC_SEC  = 7;                               // сколько держится каждый лист в заставке
 
-// Бегущая строка и слайды-объявления. Позже будем менять их из админки.
 const NEWS = [
-  "Печать с телефона за 1 минуту — без очереди и без флешки",
-  "Скан приходит прямо в телефон — сохраните или отправьте преподавателю",
-  "Работаем без выходных",
-  "Вопросы и предложения: 0773 731 212 (WhatsApp, Telegram)",
+  "Печать с телефона за минуту — без очереди и без флешки",
+  "Скан приходит прямо в телефон: сохраните или отправьте преподавателю",
+  "Работаем каждый день",
+  "Вопросы и предложения: 0773 731 212, WhatsApp и Telegram",
 ];
+// Объявления академии. Позже будут приходить из админки.
 const NOTICES = [
-  {title: "Объявление", text: "Здесь будут объявления деканата и студсовета: расписание, сессия, мероприятия."},
+  {title: "Объявление деканата", text: "Здесь будут объявления деканата и студсовета: изменения в расписании, сроки сессии, мероприятия и конференции."},
 ];
 
-/* ─────────────── QR-коды ─────────────── */
-const ORDER_URL = SITE + "/?t=" + encodeURIComponent(TERMINAL);
-document.getElementById('url').textContent = SITE.replace('https://','');
-function makeQR(el, size){
-  try{
-    new QRCode(el, {text: ORDER_URL, width: size, height: size, colorDark: "#0F2747", colorLight: "#FFFFFF",
-                    correctLevel: QRCode.CorrectLevel.M});
-  }catch(e){ el.innerHTML = '<div style="font-weight:800;padding:2vh">' + ORDER_URL + '</div>'; }
-}
-makeQR(document.getElementById('qr'), 512);
-makeQR(document.getElementById('qr2'), 256);
+const SERVICES = {
+  print: {title: "Печать", price: "5 сом за страницу", qrTitle: "Сканируй, чтобы распечатать",
+          note: "Откроется печать на сайте АкБарак",
+          steps: [["i-phone", "Наведи камеру телефона на код справа"],
+                  ["i-pay",   "Загрузи PDF, Word или фото и оплати онлайн"],
+                  ["i-out",   "Забери лист — он выйдет здесь через несколько секунд"]]},
+  copy:  {title: "Копия", price: "6 сом за страницу", qrTitle: "Сканируй, чтобы сделать копию",
+          note: "Сначала положи лист на стекло",
+          steps: [["i-lid",   "Подними крышку, положи лист на стекло лицом вниз и закрой"],
+                  ["i-phone", "Наведи камеру на код и выбери количество копий"],
+                  ["i-out",   "Оплати онлайн — копия выйдет сама"]]},
+  scan:  {title: "Скан", price: "6 сом за страницу", qrTitle: "Сканируй, чтобы получить файл",
+          note: "Сначала положи лист на стекло",
+          steps: [["i-lid",   "Подними крышку, положи лист на стекло лицом вниз и закрой"],
+                  ["i-phone", "Наведи камеру на код и оплати онлайн"],
+                  ["i-down",  "Нажми «Скачать скан» — файл сохранится в телефон"]]},
+};
 
-/* ─────────────── Часы ─────────────── */
-const DAYS = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
-const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-function tickClock(){
+/* ─────────── Вспомогательное ─────────── */
+const $ = id => document.getElementById(id);
+const orderUrl = svc => SITE + "/?t=" + encodeURIComponent(TERMINAL) + (svc ? "&s=" + svc : "");
+function qr(el, text, size){
+  el.innerHTML = "";
+  try{ new QRCode(el, {text, width: size, height: size, colorDark: "#0F2747", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.M}); }
+  catch(e){ el.innerHTML = '<b style="font-size:1.2vw">' + text.replace('https://','') + '</b>'; }
+}
+function feed(sheet){ sheet.classList.remove('in','out','shown'); void sheet.offsetWidth; sheet.classList.add('in'); }
+
+/* ─────────── Часы и новости ─────────── */
+function clock(){
   const d = new Date();
-  document.getElementById('time').textContent = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-  document.getElementById('date').textContent = d.getDate() + ' ' + MONTHS[d.getMonth()] + ', ' + DAYS[d.getDay()];
+  const t = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  document.querySelectorAll('.js-clock').forEach(e => e.textContent = t);
 }
-tickClock(); setInterval(tickClock, 10000);
+clock(); setInterval(clock, 10000);
+document.querySelectorAll('.js-news').forEach(e => e.textContent = NEWS.join('      ✦      '));
 
-/* ─────────────── Бегущая строка ─────────────── */
-document.getElementById('ticker').textContent = NEWS.join('   •   ');
-
-/* ─────────────── Состояние принтера ─────────────── */
+/* ─────────── Состояние принтера ─────────── */
 let sheetsToday = 0;
 async function refreshInfo(){
-  const pill = document.getElementById('pill'), txt = document.getElementById('pilltxt');
+  let cls = 'chip', txt = 'Принтер готов';
   try{
     const r = await fetch(SERVER + '/terminal_info/' + encodeURIComponent(TERMINAL), {cache: 'no-store'});
     const d = await r.json();
     sheetsToday = d.sheets_today || 0;
-    document.getElementById('sheets').textContent = sheetsToday;
-    document.querySelectorAll('.js-sheets').forEach(e => e.textContent = sheetsToday);
-    if(d.printer_ok){ pill.className = 'pill'; txt.textContent = 'Принтер готов'; }
-    else if(d.online){ pill.className = 'pill warn'; txt.textContent = 'Принтер: ' + String(d.printer).replace(/^задание ждёт:\s*/, ''); }
-    else { pill.className = 'pill bad'; txt.textContent = 'Терминал временно не работает'; }
-  }catch(e){
-    pill.className = 'pill bad'; txt.textContent = 'Нет интернета';
-  }
+    if(!d.online){ cls = 'chip bad'; txt = 'Терминал временно не работает'; }
+    else if(!d.printer_ok){ cls = 'chip warn'; txt = 'Принтер: ' + String(d.printer).replace(/^задание ждёт:\s*/, ''); }
+  }catch(e){ cls = 'chip bad'; txt = 'Нет связи с интернетом'; }
+  document.querySelectorAll('.js-chip').forEach(e => e.className = cls + ' js-chip');
+  document.querySelectorAll('.js-chiptxt').forEach(e => e.textContent = txt);
+  document.querySelectorAll('.js-sheets').forEach(e => e.textContent = sheetsToday);
 }
 refreshInfo(); setInterval(refreshInfo, 20000);
 
-/* ─────────────── Подсказки по услугам ─────────────── */
-const HINTS = {
-  print: ['📄','Печать документа',['Отсканируйте QR-код камерой телефона','Выберите «Печать» и загрузите PDF или Word','Оплатите онлайн — лист выйдет здесь через несколько секунд']],
-  copy:  ['📋','Копия',['Поднимите крышку и положите лист на стекло лицом вниз','Закройте крышку и отсканируйте QR-код','Выберите «Копия», оплатите — копия выйдет сама']],
-  scan:  ['📠','Скан в телефон',['Положите лист на стекло лицом вниз и закройте крышку','Отсканируйте QR-код и выберите «Скан»','Оплатите — файл появится на телефоне, нажмите «Скачать»']],
-};
-function hint(k){
-  const [ic, title, steps] = HINTS[k];
-  document.getElementById('m-ic').textContent = ic;
-  document.getElementById('m-title').textContent = title;
-  document.getElementById('m-steps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
-  document.getElementById('modal').classList.remove('hidden');
-}
-function closeHint(e){
-  if(e && e.target && e.target.closest('.box') && !e.target.classList.contains('ok')) return;
-  document.getElementById('modal').classList.add('hidden');
+/* ─────────── Переключение экранов ─────────── */
+let view = 'home';
+function show(id){
+  ['home','svc','attract'].forEach(v => $(v).classList.toggle('on', v === id));
+  view = id;
 }
 
-/* ─────────────── Слайды заставки ─────────────── */
-function buildSlides(){
-  const S = [];
-  S.push(`<div class="slide">
-      <svg style="width:16vw;height:16vw;margin-bottom:3vh"><use href="#mark"/></svg>
-      <div class="big word"><span class="a">Ак</span><span class="b">Барак</span></div>
-      <div class="sl">— бар ак!</div>
-      <div class="t">ПЕЧАТЬ · КОПИЯ · СКАН</div></div>`);
-  S.push(`<div class="slide">
-      <h2>Нужно распечатать?<br><em>Это 3 шага</em></h2>
-      <div class="flow">
-        <div class="f"><div class="e">📱</div><b>Сканируй QR</b></div><div class="arr">→</div>
-        <div class="f"><div class="e">💳</div><b>Оплати онлайн</b></div><div class="arr">→</div>
-        <div class="f"><div class="e">📄</div><b>Забери лист</b></div>
-      </div></div>`);
-  S.push(`<div class="slide">
-      <h2>Честные <em>цены</em></h2>
-      <div class="prices">
-        <div><div class="e">📄</div><b>Печать</b><div class="p">5 <small>сом</small></div></div>
-        <div><div class="e">📋</div><b>Копия</b><div class="p">6 <small>сом</small></div></div>
-        <div><div class="e">📠</div><b>Скан</b><div class="p">6 <small>сом</small></div></div>
-      </div>
-      <p>За страницу. Оплата МБанк, О!Деньги и другие.</p></div>`);
-  NOTICES.forEach(n => S.push(`<div class="slide"><div class="notice">
-      <div class="k">${n.title.toUpperCase()}</div>
-      <h2 style="margin-top:2vh;font-size:3.6vw">${n.text}</h2></div></div>`));
-  S.push(`<div class="slide">
-      <div class="t" style="margin:0 0 2vh">СЕГОДНЯ НАПЕЧАТАНО</div>
-      <div class="counter js-sheets">${sheetsToday}</div>
-      <p>листов — без очереди и без флешки</p></div>`);
-  S.push(`<div class="slide">
-      <h2>Скан — <em>сразу в телефон</em></h2>
-      <p>Положите лист на стекло, выберите «Скан» и сохраните файл. Можно сразу отправить преподавателю.</p></div>`);
-  document.getElementById('slides').innerHTML = S.join('');
-  document.getElementById('dots').innerHTML = S.map(() => '<i></i>').join('');
+/* главный */
+qr($('qrHome'), orderUrl(), 512);
+function goHome(){
+  stopSvc(); stopAttract();
+  show('home'); feed($('homeSheet'));
+  armIdle();
 }
 
-let slideIdx = 0, slideTimer = null;
-function showSlide(i){
-  const slides = document.querySelectorAll('#slides .slide'), dots = document.querySelectorAll('#dots i');
-  slideIdx = (i + slides.length) % slides.length;
-  slides.forEach((s, k) => s.classList.toggle('on', k === slideIdx));
-  dots.forEach((d, k) => d.classList.toggle('on', k === slideIdx));
+/* экран услуги */
+let svcTick = null, stepTick = null, svcLeft = 0, blockUntil = 0;
+function openSvc(key){
+  if(Date.now() < blockUntil) return;   // касание, которое разбудило экран, не открывает услугу
+  const s = SERVICES[key];
+  $('svcTitle').textContent = s.title;
+  $('svcPrice').textContent = s.price;
+  $('svcQrTitle').textContent = s.qrTitle;
+  $('svcQrNote').textContent = s.note;
+  $('svcSteps').innerHTML = s.steps.map((st, i) => '<li><b>' + (i + 1) + '</b>' + st[1] + '</li>').join('');
+  qr($('qrSvc'), orderUrl(key), 512);
+  show('svc'); feed($('svcSheet'));
+
+  let step = 0;
+  const paint = () => {
+    document.querySelectorAll('#svcSteps li').forEach((li, i) => {
+      li.classList.toggle('now', i === step); li.classList.toggle('done', i < step);
+    });
+    const pic = $('svcPic');
+    pic.classList.add('swap');
+    setTimeout(() => { pic.innerHTML = '<use href="#' + s.steps[step][0] + '"/>'; pic.classList.remove('swap'); }, 220);
+  };
+  clearInterval(stepTick); paint();
+  stepTick = setInterval(() => { step = (step + 1) % s.steps.length; paint(); }, 3200);
+
+  svcLeft = SVC_SEC; drawTimer();
+  clearInterval(svcTick);
+  svcTick = setInterval(() => { svcLeft--; drawTimer(); if(svcLeft <= 0) goHome(); }, 1000);
+  disarmIdle();
+}
+function drawTimer(){
+  $('svcFill').style.transform = 'scaleX(' + Math.max(0, svcLeft / SVC_SEC) + ')';
+  $('svcLeft').textContent = 'Вернёмся на главный экран через ' + svcLeft + ' с';
+}
+function stopSvc(){ clearInterval(svcTick); clearInterval(stepTick); }
+
+/* ─────────── Заставка: листы выходят из принтера ─────────── */
+qr($('qrAttract'), orderUrl(), 256);
+const lines = (n, from = 0, widths = [100, 94, 98, 88, 96, 72]) =>
+  Array.from({length: n}, (_, k) => '<div class="ln" style="--i:' + (from + k) + ';width:' + widths[k % widths.length] + '%"></div>').join('');
+
+function docs(){
+  const D = [];
+  D.push({h: "Реферат на 12 страниц — за минуту", p: "Загрузил с телефона, оплатил, забрал. Без очереди в копицентре.",
+    html: '<div class="doc-h" style="--i:0">Анатомия сердца</div><div class="doc-sub" style="--i:1">Реферат, 12 страниц</div>' + lines(9, 2) +
+          '<div class="stamp" style="--i:12"><svg><use href="#tunduk"/></svg>Напечатано<br>за 40 секунд</div>'});
+  D.push({h: "Белый лист всегда есть", p: "«Ак барак» — белый лист. «Бар ак!» — он есть: печать рядом с аудиторией.",
+    cls: 'brandsheet', html: '<div class="mkbox" style="--i:0"><svg class="mk"><use href="#mark"/></svg></div><div class="wm" style="--i:1"><span class="a">Ак</span>Барак</div><div class="sl" style="--i:2">бар ак!</div>'});
+  D.push({h: "Цены за страницу", p: "Оплата онлайн: МБанк, О!Деньги и другие. Сумму видно до оплаты.",
+    html: '<div class="doc-h" style="--i:0">Прайс</div>' +
+          '<div class="prow" style="--i:1">Печать <b>5<small>сом</small></b></div>' +
+          '<div class="prow" style="--i:2">Копия <b>6<small>сом</small></b></div>' +
+          '<div class="prow" style="--i:3">Скан в телефон <b>6<small>сом</small></b></div>'});
+  NOTICES.forEach(n => D.push({h: "Новости академии", p: "Объявления деканата и студсовета — на этом экране.",
+    html: '<div class="doc-h" style="--i:0">' + n.title + '</div>' + lines(1, 1, [40]) + '<div class="notice-body" style="--i:2;margin-top:2vh">' + n.text + '</div>' +
+          '<div class="stamp" style="--i:4"><svg><use href="#tunduk"/></svg>КГМА</div>'}));
+  D.push({h: "Скан — сразу в телефон", p: "Положи лист на стекло, выбери «Скан» и сохрани файл. Можно сразу отправить преподавателю.",
+    html: '<div class="doc-h" style="--i:0">Скан</div><div class="doc-sub" style="--i:1">приходит файлом на телефон</div>' +
+          '<div class="scanbox" style="--i:2"><div class="beam"></div>' + lines(7, 0) + '</div>'});
+  if(sheetsToday > 0) D.push({h: "Нами уже пользуются", p: "Столько листов студенты напечатали здесь сегодня.",
+    html: '<div class="doc-h" style="--i:0">Сегодня напечатано</div>' + lines(3, 1, [100, 80, 90]) +
+          '<div class="big-n" style="--i:4">' + sheetsToday + '</div><div class="doc-sub" style="--i:5">листов в этом терминале</div>'});
+  return D;
 }
 
-/* ─────────────── Режимы: главный ↔ заставка ─────────────── */
-let idleTimer = null, attractOn = false;
+let docIdx = 0, docTimer = null, attractOn = false;
+function printDoc(){
+  const list = docs(), d = list[docIdx % list.length], sheet = $('docSheet');
+  sheet.classList.add('out');
+  $('sayH').classList.add('fade'); $('sayP').classList.add('fade');
+  setTimeout(() => {
+    $('docInk').className = 'ink ' + (d.cls || '');
+    $('docInk').innerHTML = d.html;
+    $('sayH').textContent = d.h; $('sayP').textContent = d.p;
+    $('sayH').classList.remove('fade'); $('sayP').classList.remove('fade');
+    feed(sheet);
+    docIdx++;
+  }, attractOn && docIdx ? 900 : 0);
+}
 function startAttract(){
   if(attractOn) return;
-  attractOn = true;
-  closeHint();
-  buildSlides(); showSlide(0);
-  document.getElementById('attract').classList.remove('hidden');
-  slideTimer = setInterval(() => showSlide(slideIdx + 1), SLIDE_SEC * 1000);
+  stopSvc(); attractOn = true; docIdx = 0;
+  show('attract'); printDoc();
+  docTimer = setInterval(printDoc, DOC_SEC * 1000);
 }
-function stopAttract(){
-  if(!attractOn) return;
-  attractOn = false;
-  clearInterval(slideTimer);
-  document.getElementById('attract').classList.add('hidden');
-}
-function activity(){
-  if(attractOn){ stopAttract(); }
-  clearTimeout(idleTimer);
-  idleTimer = setTimeout(startAttract, IDLE_SEC * 1000);
-}
-['pointerdown','touchstart','keydown','mousemove'].forEach(ev =>
-  document.addEventListener(ev, activity, {passive: true}));
-activity();
+function stopAttract(){ attractOn = false; clearInterval(docTimer); }
 
-/* ─────────────── Защита киоска ─────────────── */
+/* ─────────── Простой и касания ─────────── */
+let idleTimer = null;
+function armIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(startAttract, IDLE_SEC * 1000); }
+function disarmIdle(){ clearTimeout(idleTimer); }
+function activity(e){
+  if(view === 'attract'){ blockUntil = Date.now() + 600; goHome(); return; }
+  if(view === 'svc'){ svcLeft = SVC_SEC; drawTimer(); return; }
+  armIdle();
+}
+document.addEventListener('pointerdown', activity);
+document.addEventListener('keydown', activity);
+
+/* ─────────── Защита киоска ─────────── */
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('wheel', e => { if(e.ctrlKey) e.preventDefault(); }, {passive: false});
-document.addEventListener('keydown', e => {
-  if(e.ctrlKey && ['+','-','=','0'].includes(e.key)) e.preventDefault();
-});
-// Раз в 6 часов перезагружаемся, когда никто не пользуется (подтянуть обновления сайта)
-setInterval(() => { if(attractOn) location.reload(); }, 6 * 60 * 60 * 1000);
+document.addEventListener('keydown', e => { if(e.ctrlKey && ['+','-','=','0'].includes(e.key)) e.preventDefault(); });
+setInterval(() => { if(view === 'attract') location.reload(); }, 6 * 60 * 60 * 1000);
+
+goHome();
 </script>
 </body>
 </html>
