@@ -1,0 +1,6 @@
+worker_key.txt
+akbarak_worker.log*
+__pycache__/
+*.pyc
+orders.db*
+order_files/
