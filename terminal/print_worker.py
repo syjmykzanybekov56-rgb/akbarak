@@ -185,6 +185,112 @@ def to_printable(path):
     return None
 
 
+# ─────────────────────── Очередь печати Windows ───────────────────────
+# SumatraPDF возвращает «успех», как только отдал задание в очередь Windows.
+# Многие принтеры (в том числе Pantum) не сообщают Windows, что кончилась бумага:
+# задание просто висит в очереди. Поэтому после отправки следим за самим заданием
+# и считаем заказ выполненным только когда задание ушло из очереди.
+
+JOB_WAIT_MAX = 10 * 60      # сколько ждать, пока задание напечатается (сек)
+JOB_PROBLEM_FLAGS = [       # флаги Windows JOB_STATUS_*
+    (0x00000002, "ошибка"),
+    (0x00000020, "принтер не на связи"),
+    (0x00000040, "нет бумаги"),
+    (0x00000200, "задание заблокировано"),
+    (0x00000400, "нужно вмешательство"),
+]
+
+
+def _open_printer():
+    import win32print
+    return win32print.OpenPrinter(PRINTER_NAME)
+
+
+def queue_jobs():
+    """Список заданий в очереди Windows или None, если проверить нельзя."""
+    try:
+        import win32print
+        h = _open_printer()
+        try:
+            return list(win32print.EnumJobs(h, 0, 999, 1))
+        finally:
+            win32print.ClosePrinter(h)
+    except ImportError:
+        return None
+    except Exception as e:
+        log.warning("Не удалось прочитать очередь печати: %s", e)
+        return None
+
+
+def job_problem(job):
+    return ", ".join(text for flag, text in JOB_PROBLEM_FLAGS if job.get("Status", 0) & flag)
+
+
+def cancel_jobs(job_ids):
+    try:
+        import win32print
+        h = _open_printer()
+        try:
+            for jid in job_ids:
+                try:
+                    win32print.SetJob(h, jid, 0, None, win32print.JOB_CONTROL_DELETE)
+                except Exception as e:
+                    log.warning("Не удалось удалить задание %s: %s", jid, e)
+        finally:
+            win32print.ClosePrinter(h)
+    except Exception as e:
+        log.warning("Не удалось открыть очередь для удаления: %s", e)
+
+
+def queue_problem():
+    """Описание проблемы, если в очереди Windows висят старые или ошибочные задания."""
+    jobs = queue_jobs()
+    if not jobs:
+        return None
+    bad = [job_problem(j) for j in jobs if job_problem(j)]
+    if bad:
+        return f"в очереди Windows задание с ошибкой ({bad[0]})"
+    return f"в очереди Windows висит заданий: {len(jobs)}"
+
+
+def wait_for_jobs(before_ids, doc_name):
+    """Ждём, пока наше задание напечатается. None — успех, иначе текст ошибки."""
+    # 1) находим своё задание (новое по сравнению со снимком до печати)
+    ours = []
+    for _ in range(10):
+        jobs = queue_jobs()
+        if jobs is None:
+            return None  # pywin32 нет — проверить нельзя, верим SumatraPDF
+        ours = [j["JobId"] for j in jobs
+                if j["JobId"] not in before_ids or doc_name in (j.get("pDocument") or "")]
+        if ours:
+            break
+        time.sleep(0.5)
+    if not ours:
+        return None  # задание сразу ушло в принтер
+
+    # 2) ждём, пока оно уйдёт из очереди
+    start, last_problem = time.time(), None
+    while time.time() - start < JOB_WAIT_MAX:
+        jobs = {j["JobId"]: j for j in (queue_jobs() or [])}
+        left = [jid for jid in ours if jid in jobs]
+        if not left:
+            return None
+        problem = job_problem(jobs[left[0]]) or printer_status()
+        if problem == "ok":
+            problem = None
+        waited = int(time.time() - start)
+        if problem != last_problem or (waited and waited % 60 < 2):
+            msg = problem or "задание ещё в очереди"
+            log.warning("⏳ Ждём печать (%s с): %s", waited, msg)
+            send_heartbeat(f"задание ждёт: {msg}")
+            last_problem = problem
+        time.sleep(2)
+
+    cancel_jobs(ours)
+    return f"не напечатано за {JOB_WAIT_MAX // 60} мин (нет бумаги или принтер не отвечает), задание снято"
+
+
 def print_file(path, copies=1, page_range=None):
     """Возвращает None при успехе или текст ошибки."""
     if not os.path.exists(SUMATRA):
@@ -193,12 +299,15 @@ def print_file(path, copies=1, page_range=None):
     if page_range:
         settings += f",{page_range}"
     cmd = [SUMATRA, "-print-to", PRINTER_NAME, "-print-settings", settings, "-silent", path]
+    before_ids = {j["JobId"] for j in (queue_jobs() or [])}
     log.info("Печать: %s", " ".join(cmd))
     try:
         result = subprocess.run(cmd, timeout=180)
     except subprocess.TimeoutExpired:
         return "SumatraPDF не ответил за 3 минуты"
-    return None if result.returncode == 0 else f"SumatraPDF вернул код {result.returncode}"
+    if result.returncode != 0:
+        return f"SumatraPDF вернул код {result.returncode}"
+    return wait_for_jobs(before_ids, os.path.basename(path))
 
 
 def _remove(*paths):
@@ -348,6 +457,8 @@ def main():
     while True:
         try:
             status = printer_status()
+            if status == "ok":
+                status = queue_problem() or "ok"
             if time.time() - last_beat > HEARTBEAT_INTERVAL or status != last_status:
                 send_heartbeat(status)
                 last_beat, last_status = time.time(), status
