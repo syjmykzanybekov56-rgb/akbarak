@@ -29,7 +29,7 @@ TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
 SCAN_DPI = 150
-COPY_DPI = 200
+COPY_DPI = 300
 
 LIBREOFFICE_PATHS = [
     r"C:\Program Files\LibreOffice\program\soffice.exe",
@@ -322,49 +322,98 @@ def _remove(*paths):
 # ─────────────────────── Сканер ───────────────────────
 
 
-def scan_to_jpeg(order_id, dpi):
-    """Сканирует лист со стекла. Возвращает путь к JPEG (до 1 МБ) или None."""
+WIA_BMP = "{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}"
+WIA_INTENT_GRAYSCALE = 2    # 1 — цвет, 2 — оттенки серого, 4 — текст (ч/б)
+
+
+def _connect_scanner():
+    import win32com.client
+    dm = win32com.client.Dispatch("WIA.DeviceManager")
+    for i in range(dm.DeviceInfos.Count):
+        info = dm.DeviceInfos.Item(i + 1)
+        if info.Type == 1:  # сканер
+            return info.Connect()
+    return None
+
+
+def _set_prop(item, name, value):
     try:
-        import win32com.client
+        item.Properties(name).Value = value
+        return True
+    except Exception as e:
+        log.info("Сканер: «%s» = %s не поддерживается (%s)", name, value, getattr(e, "args", [e])[0])
+        return False
+
+
+def _supported_dpi(item, wanted):
+    """Ближайшее к wanted разрешение из тех, что поддерживает сканер."""
+    try:
+        prop = item.Properties("Horizontal Resolution")
+        if prop.SubType == 2:  # список значений
+            values = [int(v) for v in prop.SubTypeValues]
+        elif prop.SubType == 1:  # диапазон
+            lo, hi, step = int(prop.SubTypeMin), int(prop.SubTypeMax), int(prop.SubTypeStep or 1)
+            values = [v for v in (100, 150, 200, 300, 600) if lo <= v <= hi and (v - lo) % step == 0]
+        else:
+            values = []
+        if values:
+            return min(values, key=lambda v: abs(v - wanted))
+    except Exception:
+        pass
+    return wanted
+
+
+def scan_to_jpeg(order_id, dpi):
+    """Сканирует лист со стекла. Возвращает путь к JPEG (до 1 МБ) или None.
+    Первая попытка — с нашими настройками, вторая — с заводскими настройками сканера."""
+    try:
         from PIL import Image
+    except ImportError:
+        log.error("Не установлен pillow: pip install pillow")
+        return None
 
-        dm = win32com.client.Dispatch("WIA.DeviceManager")
-        scanner = None
-        for i in range(dm.DeviceInfos.Count):
-            info = dm.DeviceInfos.Item(i + 1)
-            if info.Type == 1:
-                scanner = info.Connect()
-                break
-        if not scanner:
-            log.error("Сканер не найден!")
-            return None
-
-        item = scanner.Items(1)
+    tmp_path = os.path.join(tempfile.gettempdir(), f"scan_{order_id}.bmp")
+    for attempt in (1, 2):
         try:
-            item.Properties("Horizontal Resolution").Value = dpi
-            item.Properties("Vertical Resolution").Value = dpi
-            item.Properties("Current Intent").Value = 4  # оттенки серого
+            scanner = _connect_scanner()
+            if not scanner:
+                log.error("Сканер не найден! Проверьте, что принтер включён и драйвер сканера установлен.")
+                return None
+            item = scanner.Items(1)
+            if attempt == 1:
+                use_dpi = _supported_dpi(item, dpi)
+                _set_prop(item, "Current Intent", WIA_INTENT_GRAYSCALE)
+                _set_prop(item, "Horizontal Resolution", use_dpi)
+                _set_prop(item, "Vertical Resolution", use_dpi)
+            image = item.Transfer(WIA_BMP)
+            _remove(tmp_path)
+            image.SaveFile(tmp_path)
+            if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
+                raise RuntimeError("сканер вернул пустой файл")
+            break
         except Exception as e:
-            log.warning("Настройки сканера: %s", e)
+            log.warning("Сканирование, попытка %s не удалась: %s", attempt, e)
+            if attempt == 2:
+                log.error("Сканер не ответил. Проверьте: крышка закрыта, сканер не занят "
+                          "программой Pantum, принтер подключён (лучше по USB).")
+                return None
+            time.sleep(3)
 
-        image = item.Transfer("{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}")
-        tmp_path = os.path.join(tempfile.gettempdir(), f"scan_{order_id}.jpg")
-        _remove(tmp_path)
-        image.SaveFile(tmp_path)
-        if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
-            return None
-
-        img = Image.open(tmp_path).convert("RGB")
+    try:
+        img = Image.open(tmp_path).convert("L")  # оттенки серого
+        jpg_path = os.path.join(tempfile.gettempdir(), f"scan_{order_id}.jpg")
         quality = 85
         while quality > 20:
-            img.save(tmp_path, "JPEG", quality=quality)
-            if os.path.getsize(tmp_path) <= 1024 * 1024:
+            img.save(jpg_path, "JPEG", quality=quality)
+            if os.path.getsize(jpg_path) <= 1024 * 1024:
                 break
             quality -= 15
-        return tmp_path
+        return jpg_path
     except Exception as e:
-        log.exception("Ошибка сканирования: %s", e)
+        log.exception("Ошибка обработки скана: %s", e)
         return None
+    finally:
+        _remove(tmp_path)
 
 
 # ─────────────────────── Обработка заказов ───────────────────────
