@@ -23,6 +23,10 @@ GOPAY_API_KEY = os.getenv("GOPAY_API_KEY", "")
 GOPAY_SECRET = os.getenv("GOPAY_SECRET", "")
 GOPAY_WEBHOOK_SECRET = os.getenv("GOPAY_WEBHOOK_SECRET", "")
 GOPAY_BASE_URL = os.getenv("GOPAY_BASE_URL", "https://api.gopay.kg/v1")
+# Имя поля, в котором GoPay принимает адрес возврата после оплаты (смотрите в документации
+# кабинета GoPay, например "return_url" или "success_url"). Пока пусто — поле не отправляем,
+# чтобы GoPay не отклонил платёж из-за незнакомого параметра.
+GOPAY_RETURN_FIELD = os.getenv("GOPAY_RETURN_FIELD", "").strip()
 
 
 def _sign(body: str, nonce: str, secret: str) -> str:
@@ -41,7 +45,7 @@ def _headers(body: str) -> dict:
     }
 
 
-def create_payment(order_id: int, amount_som: int, description: str = ""):
+def create_payment(order_id: int, amount_som: int, description: str = "", return_url: str = ""):
     """Создаёт платёж в GoPay. Возвращает dict с payment_id и checkout_url, либо None при ошибке."""
     payload = {
         "amount": amount_som,
@@ -49,6 +53,8 @@ def create_payment(order_id: int, amount_som: int, description: str = ""):
         "order_id": f"{order_id}-{secrets.token_hex(4)}",  # уникально на каждую попытку оплаты — GoPay не разрешает повторы
         "description": description or f"АкБарак заказ #{order_id}",
     }
+    if GOPAY_RETURN_FIELD and return_url:
+        payload[GOPAY_RETURN_FIELD] = return_url
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     try:
         resp = requests.post(

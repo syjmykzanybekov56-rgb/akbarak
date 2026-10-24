@@ -63,6 +63,7 @@ COLOR_ENABLED = os.getenv("COLOR_ENABLED", "0") == "1"
 NO_COLOR_MSG = "Цветная печать и фото пока недоступны — сейчас только ч/б"
 FILE_TTL_HOURS = int(os.getenv("FILE_TTL_HOURS", "24"))
 DEFAULT_TERMINAL = os.getenv("DEFAULT_TERMINAL", "kgma-1")
+SITE_URL = os.getenv("SITE_URL", "https://akbarak.vercel.app").rstrip("/")
 
 OFFLINE_ALERT_MIN = 5      # терминал молчит дольше — уведомление
 STUCK_ALERT_MIN = 10       # оплаченный заказ не напечатан дольше — уведомление
@@ -322,6 +323,7 @@ def upload():
             unit = PRICES[f"print_{print_type}"]
 
         group_id = uuid.uuid4().hex
+        token = secrets.token_urlsafe(16)  # один ключ на весь заказ — для страницы статуса
         status = "pending_payment" if is_online_payment(payment) else "new"
         order_ids, grand_total, saved = [], 0, []
 
@@ -354,10 +356,10 @@ def upload():
                 grand_total += total
                 cur = conn.execute(
                     "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, "
-                    "page_range, status, created_at, group_id, terminal_id, order_type, photo_format) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "page_range, status, created_at, group_id, terminal_id, order_type, photo_format, access_token) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (file.filename, file_path, print_type, pages, copies, total, payment, rng, status,
-                     now(), group_id, terminal, order_type, photo_format or None))
+                     now(), group_id, terminal, order_type, photo_format or None, token))
                 order_ids.append(cur.lastrowid)
             conn.commit()
         except ValueError as e:
@@ -369,7 +371,7 @@ def upload():
             conn.close()
 
         return jsonify({"success": True, "order_ids": order_ids, "order_id": order_ids[0],
-                        "group_id": group_id, "total": grand_total})
+                        "group_id": group_id, "total": grand_total, "token": token})
     except Exception as e:
         log.exception("upload")
         return jsonify({"error": str(e)}), 500
@@ -436,7 +438,9 @@ def create_payment(order_id):
             return jsonify({"error": "Заказ уже оплачен или отменён"}), 409
 
         amount = sum(r["total"] for r in rows)
-        payment = gopay.create_payment(order_id, amount, f"АкБарак заказ #{order_id}")
+        tok = conn.execute("SELECT access_token FROM orders WHERE id=?", (order_id,)).fetchone()
+        return_url = f"{SITE_URL}/?order={order_id}&token={tok['access_token']}" if tok and tok["access_token"] else SITE_URL
+        payment = gopay.create_payment(order_id, amount, f"АкБарак заказ #{order_id}", return_url=return_url)
         if not payment or not payment.get("payment_id"):
             conn.close()
             return jsonify({"error": "Не удалось создать платёж в GoPay"}), 502
@@ -630,6 +634,55 @@ def scan_upload(order_id):
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+
+@app.route("/order_status/<int:order_id>", methods=["GET"])
+def order_status(order_id):
+    """Статус заказа для страницы «Мой заказ». Доступ — только по ключу заказа."""
+    token = request.args.get("token", "")
+    conn = db()
+    try:
+        row = conn.execute("SELECT group_id, access_token, terminal_id FROM orders WHERE id=?",
+                           (order_id,)).fetchone()
+        if not row or not row["access_token"] or not secrets.compare_digest(token, row["access_token"]):
+            return jsonify({"error": "Заказ не найден"}), 404
+        items = conn.execute(
+            "SELECT id, order_type, status, pages, copies, total, error, refund, "
+            "(scan_data IS NOT NULL) AS has_scan FROM orders WHERE group_id=? ORDER BY id",
+            (row["group_id"],)).fetchall()
+        term = conn.execute("SELECT last_seen, printer_status FROM terminals WHERE id=?",
+                            (row["terminal_id"],)).fetchone()
+    finally:
+        conn.close()
+
+    statuses = [i["status"] for i in items]
+    if any(s == "pending_payment" for s in statuses):
+        overall = "pending_payment"
+    elif any(s == "cancelled" for s in statuses):
+        overall = "cancelled"
+    elif any(s == "failed" for s in statuses):
+        overall = "failed"
+    elif all(s in ("done", "scan_ready") for s in statuses):
+        overall = "done"
+    elif any(s == "printing" for s in statuses):
+        overall = "printing"
+    else:
+        overall = "paid"
+
+    printer = None
+    if term:
+        printer = term["printer_status"] if term["printer_status"] not in (None, "ok") else "ok"
+    return jsonify({
+        "order_id": order_id,
+        "status": overall,
+        "type": items[0]["order_type"] if items else "print",
+        "total": sum(i["total"] for i in items),
+        "files": len(items),
+        "scan_ready": any(i["has_scan"] for i in items),
+        "refund": next((i["refund"] for i in items if i["refund"]), ""),
+        "error": next((i["error"] for i in items if i["error"]), None),
+        "printer": printer,
+    })
 
 
 def _scan_row(order_id):

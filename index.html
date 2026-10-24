@@ -183,6 +183,17 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 
 /* ── SUCCESS ── */
 .success-wrap{padding:60px 20px 40px;text-align:center}
+.st-steps{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 22px;max-width:320px}
+.st-step{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.35);min-width:56px}
+.st-step i{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2)}
+.st-step.on{color:var(--white)} .st-step.on i{background:var(--gold);border-color:var(--gold)}
+.st-step.now i{animation:stpulse 1.2s infinite}
+@keyframes stpulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.6)}50%{box-shadow:0 0 0 8px rgba(245,166,35,0)}}
+.st-line{flex:1;height:2px;background:rgba(255,255,255,0.12);margin-bottom:18px}
+.st-warn{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700;line-height:1.5;margin:0 0 16px;text-align:left}
+.st-btn{display:block;width:100%;padding:16px;border-radius:16px;border:none;background:#22c55e;color:#fff;font-size:15px;font-weight:900;text-align:center;text-decoration:none;cursor:pointer;margin-bottom:10px}
+.st-btn.gold{background:var(--gold);color:#000}
+
 .success-anim{font-size:64px;display:block;margin-bottom:24px;animation:bounce 1.5s ease-in-out infinite}
 @keyframes bounce{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-12px) rotate(5deg)}}
 .success-ring{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--dark));margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:44px;border:2px solid rgba(245,166,35,0.3)}
@@ -672,25 +683,23 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ SUCCESS ═══════════════════ -->
   <div id="s-success" class="screen">
     <div class="success-wrap">
-      <span class="success-anim">🖨</span>
-      <div class="success-ring">✅</div>
-      <div class="success-ttl">Заказ принят!</div>
-      <div class="success-sub" id="success-msg">Переведи оплату на указанный номер.<br>Готово через <b>1–2 минуты</b> 📄</div>
+      <span class="success-anim" id="st-icon">⏳</span>
+      <div class="success-ttl" id="st-title">Проверяем заказ…</div>
+      <div class="success-sub" id="st-text">Секунду…</div>
       <div class="order-badge">
         <div class="order-lbl">ЗАКАЗ</div>
-        <div class="order-num" id="order-num">#0001</div>
+        <div class="order-num" id="order-num">#—</div>
       </div>
-      <div id="scan-download-wrap" style="display:none;margin:0 0 20px">
-        <a id="scan-download-btn" href="#" 
-          style="display:block;width:100%;padding:16px;border-radius:16px;background:#1a3a5c;color:#fff;font-size:15px;font-weight:800;text-align:center;text-decoration:none;transition:all .2s"
-          download>Ожидаем скан...</a>
+      <div class="st-steps" id="st-steps">
+        <div class="st-step" data-k="pay"><i></i><span>Оплата</span></div>
+        <div class="st-line"></div>
+        <div class="st-step" data-k="work"><i></i><span id="st-work-lbl">Печать</span></div>
+        <div class="st-line"></div>
+        <div class="st-step" data-k="done"><i></i><span>Готово</span></div>
       </div>
-      <div id="scan-download-wrap" style="display:none;padding:0 20px 16px">
-        <a id="scan-download-btn" href="#" 
-          style="display:block;width:100%;padding:16px;border-radius:16px;background:#1a5c3a;color:#fff;font-size:15px;font-weight:800;text-align:center;text-decoration:none"
-          download>⏳ Ожидаем скан...</a>
-      </div>
-      <div class="cta"><button class="cta-btn dark" onclick="go('s-home')">На главную</button></div>
+      <div class="st-warn" id="st-warn" style="display:none"></div>
+      <div id="st-actions" style="margin:0 0 14px"></div>
+      <div class="cta"><button class="cta-btn dark" onclick="newOrder()">Новый заказ</button></div>
     </div>
   </div>
 
@@ -839,6 +848,124 @@ function updateClock(){
   document.querySelectorAll('#clock,#c2').forEach(el=>el&&(el.textContent=t));
 }
 updateClock(); setInterval(updateClock, 30000);
+
+// ─────────── Мой заказ: статус после оплаты ───────────
+// Заказ запоминается в браузере, а GoPay может вернуть на сайт с ?order=..&token=..
+// Когда студент открывает сайт, он сразу видит свой заказ и его состояние.
+let stTimer = null, stOrder = null;
+
+function rememberOrder(id, token){
+  if(!id || !token) return;
+  try{ localStorage.setItem('akbarak_last', JSON.stringify({id, token, ts: Date.now()})); }catch(e){}
+}
+function forgetOrder(){ try{ localStorage.removeItem('akbarak_last'); }catch(e){} }
+
+function newOrder(){
+  if(stTimer){ clearInterval(stTimer); stTimer = null; }
+  forgetOrder();
+  const t = new URLSearchParams(location.search).get('t');
+  try{ history.replaceState(null, '', location.pathname + (t ? '?t='+encodeURIComponent(t) : '')); }catch(e){}
+  go('s-home');
+}
+
+const ST_TEXT = {
+  pending_payment: ['⏳','Ждём оплату','Если вы уже оплатили — подождите несколько секунд, статус обновится сам.'],
+  paid:            ['🖨','Оплачено!','Отправляем заказ на принтер…'],
+  printing:        ['🖨','Печатается…','Подойдите к принтеру АкБарак — лист сейчас выйдет.'],
+  done:            ['✅','Готово!','Заберите документ у принтера. Спасибо! <b>Бар ак!</b>'],
+  failed:          ['⚠️','Не получилось','С заказом что-то пошло не так.'],
+  cancelled:       ['✖️','Заказ отменён','Этот заказ отменён.'],
+};
+
+function renderStatus(d){
+  const type = d.type || 'print';
+  let [icon, title, text] = ST_TEXT[d.status] || ST_TEXT.paid;
+  if(type === 'copy'){
+    if(d.status === 'printing'){ title = 'Копируем…'; text = 'Не поднимайте крышку, пока копия не выйдет.'; }
+    if(d.status === 'paid') text = 'Положите лист на стекло лицом вниз и закройте крышку.';
+  }
+  if(type === 'scan'){
+    if(d.status === 'paid'){ text = 'Положите лист на стекло лицом вниз и закройте крышку.'; }
+    if(d.status === 'printing'){ icon = '📠'; title = 'Сканируем…'; text = 'Не поднимайте крышку несколько секунд.'; }
+    if(d.status === 'done'){ icon = '📄'; title = 'Скан готов!'; text = 'Нажмите кнопку ниже, чтобы сохранить файл в телефон.'; }
+  }
+  if(d.status === 'failed'){
+    text = d.refund === 'needed' || d.refund === 'done'
+      ? 'Заказ не выполнен. Деньги вернём — если остались вопросы, напишите нам: <b>0773 731 212</b>.'
+      : 'Заказ не выполнен. Напишите нам: <b>0773 731 212</b>.';
+  }
+  document.getElementById('st-icon').textContent = icon;
+  document.getElementById('st-title').textContent = title;
+  document.getElementById('st-text').innerHTML = text;
+  document.getElementById('order-num').textContent = '#' + String(d.order_id).padStart(4,'0');
+  document.getElementById('st-work-lbl').textContent = type === 'scan' ? 'Скан' : (type === 'copy' ? 'Копия' : 'Печать');
+
+  const stage = {pending_payment:0, paid:1, printing:1, done:3, failed:1}[d.status] ?? -1;
+  const final = ['done','failed','cancelled'].includes(d.status);
+  document.querySelectorAll('#st-steps .st-step').forEach((el, i) => {
+    el.classList.toggle('on', i < stage || d.status === 'done');
+    el.classList.toggle('now', i === stage && !final);
+  });
+
+  const warn = document.getElementById('st-warn');
+  const busy = ['paid','printing'].includes(d.status);
+  if(busy && d.printer && d.printer !== 'ok'){
+    warn.style.display = 'block';
+    warn.innerHTML = '⚠️ Принтер: ' + String(d.printer).replace(/^задание ждёт:\s*/, '') + '. Мы уже знаем — заказ выполнится, как только это исправят.';
+  } else warn.style.display = 'none';
+
+  const act = document.getElementById('st-actions');
+  act.innerHTML = '';
+  if(d.status === 'pending_payment'){
+    act.innerHTML = '<button class="st-btn gold" onclick="goToGoPayCheckout(' + d.order_id + ')">Оплатить ' + d.total + ' сом</button>';
+  }
+  if(type === 'scan' && d.scan_ready && stOrder){
+    act.innerHTML = '<a class="st-btn" download href="' + SERVER + '/scan_download/' + stOrder.id +
+      '?token=' + encodeURIComponent(stOrder.token) + '">⬇ Скачать скан</a>';
+  }
+}
+
+async function checkStatus(){
+  if(!stOrder) return null;
+  try{
+    const r = await fetch(SERVER + '/order_status/' + stOrder.id + '?token=' + encodeURIComponent(stOrder.token));
+    if(r.status === 404){ forgetOrder(); return null; }
+    const d = await r.json();
+    renderStatus(d);
+    const final = ['done','failed','cancelled'].includes(d.status);
+    if(final && stTimer){ clearInterval(stTimer); stTimer = null; }
+    return d;
+  }catch(e){ return null; }
+}
+
+async function openStatus(id, token, fromLink){
+  stOrder = {id, token};
+  const d = await checkStatus();
+  if(!d) return;
+  // Человек просто открыл сайт: не мешаем новому заказу старыми.
+  // Показываем только заказ «в работе», свежий результат (до 15 мин) или готовый скан.
+  if(!fromLink){
+    let saved = {}; try{ saved = JSON.parse(localStorage.getItem('akbarak_last')||'{}'); }catch(e){}
+    const age = Date.now() - (saved.ts || 0);
+    const final = ['done','failed','cancelled'].includes(d.status);
+    const keep = d.status === 'pending_payment' ? age < 60*60*1000
+               : !final || age < 15*60*1000 || (d.type === 'scan' && d.scan_ready);
+    if(!keep){ forgetOrder(); return; }
+  }
+  go('s-success');
+  if(stTimer) clearInterval(stTimer);
+  stTimer = setInterval(checkStatus, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const q = new URLSearchParams(location.search);
+  const id = q.get('order'), token = q.get('token');
+  if(id && token){ rememberOrder(id, token); openStatus(id, token, true); return; }
+  let saved = null; try{ saved = JSON.parse(localStorage.getItem('akbarak_last')||'null'); }catch(e){}
+  if(saved && saved.id && saved.token && Date.now() - (saved.ts || 0) < 24*60*60*1000){
+    openStatus(saved.id, saved.token, false);
+  }
+});
 
 function go(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -1059,44 +1186,6 @@ function recalcScan(){
   document.getElementById('v-pay-scan').innerHTML=t+' <span>сом</span>';
 }
 
-function showSuccess(type){
-  orderCount++;
-  document.getElementById('order-num').textContent='#'+String(orderCount).padStart(4,'0');
-  const msgs={
-    print:'Переведи оплату на указанный номер.<br>Забери документ у принтера через <b>1–2 минуты</b> 🖨',
-    copy:'Переведи оплату.<br>Копия выйдет автоматически через <b>1–2 минуты</b> 📋',
-    scan:'Переведи оплату.<br>Скан готовится. Нажми кнопку ниже чтобы скачать 📄',
-    photo:'Переведи оплату.<br>Фото будут готовы через <b>3–5 минут</b> 🪪'
-  };
-  document.getElementById('success-msg').innerHTML=msgs[type]||msgs.print;
-  addNotif('Заказ #'+String(orderCount).padStart(4,'0')+' принят!');
-  
-  if(type === 'scan'){
-    document.getElementById('scan-download-wrap').style.display = 'block';
-    document.getElementById('scan-download-btn').href = '#';
-    document.getElementById('scan-download-btn').textContent = 'Ожидаем скан...';
-    // Опрашиваем сервер каждые 5 секунд
-    let saved = {}; try{ saved = JSON.parse(localStorage.getItem('akbarak_scan')||'{}'); }catch(e){}
-    const scanOrderId = saved.id, scanToken = saved.token;
-    const checkScan = setInterval(async () => {
-      try {
-        const r = await fetch(SERVER+'/scan_status/'+scanOrderId+'?token='+encodeURIComponent(scanToken));
-        const d = await r.json();
-        if(d.ready){
-          clearInterval(checkScan);
-          const btn = document.getElementById('scan-download-btn');
-          btn.href = SERVER+'/scan_download/'+scanOrderId+'?token='+encodeURIComponent(scanToken);
-          btn.textContent = 'Скачать скан';
-          btn.style.background = '#22c55e';
-        }
-      } catch(e){}
-    }, 5000);
-  } else {
-    document.getElementById('scan-download-wrap').style.display = 'none';
-  }
-  
-  go('s-success');
-}
 
 // Если payment === 'gopay': создаёт платёж в GoPay и переводит на страницу оплаты.
 // Печать запустится автоматически на сервере, как только GoPay подтвердит оплату —
@@ -1117,6 +1206,7 @@ async function sendOrder(url, opts){
 }
 
 async function finishOrder(data, type){
+  rememberOrder(data.order_id, data.token);
   const ok = await goToGoPayCheckout(data.order_id);
   document.getElementById('loading').classList.remove('show');
   if(!ok) return;            // остаёмся на экране оплаты
