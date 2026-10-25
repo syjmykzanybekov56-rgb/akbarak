@@ -179,6 +179,10 @@ def init_db():
 
 init_db()
 
+# «Ак сынак» — честный входной контроль на занятии (прототип)
+import sinak  # noqa: E402
+sinak.register(app, db)
+
 # Колонки, которые отдаём терминалу (без больших/секретных полей)
 PUBLIC_COLS = ("id, file_name, print_type, pages, copies, total, payment, page_range, status, "
                "created_at, paid_at, group_id, terminal_id, order_type, photo_format, error, refund")

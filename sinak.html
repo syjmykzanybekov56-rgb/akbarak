@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ак сынак — преподаватель</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#081830;--ink:#0E2340;--navy:#0F2747;--navy2:#163562;--gold:#E0B44C;--gold-d:#B8892A;--dim:#9FB2CE;
+        --ok:#3DDC84;--bad:#F2545B;--line:rgba(255,255,255,.1);--disp:"Unbounded","Manrope",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;font-family:"Manrope",system-ui,sans-serif;color:#fff;
+    background:radial-gradient(80vw 60vh at 0% 0%,var(--navy2),transparent 60%),linear-gradient(180deg,var(--ink),var(--night))}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:22px 32px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:var(--disp);font-weight:800;font-size:22px}
+  .brand i{width:38px;height:38px;border-radius:50%;border:3.5px solid var(--gold);display:grid;place-items:center;font-style:normal;font-size:13px;color:var(--gold)}
+  .brand span{color:var(--dim);font-family:"Manrope";font-weight:700;font-size:14px;margin-left:6px}
+  .view{display:none} .view.on{display:block}
+
+  /* настройка */
+  .setup{max-width:560px;margin:40px auto;padding:0 20px}
+  .setup h1{font-family:var(--disp);font-weight:800;font-size:34px;letter-spacing:-.02em;line-height:1.1}
+  .setup p{color:var(--dim);font-weight:600;font-size:16px;line-height:1.55;margin:12px 0 26px}
+  label{display:block;font-weight:700;font-size:14px;color:var(--dim);margin:18px 0 8px}
+  select{width:100%;padding:14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font:inherit;font-weight:700;font-size:16px}
+  select option{color:#000}
+  .seg{display:flex;gap:8px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:70px;padding:12px;border-radius:10px;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font:inherit;font-weight:800;font-size:16px;cursor:pointer}
+  .seg button.on{border-color:var(--gold);background:rgba(224,180,76,.18);color:var(--gold)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;padding:16px 28px;border:0;border-radius:999px;background:var(--gold);color:var(--night);font:inherit;font-weight:800;font-size:17px;cursor:pointer}
+  .btn.full{width:100%;margin-top:28px}
+  .btn.ghost{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.16)}
+  .btn.sm{padding:9px 14px;font-size:13px}
+
+  /* живой тест */
+  .live{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:32px;padding:6px 32px 32px}
+  .join{background:#fff;color:var(--navy);border-radius:14px;padding:26px;text-align:center;position:relative;overflow:hidden;align-self:start}
+  .join::before{content:"";position:absolute;right:0;top:0;width:52px;height:52px;background:linear-gradient(225deg,var(--night) 50%,var(--gold) 50%)}
+  .join h2{font-family:var(--disp);font-weight:800;font-size:22px;line-height:1.2}
+  .join .t{color:#55657D;font-weight:700;font-size:14px;margin-top:6px}
+  #qr{display:flex;justify-content:center;margin:20px 0 14px}
+  #qr img,#qr canvas{width:300px !important;height:300px !important}
+  .code{font-family:var(--disp);font-weight:800;font-size:44px;letter-spacing:.12em;font-variant-numeric:tabular-nums}
+  .join small{display:block;color:#55657D;font-weight:700;font-size:13px;margin-top:6px;word-break:break-all}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat b{display:block;font-family:var(--disp);font-weight:800;font-size:28px}
+  .stat span{font-weight:700;font-size:13px;color:var(--dim)}
+  .stat.bad b{color:var(--bad)} .stat.ok b{color:var(--ok)} .stat.gold b{color:var(--gold)}
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .head h3{font-family:var(--disp);font-weight:800;font-size:20px}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:12px;font-weight:800;color:var(--dim);padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:12px 10px;border-bottom:1px solid var(--line);font-weight:700;font-size:15px;vertical-align:middle}
+  td small{color:var(--dim);font-weight:600}
+  .prog{width:120px;height:8px;border-radius:8px;background:rgba(255,255,255,.1);overflow:hidden;display:inline-block;vertical-align:middle;margin-right:8px}
+  .prog i{display:block;height:100%;background:var(--gold)}
+  .st{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:13px;font-weight:800}
+  .st.active{background:rgba(224,180,76,.14);color:var(--gold)}
+  .st.done{background:rgba(61,220,132,.14);color:var(--ok)}
+  .st.annulled{background:rgba(242,84,91,.16);color:#FF9DA2}
+  tr.annulled td{background:rgba(242,84,91,.06)}
+  .score{font-family:var(--disp);font-weight:800;font-size:18px}
+  .empty{padding:40px;text-align:center;color:var(--dim);font-weight:700}
+  @media (max-width:900px){ .live{grid-template-columns:1fr} .stats{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand"><i>АК</i>Ак сынак<span>честный входной контроль</span></div>
+  <div id="topRight"></div>
+</div>
+
+<!-- настройка теста -->
+<section class="view on" id="vSetup">
+  <div class="setup">
+    <h1>Новый входной контроль</h1>
+    <p>Студенты сканируют QR своим телефоном и проходят короткий тест. У каждого свой набор вопросов, на ответ — ограниченное время. Если студент выходит из теста, попытка аннулируется, и вы это сразу видите.</p>
+    <label for="bank">Тема</label>
+    <select id="bank"></select>
+    <label>Сколько вопросов</label>
+    <div class="seg" id="segN"><button data-v="5" class="on">5</button><button data-v="8">8</button><button data-v="10">10</button></div>
+    <label>Секунд на вопрос</label>
+    <div class="seg" id="segS"><button data-v="20">20</button><button data-v="25" class="on">25</button><button data-v="30">30</button><button data-v="45">45</button></div>
+    <button class="btn full" id="createBtn">Начать тест</button>
+  </div>
+</section>
+
+<!-- идёт тест -->
+<section class="view" id="vLive">
+  <div class="live">
+    <div class="join">
+      <h2>Сканируйте, чтобы начать</h2>
+      <div class="t" id="lTitle"></div>
+      <div id="qr"></div>
+      <div class="code" id="lCode">000000</div>
+      <small id="lUrl"></small>
+    </div>
+    <div>
+      <div class="stats">
+        <div class="stat"><b id="sJoined">0</b><span>подключились</span></div>
+        <div class="stat ok"><b id="sDone">0</b><span>завершили</span></div>
+        <div class="stat bad"><b id="sAnnul">0</b><span>аннулировано</span></div>
+        <div class="stat gold"><b id="sAvg">—</b><span>средний балл</span></div>
+      </div>
+      <div class="head"><h3>Группа</h3><div style="display:flex;gap:10px"><button class="btn ghost sm" id="newBtn">Новый тест</button><button class="btn sm" id="closeBtn">Завершить тест</button></div></div>
+      <table><thead><tr><th>Студент</th><th>Прогресс</th><th>Статус</th><th>Балл</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+      <div class="empty" id="empty">Пока никто не подключился. Попросите студентов отсканировать QR.</div>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const SERVER = "https://akbarak-production.up.railway.app";
+const SITE = location.origin;
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let S = null, poll = null;
+
+async function api(path, body){
+  const r = await fetch(SERVER + path, body === undefined ? {cache: 'no-store'} :
+    {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(d.error || 'Ошибка сервера');
+  return d;
+}
+function seg(id){
+  $(id).querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  }));
+  return () => Number($(id).querySelector('.on').dataset.v);
+}
+const getN = seg('segN'), getS = seg('segS');
+
+(async () => {
+  try{
+    const banks = await api('/sinak/banks');
+    $('bank').innerHTML = Object.entries(banks).map(([k, b]) => '<option value="' + k + '">' + esc(b.title) + ' — ' + esc(b.subject) + ' (' + b.count + ' вопр.)</option>').join('');
+  }catch(e){ $('bank').innerHTML = '<option>Нет связи с сервером</option>'; }
+  try{ const saved = JSON.parse(localStorage.getItem('sinak_teacher') || 'null'); if(saved && saved.code) openLive(saved); }catch(e){}
+})();
+
+$('createBtn').addEventListener('click', async () => {
+  $('createBtn').disabled = true;
+  try{
+    const d = await api('/sinak/session', {bank: $('bank').value, n: getN(), sec: getS()});
+    try{ localStorage.setItem('sinak_teacher', JSON.stringify(d)); }catch(e){}
+    openLive(d);
+  }catch(e){ alert(e.message); }
+  $('createBtn').disabled = false;
+});
+
+function openLive(d){
+  S = d;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'vLive'));
+  const url = SITE + '/sinak-test.html?c=' + d.code;
+  $('lTitle').textContent = d.title + ' · ' + d.n + ' вопросов по ' + d.sec + ' с';
+  $('lCode').textContent = d.code;
+  $('lUrl').textContent = url.replace(/^https?:\/\//, '');
+  $('qr').innerHTML = '';
+  try{ new QRCode($('qr'), {text: url, width: 600, height: 600, colorDark: '#0F2747', colorLight: '#FFFFFF', correctLevel: QRCode.CorrectLevel.M}); }catch(e){}
+  refresh(); clearInterval(poll); poll = setInterval(refresh, 2000);
+}
+
+const STATUS = {active: 'Проходит', done: 'Завершил', annulled: 'Вышел из теста'};
+async function refresh(){
+  let d;
+  try{ d = await api('/sinak/session/' + S.code + '?key=' + encodeURIComponent(S.key)); }
+  catch(e){ return; }
+  const st = d.students;
+  $('sJoined').textContent = st.length;
+  $('sDone').textContent = st.filter(s => s.status === 'done').length;
+  $('sAnnul').textContent = st.filter(s => s.status === 'annulled').length;
+  const scores = st.filter(s => s.score != null).map(s => s.score);
+  $('sAvg').textContent = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) + '%' : '—';
+  $('empty').style.display = st.length ? 'none' : 'block';
+  $('rows').innerHTML = st.map(s =>
+    '<tr class="' + s.status + '"><td>' + esc(s.name) + '<br><small>' + esc(s.group || '') + '</small></td>' +
+    '<td><span class="prog"><i style="width:' + Math.round(100 * s.done / s.total) + '%"></i></span><small>' + s.done + '/' + s.total + '</small></td>' +
+    '<td><span class="st ' + s.status + '">' + STATUS[s.status] + '</span>' + (s.status === 'annulled' && s.reason ? '<br><small>' + esc(s.reason) + '</small>' : '') +
+      (s.leaves && s.status !== 'annulled' ? '<br><small>выходил: ' + s.leaves + ' раз</small>' : '') + '</td>' +
+    '<td class="score">' + (s.score != null ? s.score + '%' : '') + '</td>' +
+    '<td>' + (s.status === 'annulled' ? '<button class="btn ghost sm" onclick="unlock(' + s.id + ')">Разрешить продолжить</button>' : '') + '</td></tr>').join('');
+}
+async function unlock(id){ try{ await api('/sinak/unlock/' + S.code + '/' + id, {key: S.key}); refresh(); }catch(e){} }
+$('closeBtn').addEventListener('click', async () => { if(!confirm('Завершить тест? Незавершённые попытки будут засчитаны как есть.')) return; try{ await api('/sinak/close/' + S.code, {key: S.key}); refresh(); }catch(e){} });
+$('newBtn').addEventListener('click', () => {
+  clearInterval(poll); S = null; try{ localStorage.removeItem('sinak_teacher'); }catch(e){}
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'vSetup'));
+});
+</script>
+</body>
+</html>
