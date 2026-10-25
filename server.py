@@ -35,6 +35,7 @@ from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
 import gopay
+import doc_templates
 
 try:
     from pypdf import PdfReader
@@ -497,6 +498,43 @@ def kiosk_cancel(order_id):
         return jsonify({"success": True})
     finally:
         conn.close()
+
+
+# ─────────────────────── Шаблоны документов ───────────────────────
+
+@app.route("/template_order", methods=["POST"])
+def template_order():
+    """Заявление/объяснительная/титульный лист: собираем DOCX по шаблону и создаём заказ."""
+    try:
+        data = request.get_json(silent=True) or {}
+        payment = data.get("payment", "gopay")
+        err = check_payment(payment)
+        if err:
+            return jsonify({"error": err}), 400
+        copies = clamp(data.get("copies"), 1, 10, 1)
+        terminal = (data.get("terminal") or DEFAULT_TERMINAL)[:40]
+        file_path = os.path.join(FILES_DIR, f"{uuid.uuid4().hex}.docx")
+        try:
+            title = doc_templates.build_docx(str(data.get("template", "")), data.get("values") or {}, file_path)
+        except doc_templates.TemplateError as e:
+            return jsonify({"error": str(e)}), 400
+
+        total = PRICES["print_bw"] * copies
+        token = secrets.token_urlsafe(16)
+        status = "pending_payment" if is_online_payment(payment) else "new"
+        conn = db()
+        cur = conn.execute(
+            "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, "
+            "created_at, group_id, terminal_id, order_type, access_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (f"{title}.docx", file_path, "bw", 1, copies, total, payment, status, now(),
+             uuid.uuid4().hex, terminal, "print", token))
+        order_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "order_id": order_id, "token": token, "total": total})
+    except Exception as e:
+        log.exception("template_order")
+        return jsonify({"error": "Не удалось собрать документ"}), 500
 
 
 @app.route("/order", methods=["POST"])

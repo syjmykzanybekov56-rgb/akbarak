@@ -1,0 +1,116 @@
+{
+  "_help": "Шаблоны документов АкБарак. Поля в тексте: {ключ}. Пол: {sex:вариант для м|вариант для ж}. Выравнивание a: c — центр, j — по ширине, hdr — шапка справа. opt: строка пропускается, если поле в ней пустое. type sign — дата слева, подпись справа.",
+  "fields": {
+    "sex":        {"label": "Пол", "type": "select", "options": [["m", "Мужской"], ["f", "Женский"]], "def": "m"},
+    "fio_nom":    {"label": "ФИО полностью", "ph": "Асанов Бекжан Маратович", "save": true},
+    "fio_gen":    {"label": "ФИО — от кого (родительный падеж)", "ph": "Асанова Бекжана Маратовича", "save": true},
+    "fio_short":  {"label": "Фамилия и инициалы для подписи", "ph": "Асанов Б.М.", "save": true},
+    "course":     {"label": "Курс", "ph": "5", "save": true, "max": 2},
+    "group":      {"label": "Группа", "ph": "37 ЛД-2", "save": true, "max": 20},
+    "faculty":    {"label": "Факультет (какого)", "ph": "лечебного", "save": true},
+    "phone":      {"label": "Телефон", "ph": "0700 123 456", "save": true, "optional": true, "max": 20},
+    "date":       {"label": "Дата", "ph": "25.10.2026", "auto": "date", "max": 12},
+    "year":       {"label": "Год", "ph": "2026", "auto": "year", "max": 4},
+    "chair_pos":  {"label": "Кому (должность, в дательном падеже)", "ph": "Заведующему кафедрой факультетской терапии"},
+    "chair_name": {"label": "ФИО заведующего (кому)", "ph": "проф. Иванову И.И.", "optional": true},
+    "dean_name":  {"label": "ФИО декана (кому)", "ph": "Иванову И.И.", "optional": true},
+    "subject":    {"label": "Дисциплина", "ph": "Факультетская терапия"},
+    "dates":      {"label": "Даты занятий", "ph": "12.10.2026 и 14.10.2026"},
+    "reason":     {"label": "Причина", "ph": "болезнью (справка прилагается)"},
+    "reason_obj": {"label": "Причина отсутствия", "ph": "болезнь, справка прилагается"},
+    "exam_type":  {"label": "Что пересдать", "type": "select", "options": [["экзамена", "Экзамен"], ["зачёта", "Зачёт"], ["модуля", "Модуль"]], "def": "экзамена"},
+    "where":      {"label": "Куда нужна справка", "ph": "в Социальный фонд"},
+    "dept":       {"label": "Кафедра (какая)", "ph": "нормальной анатомии"},
+    "work_type":  {"label": "Вид работы", "type": "select", "options": [["Самостоятельная работа студента", "СРС"], ["Реферат", "Реферат"], ["Доклад", "Доклад"], ["Курсовая работа", "Курсовая работа"]], "def": "Самостоятельная работа студента"},
+    "topic":      {"label": "Тема", "ph": "Анатомия и физиология сердца", "max": 160},
+    "teacher":    {"label": "Преподаватель (кто проверил)", "ph": "доц. Иванова А.А.", "optional": true}
+  },
+  "templates": [
+    {
+      "id": "otrabotka",
+      "title": "Заявление на отработку",
+      "desc": "Разрешение отработать пропущенные занятия",
+      "fields": ["chair_pos", "chair_name", "sex", "course", "group", "faculty", "fio_gen", "phone", "subject", "dates", "reason", "date", "fio_short"],
+      "blocks": [
+        {"t": "{chair_pos}", "a": "hdr"},
+        {"t": "{chair_name}", "a": "hdr", "opt": true},
+        {"t": "{sex:студента|студентки} {course} курса", "a": "hdr", "before": 6},
+        {"t": "группы {group}, {faculty} факультета", "a": "hdr"},
+        {"t": "{fio_gen}", "a": "hdr"},
+        {"t": "тел.: {phone}", "a": "hdr", "opt": true},
+        {"t": "Заявление", "a": "c", "b": true, "s": 16, "before": 48, "after": 18},
+        {"t": "Прошу Вас разрешить мне отработать пропущенные занятия по дисциплине «{subject}» за {dates} в связи с {reason}.", "a": "j", "ind": true},
+        {"type": "sign", "before": 48}
+      ]
+    },
+    {
+      "id": "obyasnitelnaya",
+      "title": "Объяснительная записка",
+      "desc": "О пропуске занятия или опоздании",
+      "fields": ["chair_pos", "chair_name", "sex", "course", "group", "faculty", "fio_gen", "fio_nom", "subject", "dates", "reason_obj", "date", "fio_short"],
+      "blocks": [
+        {"t": "{chair_pos}", "a": "hdr"},
+        {"t": "{chair_name}", "a": "hdr", "opt": true},
+        {"t": "{sex:студента|студентки} {course} курса", "a": "hdr", "before": 6},
+        {"t": "группы {group}, {faculty} факультета", "a": "hdr"},
+        {"t": "{fio_gen}", "a": "hdr"},
+        {"t": "Объяснительная записка", "a": "c", "b": true, "s": 16, "before": 48, "after": 18},
+        {"t": "Я, {fio_nom}, {sex:студент|студентка} {course} курса группы {group}, {sex:отсутствовал|отсутствовала} на занятиях по дисциплине «{subject}» {dates}. Причина отсутствия: {reason_obj}.", "a": "j", "ind": true},
+        {"type": "sign", "before": 48}
+      ]
+    },
+    {
+      "id": "peresdacha",
+      "title": "Заявление на пересдачу",
+      "desc": "Пересдача экзамена, зачёта или модуля",
+      "fields": ["faculty", "dean_name", "sex", "course", "group", "fio_gen", "phone", "exam_type", "subject", "reason", "date", "fio_short"],
+      "blocks": [
+        {"t": "Декану {faculty} факультета", "a": "hdr"},
+        {"t": "{dean_name}", "a": "hdr", "opt": true},
+        {"t": "{sex:студента|студентки} {course} курса", "a": "hdr", "before": 6},
+        {"t": "группы {group}", "a": "hdr"},
+        {"t": "{fio_gen}", "a": "hdr"},
+        {"t": "тел.: {phone}", "a": "hdr", "opt": true},
+        {"t": "Заявление", "a": "c", "b": true, "s": 16, "before": 48, "after": 18},
+        {"t": "Прошу Вас разрешить мне пересдачу {exam_type} по дисциплине «{subject}» в связи с {reason}.", "a": "j", "ind": true},
+        {"type": "sign", "before": 48}
+      ]
+    },
+    {
+      "id": "spravka",
+      "title": "Заявление на справку",
+      "desc": "Справка с места учёбы",
+      "fields": ["faculty", "dean_name", "sex", "course", "group", "fio_gen", "phone", "where", "date", "fio_short"],
+      "blocks": [
+        {"t": "Декану {faculty} факультета", "a": "hdr"},
+        {"t": "{dean_name}", "a": "hdr", "opt": true},
+        {"t": "{sex:студента|студентки} {course} курса", "a": "hdr", "before": 6},
+        {"t": "группы {group}", "a": "hdr"},
+        {"t": "{fio_gen}", "a": "hdr"},
+        {"t": "тел.: {phone}", "a": "hdr", "opt": true},
+        {"t": "Заявление", "a": "c", "b": true, "s": 16, "before": 48, "after": 18},
+        {"t": "Прошу Вас выдать мне справку с места учёбы для предоставления {where}.", "a": "j", "ind": true},
+        {"type": "sign", "before": 48}
+      ]
+    },
+    {
+      "id": "titul",
+      "title": "Титульный лист",
+      "desc": "Для СРС, реферата, доклада",
+      "fields": ["dept", "work_type", "topic", "subject", "sex", "course", "group", "faculty", "fio_nom", "teacher", "year"],
+      "blocks": [
+        {"t": "Министерство здравоохранения Кыргызской Республики", "a": "c", "s": 12, "u": true},
+        {"t": "Кыргызская государственная медицинская академия имени И.К. Ахунбаева", "a": "c", "s": 12, "b": true, "u": true, "before": 4},
+        {"t": "Кафедра {dept}", "a": "c", "before": 24},
+        {"t": "{work_type}", "a": "c", "b": true, "s": 20, "u": true, "before": 150},
+        {"t": "на тему: «{topic}»", "a": "c", "b": true, "s": 16, "before": 12},
+        {"t": "по дисциплине «{subject}»", "a": "c", "before": 8, "opt": true},
+        {"t": "{sex:Выполнил|Выполнила}: {sex:студент|студентка} {course} курса", "a": "hdr", "before": 130},
+        {"t": "группы {group}, {faculty} факультета", "a": "hdr"},
+        {"t": "{fio_nom}", "a": "hdr"},
+        {"t": "Проверил(а): {teacher}", "a": "hdr", "before": 14, "opt": true},
+        {"t": "Бишкек — {year}", "a": "c", "before": 120}
+      ]
+    }
+  ]
+}
