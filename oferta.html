@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Публичная оферта — АкБарак</title>
+<script src="/i18n.js"></script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -40,15 +41,16 @@
   td{padding:9px 0;border-bottom:1px dashed var(--rule)} td:last-child{text-align:right;font-weight:800}
   .req{margin-top:10px;line-height:1.9}
   @media (max-width:560px){ nav ol{columns:1} .paper{padding:34px 18px 36px} ol.pts > li{padding-left:38px} }
+  main[hidden]{display:none}
 </style>
 </head>
 <body>
 <div class="top">
   <a class="logo" href="/"><img src="/icons/icon-192.png" alt=""><span><span class="a">Ак</span>Барак</span></a>
-  <a class="other" href="/privacy.html">Конфиденциальность</a>
+  <div style="display:flex;gap:10px;align-items:center"><div data-ak-lang="small"></div><a class="other" href="/privacy.html">Конфиденциальность</a></div>
 </div>
 
-<main class="paper">
+<main class="paper" data-lang="ru" data-no-i18n>
   <h1>Публичная оферта на оказание услуг печати</h1>
   <div class="ed">Редакция от 25 октября 2026 года</div>
 
@@ -144,6 +146,200 @@
     Телефон, WhatsApp, Telegram: 0773 731 212<br>
     Электронная почта: akbarak@gmail.com<br>
     Сайт: akbarak.vercel.app
+  </p>
+</main>
+<main class="paper" data-lang="ky" data-no-i18n>
+  <h1>Басып чыгаруу кызматтарын көрсөтүү боюнча ачык оферта</h1>
+  <div class="ed">2026-жылдын 25-октябрындагы редакция. Котормодо айырмачылык болсо, орус тилиндеги текст негизги болуп эсептелет.</div>
+  <nav><ol>
+    <li><a href="#k1">Жалпы жоболор</a></li><li><a href="#k2">Терминдер</a></li>
+    <li><a href="#k3">Кызматтар</a></li><li><a href="#k4">Буйрутма берүү</a></li>
+    <li><a href="#k5">Баасы жана төлөм</a></li><li><a href="#k6">Буйрутманы аткаруу</a></li>
+    <li><a href="#k7">Акчаны кайтаруу</a></li><li><a href="#k8">Жоопкерчилик</a></li>
+    <li><a href="#k9">Башка шарттар</a></li><li><a href="#k10">Реквизиттер</a></li>
+  </ol></nav>
+
+  <h2 id="k1">1. Жалпы жоболор</h2>
+  <ol class="pts">
+    <li data-n="1.1">Жеке ишкер Жаныбеков Сыймык Эркинбекович (мындан ары — Аткаруучу) ар бир аракетке жөндөмдүү жеке адамга (мындан ары — Буйрутмачы) «АкБарак» терминалдары жана сайты аркылуу басып чыгаруу, көчүрүү жана сканерлөө кызматтарын көрсөтүү келишимин ушул оферттин шарттарында түзүүнү сунуштайт.</li>
+    <li data-n="1.2">Оферта ачык: анын шарттары бардык Буйрутмачылар үчүн бирдей.</li>
+    <li data-n="1.3">Буйрутманы төлөө оферттин шарттарын толук жана шартсыз кабыл алууну (акцепт) билдирет. Төлөнгөн учурдан тартып келишим түзүлдү деп эсептелет.</li>
+    <li data-n="1.4">Буйрутмачынын жеке маалыматтарын иштетүү <a href="/privacy.html">Купуялуулук саясатында</a> баяндалган, ал оферттин бөлүгү болуп саналат.</li>
+  </ol>
+
+  <h2 id="k2">2. Терминдер</h2>
+  <ol class="pts">
+    <li data-n="2.1"><b>Кызмат көрсөтүүчү система</b> — akbarak.vercel.app сайты, терминалдын экраны жана алар менен байланышкан программалар, алар аркылуу буйрутма берилет.</li>
+    <li data-n="2.2"><b>Терминал</b> — принтери жана (же) сканери бар «АкБарак» өзүн-өзү тейлөө түйүнү.</li>
+    <li data-n="2.3"><b>Буйрутма</b> — Буйрутмачы тандаган кызматтар: файлдар, беттердин жана көчүрмөлөрдүн саны, кызматтын түрү, сумма.</li>
+    <li data-n="2.4"><b>Үлгү</b> — Буйрутмачы өз маалыматы менен толтурган документтин (арыздын, түшүнүк каттын, титулдук барактын) үлгүсү.</li>
+  </ol>
+
+  <h2 id="k3">3. Кызматтар</h2>
+  <ol class="pts">
+    <li data-n="3.1">PDF, DOC, DOCX, TXT, JPG жана PNG файлдарынан документтерди басып чыгаруу.</li>
+    <li data-n="3.2">Буйрутмачы терминалдын сканер айнегине койгон документтин көчүрмөсүн алуу.</li>
+    <li data-n="3.3">Документти сканерлеп, файлды Буйрутмачыга жүктөп алуу үчүн берүү.</li>
+    <li data-n="3.4">Үлгүлөр боюнча документтерди даярдоо жана басып чыгаруу.</li>
+    <li data-n="3.5">Жеткиликтүү кызматтар, форматтар жана басып чыгаруунун түрлөрү (ак-кара, түстүү, эки тараптуу) терминалга жараша болот жана буйрутма берүүдө көрсөтүлөт.</li>
+  </ol>
+
+  <h2 id="k4">4. Буйрутма берүү</h2>
+  <ol class="pts">
+    <li data-n="4.1">Буйрутмачы сайтта же терминалдын экранында буйрутма берет: кызматты, файлдарды жана жөндөөлөрдү тандайт. Каттоо талап кылынбайт.</li>
+    <li data-n="4.2">Төлөөгө чейин система беттердин, көчүрмөлөрдүн санын жана жалпы сумманы көрсөтөт. Буйрутмачы файлды, жөндөөлөрдү жана үлгүгө киргизген маалыматтарды өзү текшерет.</li>
+    <li data-n="4.3">Көчүрүү жана сканерлөө үчүн Буйрутмачы төлөөгө чейин документти сканер айнегине бети менен ылдый коюп, капкакты жабат.</li>
+  </ol>
+
+  <h2 id="k5">5. Баасы жана төлөм</h2>
+  <ol class="pts">
+    <li data-n="5.1">Кызматтардын баасы системада жана терминалда көрсөтүлгөн. Ушул редакциянын күнүнө:
+      <table>
+        <tr><td>Ак-кара басып чыгаруу, бети</td><td>5 сом</td></tr>
+        <tr><td>Ак-кара көчүрмө, бети</td><td>6 сом</td></tr>
+        <tr><td>Скан, бети</td><td>6 сом</td></tr>
+        <tr><td>Үлгү боюнча документ, барагы</td><td>5 сом</td></tr>
+      </table>
+    </li>
+    <li data-n="5.2">Төлөм GoPay төлөм кызматы аркылуу онлайн жүргүзүлөт (МБанк, О!Деньги жана ал колдогон башка ыкмалар). Терминалдар накталай акча кабыл албайт.</li>
+    <li data-n="5.3">Банк карталарынын жана электрондук капчыктардын маалыматтарын төлөм кызматы иштетет. Аткаруучу аларды албайт жана сактабайт.</li>
+    <li data-n="5.4">Аткаруучу бааларды өзгөртүүгө укуктуу. Жаңы баалар системада жарыялангандан кийин берилген буйрутмаларга колдонулат; төлөнгөн буйрутманын суммасы өзгөрбөйт.</li>
+  </ol>
+
+  <h2 id="k6">6. Буйрутманы аткаруу</h2>
+  <ol class="pts">
+    <li data-n="6.1">Буйрутма төлөм кызматы төлөмдү ырастагандан кийин автоматтык түрдө, адатта бир нече мүнөттүн ичинде аткарылат.</li>
+    <li data-n="6.2">Буйрутмачы басылган барактарды терминалдан өзү алат. Аткаруучу терминалдын жанында кароосуз калтырылган барактар үчүн жооп бербейт.</li>
+    <li data-n="6.3">Скан файлы системадагы шилтеме боюнча 24 сааттын ичинде жүктөп алууга жеткиликтүү, андан кийин өчүрүлөт.</li>
+    <li data-n="6.4">Эгер терминал буйрутманы убактылуу аткара албаса (кагаз жок, бузулуу, байланыш жок), буйрутма күтүп турат жана себеби жоюлгандан кийин аткарылат. Буйрутманын абалы системада көрүнөт.</li>
+  </ol>
+
+  <h2 id="k7">7. Акчаны кайтаруу</h2>
+  <ol class="pts">
+    <li data-n="7.1">Эгер төлөнгөн буйрутма Аткаруучунун же терминалдын күнөөсү менен аткарылбаса же кемчилик менен аткарылса (мисалы, барак чыкпаса, басылган барак бош же сызыктуу болсо), Буйрутмачы өз тандоосу боюнча акысыз кайра басып чыгарууну же сумманын толук кайтарылышын алат.</li>
+    <li data-n="7.2">Акча буйрутма төлөнгөн ыкма менен кайрылуудан кийин 10 жумуш күнүнүн ичинде кайтарылат.</li>
+    <li data-n="7.3">Эгер буйрутма Буйрутмачы тандаган жөндөөлөр боюнча аткарылса, анын ичинде Буйрутмачы туура эмес файл жүктөсө, файлда ката же начар калып болсо, же үлгүгө туура эмес маалымат киргизилсе, акча кайтарылбайт.</li>
+    <li data-n="7.4">Акчаны кайтаруу үчүн Аткаруучуга жазыңыз же чалыңыз (10-бөлүм) жана буйрутманын номерин, күнүн жана эмне туура эмес болгонун билдириңиз.</li>
+  </ol>
+
+  <h2 id="k8">8. Жоопкерчилик</h2>
+  <ol class="pts">
+    <li data-n="8.1">Буйрутмачы файлдардын мазмуну үчүн жана аларды басып чыгарууга, көчүрүүгө укугу бар экени үчүн жооп берет. Таратылышы Кыргыз Республикасынын мыйзамдарын бузган материалдарды басып чыгарууга тыюу салынат.</li>
+    <li data-n="8.2">Аткаруучу файлдардын мазмунун карабайт. Үлгүлөр — жалпы үлгүлөр: Буйрутмачы документ ал тапшыра турган мекеменин талаптарына ылайык келерин өзү текшерет.</li>
+    <li data-n="8.3">Аткаруучу электр энергиясынын, интернеттин өчүшүнөн, төлөм кызматынын иштешинен же анын көзөмөлүнөн тышкаркы башка жагдайлардан улам системанын иштешиндеги үзгүлтүктөр үчүн жооп бербейт. Ушундан улам аткарылбаган буйрутмалар үчүн акча 7-бөлүм боюнча кайтарылат.</li>
+  </ol>
+
+  <h2 id="k9">9. Башка шарттар</h2>
+  <ol class="pts">
+    <li data-n="9.1">Аткаруучу офертаны өзгөртүүгө укуктуу. Жаңы редакция сайтта жарыяланган учурдан тартып күчүнө кирет жана андан кийин төлөнгөн буйрутмаларга колдонулат.</li>
+    <li data-n="9.2">Талаштар сүйлөшүү жолу менен, макулдашууга жетишилбесе — Кыргыз Республикасынын мыйзамдары боюнча сотто чечилет. Буйрутмачынын керектөөчү катары укуктары керектөөчүлөрдүн укуктарын коргоо жөнүндөгү мыйзамдар менен корголот.</li>
+  </ol>
+
+  <h2 id="k10">10. Реквизиттер жана байланыш</h2>
+  <p class="req">
+    ЖИ Жаныбеков Сыймык Эркинбекович<br>
+    ИНН: 20112200300569<br>
+    Каттоо дареги: Бишкек ш., Передовая көч., 28<br>
+    Телефон, WhatsApp, Telegram: 0773 731 212<br>
+    Электрондук почта: akbarak@gmail.com<br>
+    Сайт: akbarak.vercel.app
+  </p>
+</main>
+<main class="paper" data-lang="en" data-no-i18n>
+  <h1>Public offer for printing services</h1>
+  <div class="ed">Version of 25 October 2026. This is a translation; if it differs from the Russian text, the Russian text prevails.</div>
+  <nav><ol>
+    <li><a href="#e1">General provisions</a></li><li><a href="#e2">Terms</a></li>
+    <li><a href="#e3">Services</a></li><li><a href="#e4">Placing an order</a></li>
+    <li><a href="#e5">Prices and payment</a></li><li><a href="#e6">Order fulfilment</a></li>
+    <li><a href="#e7">Refunds</a></li><li><a href="#e8">Liability</a></li>
+    <li><a href="#e9">Other terms</a></li><li><a href="#e10">Details</a></li>
+  </ol></nav>
+
+  <h2 id="e1">1. General provisions</h2>
+  <ol class="pts">
+    <li data-n="1.1">Individual entrepreneur Syimyk Erkinbekovich Zhanybekov (the “Provider”) offers any legally capable individual (the “Customer”) to enter into an agreement for printing, copying and scanning services through AkBarak terminals and website on the terms of this offer.</li>
+    <li data-n="1.2">This offer is public: its terms are the same for all Customers.</li>
+    <li data-n="1.3">Paying for an order means full and unconditional acceptance of this offer. The agreement is concluded at the moment of payment.</li>
+    <li data-n="1.4">The processing of the Customer’s personal data is described in the <a href="/privacy.html">Privacy policy</a>, which forms part of this offer.</li>
+  </ol>
+
+  <h2 id="e2">2. Terms</h2>
+  <ol class="pts">
+    <li data-n="2.1"><b>Service</b> — the website akbarak.vercel.app, the terminal screen and related software through which orders are placed.</li>
+    <li data-n="2.2"><b>Terminal</b> — an AkBarak self-service point with a printer and/or scanner.</li>
+    <li data-n="2.3"><b>Order</b> — the services selected by the Customer: files, number of pages and copies, type of service and amount.</li>
+    <li data-n="2.4"><b>Template</b> — a sample document (application, explanatory note, title page) that the Customer fills in with their own details.</li>
+  </ol>
+
+  <h2 id="e3">3. Services</h2>
+  <ol class="pts">
+    <li data-n="3.1">Printing documents from PDF, DOC, DOCX, TXT, JPG and PNG files.</li>
+    <li data-n="3.2">Copying a document placed by the Customer on the terminal’s scanner glass.</li>
+    <li data-n="3.3">Scanning a document and providing the file to the Customer for download.</li>
+    <li data-n="3.4">Preparing and printing documents from templates.</li>
+    <li data-n="3.5">The available services, formats and print types (black-and-white, color, double-sided) depend on the terminal and are shown in the Service when ordering.</li>
+  </ol>
+
+  <h2 id="e4">4. Placing an order</h2>
+  <ol class="pts">
+    <li data-n="4.1">The Customer places an order on the website or the terminal screen by choosing a service, files and settings. No registration is required.</li>
+    <li data-n="4.2">Before payment, the Service shows the number of pages, copies and the total amount. The Customer checks the file, settings and any details entered into a template.</li>
+    <li data-n="4.3">For copying and scanning, the Customer places the document face down on the scanner glass and closes the lid before paying.</li>
+  </ol>
+
+  <h2 id="e5">5. Prices and payment</h2>
+  <ol class="pts">
+    <li data-n="5.1">Prices are shown in the Service and on the terminal. As of this version:
+      <table>
+        <tr><td>Black-and-white print, per page</td><td>5 som</td></tr>
+        <tr><td>Black-and-white copy, per page</td><td>6 som</td></tr>
+        <tr><td>Scan, per page</td><td>6 som</td></tr>
+        <tr><td>Template document, per sheet</td><td>5 som</td></tr>
+      </table>
+    </li>
+    <li data-n="5.2">Payment is made online through the GoPay payment service (MBank, O!Dengi and other methods it supports). Terminals do not accept cash.</li>
+    <li data-n="5.3">Bank card and e-wallet details are processed by the payment service. The Provider does not receive or store them.</li>
+    <li data-n="5.4">The Provider may change prices. New prices apply to orders placed after they are published in the Service; the amount of an order already paid does not change.</li>
+  </ol>
+
+  <h2 id="e6">6. Order fulfilment</h2>
+  <ol class="pts">
+    <li data-n="6.1">An order is fulfilled automatically after the payment service confirms payment, usually within a few minutes.</li>
+    <li data-n="6.2">The Customer collects the printouts from the terminal. The Provider is not responsible for printouts left unattended at the terminal.</li>
+    <li data-n="6.3">A scan file is available for download via the link in the Service for 24 hours and is then deleted.</li>
+    <li data-n="6.4">If a terminal temporarily cannot fulfil an order (no paper, a fault, no connection), the order waits and is fulfilled once the cause is fixed. The order status is shown in the Service.</li>
+  </ol>
+
+  <h2 id="e7">7. Refunds</h2>
+  <ol class="pts">
+    <li data-n="7.1">If a paid order is not fulfilled, or is fulfilled with a defect through the fault of the Provider or the terminal (for example, no sheet came out, or the print is blank or streaked), the Customer may choose a free reprint or a full refund.</li>
+    <li data-n="7.2">Refunds are made by the same payment method within 10 business days of the request.</li>
+    <li data-n="7.3">No refund is made if the order was fulfilled with the settings the Customer chose, including when the Customer uploaded the wrong file, the file contained errors or poor layout, or incorrect details were entered into a template.</li>
+    <li data-n="7.4">To request a refund, message or call the Provider (section 10) and give the order number, the date and what went wrong.</li>
+  </ol>
+
+  <h2 id="e8">8. Liability</h2>
+  <ol class="pts">
+    <li data-n="8.1">The Customer is responsible for the content of the files and for having the right to print and copy them. Printing materials whose distribution violates the laws of the Kyrgyz Republic is prohibited.</li>
+    <li data-n="8.2">The Provider does not view file contents. Templates are general samples: the Customer checks that the document meets the requirements of the institution where it is submitted.</li>
+    <li data-n="8.3">The Provider is not liable for interruptions caused by power or internet outages, the payment service, or other circumstances beyond its control. Orders not fulfilled for these reasons are refunded under section 7.</li>
+  </ol>
+
+  <h2 id="e9">9. Other terms</h2>
+  <ol class="pts">
+    <li data-n="9.1">The Provider may amend this offer. A new version takes effect when published on the website and applies to orders paid after that.</li>
+    <li data-n="9.2">Disputes are settled by negotiation and, failing agreement, in court under the laws of the Kyrgyz Republic. The Customer’s consumer rights are protected by consumer protection laws.</li>
+  </ol>
+
+  <h2 id="e10">10. Details and contacts</h2>
+  <p class="req">
+    Individual entrepreneur Syimyk Erkinbekovich Zhanybekov<br>
+    Tax ID (INN): 20112200300569<br>
+    Registered address: 28 Peredovaya St., Bishkek<br>
+    Phone, WhatsApp, Telegram: 0773 731 212<br>
+    Email: akbarak@gmail.com<br>
+    Website: akbarak.vercel.app
   </p>
 </main>
 </body>

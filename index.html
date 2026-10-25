@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AKBARAK — Smart Print Network</title>
+<script src="/i18n.js"></script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -270,7 +271,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 
   <!-- ═══════════════════ HOME ═══════════════════ -->
   <div id="s-home" class="screen active">
-    <div class="status-bar"><span id="clock">9:41</span><span>WiFi 🔋</span></div>
+    <div class="status-bar" style="align-items:center"><span id="clock">9:41</span><div data-ak-lang="small"></div></div>
     <div class="hdr">
       <div class="logo">
         <svg class="logo-mark" viewBox="0 0 36 40" fill="none">
@@ -475,10 +476,10 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">📋 Копия</div></div>
     <div class="instr">
-      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Подними <b>крышку сканера</b> принтера</div></div>
-      <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Положи документ <b>лицом вниз</b>, совмести с правым верхним углом стекла</div></div>
-      <div class="instr-step"><div class="step-num">3</div><div class="step-txt"><b>Закрой крышку</b> и не трогай документ</div></div>
-      <div class="instr-step"><div class="step-num">4</div><div class="step-txt">Выбери настройки и <b>оплати</b></div></div>
+      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Подними крышку сканера принтера</div></div>
+      <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Положи документ лицом вниз, совмести с правым верхним углом стекла</div></div>
+      <div class="instr-step"><div class="step-num">3</div><div class="step-txt">Закрой крышку и не трогай документ</div></div>
+      <div class="instr-step"><div class="step-num">4</div><div class="step-txt">Выбери настройки и оплати</div></div>
     </div>
     <div class="settings">
       <div class="set-row">
@@ -566,8 +567,8 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">🔍 Сканирование</div></div>
     <div class="instr">
-      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Подними <b>крышку сканера</b></div></div>
-      <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Положи документ <b>лицом вниз</b> на стекло</div></div>
+      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Подними крышку сканера</div></div>
+      <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Положи документ лицом вниз на стекло</div></div>
       <div class="instr-step"><div class="step-num">3</div><div class="step-txt">Закрой крышку. Скан будет готов через 1-2 мин</div></div>
       <div class="instr-step"><div class="step-num">4</div><div class="step-txt">Нажми кнопку оплаты ниже</div></div>
     </div>
@@ -653,9 +654,9 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="hdr"><button class="back-btn" onclick="go('s-photo')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl" id="photo-ttl">Паспортное фото</div></div>
     <div class="instr">
-      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Фото должно быть <b>чёткое</b>, хорошего освещения</div></div>
-      <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Формат: <b>JPG или PNG</b>, размер до 10 МБ</div></div>
-      <div class="instr-step"><div class="step-num">3</div><div class="step-txt">После оплаты забери <b>готовые фото</b> у принтера</div></div>
+      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Фото должно быть чётким, при хорошем освещении</div></div>
+      <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Формат JPG или PNG, размер до 10 МБ</div></div>
+      <div class="instr-step"><div class="step-num">3</div><div class="step-txt">После оплаты забери готовые фото у принтера</div></div>
     </div>
     <div class="upload-zone" id="photo-zone">
       <input type="file" id="photo-input" accept="image/jpeg,image/png,image/jpg" onchange="handlePhoto(this)">
@@ -726,11 +727,11 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">📖 Инструкция</div></div>
     <div class="instr">
-      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Выбери услугу: <b>Печать, Копия, Скан или Фото</b></div></div>
+      <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Выбери услугу: печать, копия, скан или шаблон</div></div>
       <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Загрузи файл или следуй инструкции</div></div>
-      <div class="instr-step"><div class="step-num">3</div><div class="step-txt">Выбери настройки и нажми <b>Перейти к оплате</b></div></div>
-      <div class="instr-step"><div class="step-num">4</div><div class="step-txt">Переведи деньги через <b>МБанк или Элсом</b> на номер 0773 731 212</div></div>
-      <div class="instr-step"><div class="step-num">5</div><div class="step-txt">Забери готовый документ у принтера через <b>1-2 минуты</b> 🎉</div></div>
+      <div class="instr-step"><div class="step-num">3</div><div class="step-txt">Выбери настройки и нажми «Перейти к оплате»</div></div>
+      <div class="instr-step"><div class="step-num">4</div><div class="step-txt">Оплати онлайн: МБанк, О!Деньги и другие</div></div>
+      <div class="instr-step"><div class="step-num">5</div><div class="step-txt">Забери готовый документ у принтера через 1–2 минуты 🎉</div></div>
     </div>
     <div style="margin:0 20px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.15);border-radius:16px;padding:16px 20px">
       <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px">💡 Есть вопросы?</div>
@@ -744,7 +745,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">🤝 Сотрудничество</div></div>
     <div class="instr">
-      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.8;font-weight:600">Хочешь открыть терминал AKBARAK в своём заведении?<br><br>Мы предлагаем:<br>• <b>Установку и настройку</b> терминала<br>• <b>Техническую поддержку</b> 24/7<br>• <b>Выгодные условия</b> партнёрства<br>• <b>Обучение</b> персонала</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.8;font-weight:600">Хочешь открыть терминал AKBARAK в своём заведении?<br><br>Мы предлагаем:<br>• Установку и настройку терминала<br>• Техническую поддержку 24/7<br>• Выгодные условия партнёрства<br>• Обучение персонала</div>
     </div>
     <div style="margin:0 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:20px">
       <div style="font-size:14px;font-weight:800;color:var(--white);margin-bottom:14px">Свяжитесь с нами</div>
@@ -758,7 +759,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">ℹ️ О нас</div></div>
     <div class="instr">
-      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.8;font-weight:600">AKBARAK — первый автономный терминал печати в Кыргызстане.<br><br>Мы создали сервис чтобы студенты могли печатать документы <b>быстро, дёшево и без очередей</b> — 24 часа в сутки, 7 дней в неделю.</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.8;font-weight:600">AKBARAK — первый автономный терминал печати в Кыргызстане.<br><br>Мы создали сервис, чтобы студенты могли печатать документы быстро, дёшево и без очередей — 24 часа в сутки, 7 дней в неделю.</div>
     </div>
     <div style="display:flex;gap:10px;padding:0 20px;margin-bottom:16px">
       <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;text-align:center">
