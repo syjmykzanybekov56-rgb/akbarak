@@ -1,0 +1,12 @@
+{
+  "name": "АкБарак — печать с телефона",
+  "short_name": "АкБарак",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E2340",
+  "theme_color": "#0E2340",
+  "icons": [
+    {"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
