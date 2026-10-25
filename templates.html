@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2340">
+<title>АкБарак — шаблоны документов</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#081830;--ink:#0E2340;--navy:#0F2747;--navy2:#163562;--gold:#E0B44C;--gold-d:#B8892A;
+        --dim:#9FB2CE;--line:rgba(255,255,255,.12);--bad:#F2545B;--disp:"Unbounded","Manrope",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;font-family:"Manrope",system-ui,sans-serif;color:#fff;
+    background:radial-gradient(120% 50% at 0% 0%,var(--navy2),transparent 60%),linear-gradient(180deg,var(--ink),var(--night));
+    padding:20px 18px calc(110px + env(safe-area-inset-bottom))}
+  .wrap{max-width:520px;margin:0 auto}
+  .top{display:flex;align-items:center;justify-content:space-between}
+  .logo{display:flex;align-items:center;gap:10px;font-family:"Inter","Manrope",sans-serif;font-weight:800;font-size:21px;letter-spacing:-.03em;color:#fff;text-decoration:none}
+  .logo svg{width:32px;height:32px} .logo .a{color:var(--gold)}
+  .back{display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:800;font-size:14px;color:#fff;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 14px 9px 11px;cursor:pointer}
+  h1{font-family:var(--disp);font-weight:800;font-size:27px;line-height:1.12;letter-spacing:-.02em;margin:28px 0 10px}
+  p.lead{color:var(--dim);font-weight:600;font-size:15px;line-height:1.5}
+
+  /* список шаблонов — листы бумаги */
+  .list{display:grid;gap:12px;margin-top:24px}
+  .tcard{position:relative;display:flex;align-items:center;gap:14px;text-align:left;background:#fff;color:var(--navy);border:0;border-radius:10px;
+    padding:18px 18px;font:inherit;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.3);overflow:hidden}
+  .tcard::before{content:"";position:absolute;right:0;top:0;width:30px;height:30px;background:linear-gradient(225deg,var(--ink) 50%,var(--gold) 50%)}
+  .tcard:active{transform:scale(.985)}
+  .tcard .ic{flex:none;width:44px;height:52px;border:2.5px solid var(--navy);border-radius:4px;position:relative}
+  .tcard .ic::after{content:"";position:absolute;left:8px;right:8px;top:12px;height:14px;
+    background:repeating-linear-gradient(180deg,var(--navy) 0 2px,transparent 2px 6px);opacity:.55}
+  .tcard b{display:block;font-family:var(--disp);font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .tcard span{display:block;font-weight:700;font-size:13px;color:#6B7C95;margin-top:3px}
+  .tcard .pr{margin-left:auto;font-family:var(--disp);font-weight:800;font-size:15px;color:var(--gold-d);white-space:nowrap;padding-right:14px}
+
+  /* форма */
+  .form{display:grid;gap:14px;margin-top:22px}
+  .fld label{display:block;font-weight:700;font-size:13px;color:var(--dim);margin-bottom:6px}
+  .fld label i{font-style:normal;opacity:.7}
+  .fld input,.fld select{width:100%;padding:14px;border-radius:10px;border:1.5px solid var(--line);background:rgba(255,255,255,.06);
+    color:#fff;font:inherit;font-weight:700;font-size:16px;outline:none;-webkit-appearance:none;appearance:none}
+  .fld select{background-image:linear-gradient(45deg,transparent 50%,var(--gold) 50%),linear-gradient(135deg,var(--gold) 50%,transparent 50%);
+    background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat}
+  .fld select option{color:#000}
+  .fld input:focus,.fld select:focus{border-color:var(--gold)}
+  .fld input::placeholder{color:rgba(255,255,255,.28)}
+  .fld.bad input{border-color:var(--bad)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* предпросмотр листа А4 */
+  .ptitle{font-family:var(--disp);font-weight:800;font-size:16px;margin:30px 0 12px}
+  .a4{position:relative;background:#fff;color:#111;aspect-ratio:210/297;border-radius:4px;box-shadow:0 14px 34px rgba(0,0,0,.45);overflow:hidden;
+    font-family:"Times New Roman",Times,"Liberation Serif",serif;--u:1px}
+  .a4 .page{position:absolute;left:calc(var(--u)*85);right:calc(var(--u)*42.5);top:calc(var(--u)*57)}
+  .a4 p{font-size:calc(var(--u)*14);line-height:1.15;margin:0}
+  .a4 p.hdr{margin-left:calc(var(--u)*241)}
+  .a4 p.c{text-align:center}
+  .a4 p.j{text-align:justify;line-height:1.5}
+  .a4 p.ind{text-indent:calc(var(--u)*35.4)}
+  .a4 p.sign{display:flex;justify-content:space-between}
+  .a4 .ph{color:#9AA6B6;font-style:italic}
+
+  /* нижняя панель оплаты */
+  .pay{position:fixed;left:0;right:0;bottom:0;padding:12px 18px calc(12px + env(safe-area-inset-bottom));
+    background:rgba(8,24,48,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:none}
+  .pay .in{max-width:520px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .step{display:flex;align-items:center;gap:6px}
+  .step button{width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:20px;font-weight:700;cursor:pointer}
+  .step output{min-width:22px;text-align:center;font-family:var(--disp);font-weight:800}
+  .step small{font-size:11px;color:var(--dim);font-weight:700;display:block;text-align:center}
+  .go{flex:1;padding:15px;border:0;border-radius:999px;background:var(--gold);color:var(--night);font:inherit;font-weight:800;font-size:16px;cursor:pointer}
+  .go:disabled{opacity:.5}
+  .err{display:none;margin-top:16px;padding:12px 14px;border-radius:10px;background:rgba(242,84,91,.14);color:#FFC9CC;font-weight:700;font-size:14px;line-height:1.45}
+  .note{margin-top:14px;color:var(--dim);font-size:13px;font-weight:600;line-height:1.5}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <clipPath id="tc"><circle cx="124" cy="146" r="38"/></clipPath>
+  <symbol id="mark" viewBox="0 0 240 240">
+    <path d="M58 20 H152 L192 60 V222 H58 Z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M152 20 L152 60 L192 60 Z" fill="#E0B44C" stroke="#E0B44C" stroke-width="10" stroke-linejoin="round"/>
+    <circle cx="124" cy="146" r="52" fill="#0F2747"/><circle cx="124" cy="146" r="44" fill="none" stroke="#E0B44C" stroke-width="5.5"/>
+    <g clip-path="url(#tc)" fill="none" stroke="#E0B44C" stroke-width="4.6" stroke-linecap="round">
+      <path d="M80 135 Q124 125 168 135"/><path d="M80 146 L168 146"/><path d="M80 157 Q124 167 168 157"/>
+      <path d="M113 102 Q103 146 113 190"/><path d="M124 102 L124 190"/><path d="M135 102 Q145 146 135 190"/></g>
+  </symbol></defs></svg>
+
+<div class="wrap">
+  <div class="top">
+    <a class="logo" id="home"><svg><use href="#mark"/></svg><div><span class="a">Ак</span>Барак</div></a>
+    <button class="back" id="backBtn" style="display:none" onclick="showList()">← Все шаблоны</button>
+  </div>
+
+  <section id="listView">
+    <h1>Шаблоны документов</h1>
+    <p class="lead">Заполни поля — документ оформим по правилам и распечатаем. Свои данные вводишь один раз, дальше подставятся сами.</p>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section id="formView" style="display:none">
+    <h1 id="tTitle"></h1>
+    <p class="lead" id="tDesc"></p>
+    <div class="form" id="form"></div>
+    <div class="ptitle">Так будет выглядеть лист</div>
+    <div class="a4" id="a4"><div class="page" id="page"></div></div>
+    <div class="err" id="err"></div>
+    <p class="note">ФИО, курс и группа запомнятся на этом телефоне, чтобы в следующий раз не вводить их заново.</p>
+  </section>
+</div>
+
+<div class="pay" id="payBar"><div class="in">
+  <div class="step"><button onclick="setCopies(-1)">−</button><div><output id="cVal">1</output><small>экз.</small></div><button onclick="setCopies(1)">+</button></div>
+  <button class="go" id="goBtn" onclick="order()">Распечатать за 5 сом</button>
+</div></div>
+
+<script>
+const SERVER = "https://akbarak-production.up.railway.app";
+const PRICE = 5;
+const q = new URLSearchParams(location.search);
+const TERMINAL = q.get('t') || '';
+const $ = id => document.getElementById(id);
+$('home').href = '/' + (TERMINAL ? '?t=' + encodeURIComponent(TERMINAL) : '');
+
+let DATA = null, tpl = null, copies = 1;
+const store = {
+  get(){ try{ return JSON.parse(localStorage.getItem('akbarak_me') || '{}'); }catch(e){ return {}; } },
+  set(v){ try{ localStorage.setItem('akbarak_me', JSON.stringify(v)); }catch(e){} },
+};
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function today(){ const d = new Date(); return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear(); }
+
+async function load(){
+  try{ DATA = await (await fetch('templates.json', {cache: 'no-store'})).json(); }
+  catch(e){ $('list').innerHTML = '<p class="lead">Не удалось загрузить шаблоны. Проверь интернет.</p>'; return; }
+  $('list').innerHTML = DATA.templates.map(t =>
+    '<button class="tcard" onclick="openTpl(\'' + t.id + '\')"><div class="ic"></div><div><b>' + esc(t.title) + '</b><span>' + esc(t.desc) + '</span></div><div class="pr">' + PRICE + ' сом</div></button>').join('');
+  const want = q.get('d');
+  if(want && DATA.templates.some(t => t.id === want)) openTpl(want);
+}
+
+function showList(){
+  tpl = null;
+  $('listView').style.display = ''; $('formView').style.display = 'none';
+  $('backBtn').style.display = 'none'; $('payBar').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+function openTpl(id){
+  tpl = DATA.templates.find(t => t.id === id);
+  const me = store.get();
+  $('tTitle').textContent = tpl.title; $('tDesc').textContent = tpl.desc;
+  const html = tpl.fields.map(k => {
+    const f = DATA.fields[k];
+    let val = me[k] || '';
+    if(f.auto === 'date') val = today();
+    if(f.auto === 'year') val = String(new Date().getFullYear());
+    const lbl = '<label for="f_' + k + '">' + esc(f.label) + (f.optional ? ' <i>— можно пусто</i>' : '') + '</label>';
+    if(f.type === 'select'){
+      const cur = val || f.def;
+      return '<div class="fld">' + lbl + '<select id="f_' + k + '" data-k="' + k + '">' +
+        f.options.map(o => '<option value="' + esc(o[0]) + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select></div>';
+    }
+    const mode = k === 'course' || k === 'year' ? ' inputmode="numeric"' : (k === 'phone' ? ' inputmode="tel"' : '');
+    return '<div class="fld">' + lbl + '<input id="f_' + k + '" data-k="' + k + '" maxlength="' + (f.max || 120) + '"' + mode +
+      ' placeholder="' + esc(f.ph || '') + '" value="' + esc(val) + '"></div>';
+  }).join('');
+  $('form').innerHTML = html;
+  $('form').querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => { el.parentNode.classList.remove('bad'); render(); }));
+  $('listView').style.display = 'none'; $('formView').style.display = '';
+  $('backBtn').style.display = ''; $('payBar').style.display = 'block'; $('err').style.display = 'none';
+  copies = 1; drawCopies(); render(); window.scrollTo(0, 0);
+}
+
+function values(){
+  const v = {};
+  $('form').querySelectorAll('[data-k]').forEach(el => v[el.dataset.k] = el.value.trim());
+  return v;
+}
+
+/* Заполнение шаблона: то же правило, что на сервере */
+function fill(text, v, preview){
+  let empty = false;
+  const out = text.replace(/\{(\w+)(?::([^{}|]*)\|([^{}]*))?\}/g, (m, k, male, female) => {
+    if(male !== undefined) return v[k] === 'f' ? female : male;
+    const val = v[k] || '';
+    if(!val){ empty = true; return preview ? '<span class="ph">' + esc((DATA.fields[k] || {}).ph || k) + '</span>' : ''; }
+    return preview ? esc(val) : val;
+  });
+  return [out, empty];
+}
+
+function render(){
+  if(!tpl) return;
+  const v = values();
+  const page = $('page');
+  page.innerHTML = tpl.blocks.map(b => {
+    const st = 'margin-top:calc(var(--u)*' + (b.before || 0) + ');margin-bottom:calc(var(--u)*' + (b.after || 0) + ');';
+    if(b.type === 'sign'){
+      const [d] = fill('{date}', v, true), [s] = fill('{fio_short}', v, true);
+      return '<p class="sign" style="' + st + '"><span>' + d + '</span><span>____________&nbsp; ' + s + '</span></p>';
+    }
+    let [t, empty] = fill(b.t, v, true);
+    if(empty && b.opt){
+      const optEmpty = (b.t.match(/\{(\w+)\}/g) || []).some(m => !v[m.slice(1, -1)]);
+      if(optEmpty) return '';
+    }
+    if(b.u) t = t.replace(/(^|>)([^<]+)/g, (m, a, txt) => a + txt.toUpperCase());
+    const cls = (b.a === 'c' ? 'c' : b.a === 'hdr' ? 'hdr' : 'j') + (b.ind ? ' ind' : '');
+    return '<p class="' + cls + '" style="' + st + 'font-size:calc(var(--u)*' + (b.s || 14) + ');' + (b.b ? 'font-weight:700;' : '') + '">' + t + '</p>';
+  }).join('');
+}
+function scaleA4(){ const w = $('a4').getBoundingClientRect().width; if(w) $('a4').style.setProperty('--u', (w / 595) + 'px'); }
+new ResizeObserver(scaleA4).observe($('a4'));
+
+function drawCopies(){
+  $('cVal').textContent = copies;
+  $('goBtn').textContent = 'Распечатать за ' + (PRICE * copies) + ' сом';
+}
+function setCopies(d){ copies = Math.max(1, Math.min(10, copies + d)); drawCopies(); }
+
+async function order(){
+  const v = values();
+  // проверка обязательных полей
+  let firstBad = null;
+  tpl.fields.forEach(k => {
+    const f = DATA.fields[k];
+    if(!f.optional && f.type !== 'select' && !v[k]){ const el = $('f_' + k); el.parentNode.classList.add('bad'); firstBad = firstBad || el; }
+  });
+  if(firstBad){ firstBad.focus(); firstBad.scrollIntoView({block: 'center', behavior: 'smooth'}); return; }
+
+  // запоминаем свои данные на этом телефоне
+  const me = store.get();
+  tpl.fields.forEach(k => { if(DATA.fields[k].save || k === 'sex') me[k] = v[k]; });
+  store.set(me);
+
+  $('goBtn').disabled = true; $('err').style.display = 'none';
+  try{
+    const r = await fetch(SERVER + '/template_order', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({template: tpl.id, values: v, copies, terminal: TERMINAL, payment: 'gopay'})});
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.error || 'Не удалось оформить документ');
+    try{ localStorage.setItem('akbarak_last', JSON.stringify({id: d.order_id, token: d.token, ts: Date.now()})); }catch(e){}
+    const p = await fetch(SERVER + '/create_payment/' + d.order_id, {method: 'POST'});
+    const pd = await p.json();
+    if(!pd.checkout_url) throw new Error(pd.error || 'Не получилось открыть оплату');
+    location.href = pd.checkout_url;
+  }catch(e){
+    $('err').textContent = e.message + '. Попробуй ещё раз.'; $('err').style.display = 'block';
+    $('goBtn').disabled = false;
+  }
+}
+
+load();
+</script>
+</body>
+</html>

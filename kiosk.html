@@ -67,27 +67,27 @@
   .ln{height:1.1vh;border-radius:.6vh;background:var(--line);margin:1.1vh 0}
 
   /* ── главный экран ── */
-  #home .stage{position:absolute;left:3.2vw;right:3.2vw;top:13vh;bottom:14vh;display:grid;grid-template-columns:1.45fr 1fr;gap:4vw}
+  #home .stage{position:absolute;left:3.2vw;right:3.2vw;top:13vh;bottom:14vh;display:grid;grid-template-columns:1.8fr 1fr;gap:3vw}
   .hello{display:flex;flex-direction:column;height:100%}
   .hello .tiles{margin-top:auto}
   .hello h1{font-family:var(--disp);font-weight:800;font-size:4.4vw;line-height:1.05;letter-spacing:-.03em;max-width:15ch}
   .hello p{font-size:1.45vw;line-height:1.45;color:var(--text-dim);font-weight:600;margin:2.4vh 0 4.4vh;max-width:36ch}
-  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4vw}
-  .tile{position:relative;background:var(--paper);color:var(--navy);border-radius:.6vw;padding:3.2vh 1.6vw 2.8vh;text-align:left;
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1vw}
+  .tile{position:relative;background:var(--paper);color:var(--navy);border-radius:.6vw;padding:3.2vh 1.3vw 2.6vh;text-align:left;
     min-height:37vh;display:flex;flex-direction:column;justify-content:space-between;
     box-shadow:0 1.6vh 3.2vh rgba(0,0,0,.35);transition:transform .12s ease, box-shadow .12s ease;overflow:hidden}
   .tile::before{content:"";position:absolute;right:0;top:0;width:3.2vw;aspect-ratio:1;background:linear-gradient(225deg,var(--ink) 50%,var(--gold) 50%)}
   .tile:active{transform:translateY(.5vh) scale(.985);box-shadow:0 .6vh 1.4vh rgba(0,0,0,.35)}
   .tile svg{width:5.4vw;height:5.4vw}
-  .tile h2{font-family:var(--disp);font-weight:800;font-size:2.35vw;letter-spacing:-.02em;margin-top:1.4vh}
-  .tile .price{font-weight:800;font-size:1.25vw;color:#51627C;margin-top:.6vh}
-  .tile .price b{font-family:var(--disp);color:var(--navy);font-size:2vw;letter-spacing:-.02em}
-  .tile .go{display:flex;align-items:center;justify-content:space-between;margin-top:2vh;padding-top:1.6vh;border-top:2px solid var(--paper-shade);
-    font-weight:800;font-size:1.05vw;color:var(--gold-d)}
-  .tile .go span{width:2.6vw;height:2.6vw;border-radius:50%;background:var(--navy);display:grid;place-items:center}
+  .tile h2{font-family:var(--disp);font-weight:800;font-size:1.65vw;letter-spacing:-.02em;margin-top:1.4vh}
+  .tile .price{font-weight:800;font-size:1.05vw;color:#51627C;margin-top:.6vh}
+  .tile .price b{font-family:var(--disp);color:var(--navy);font-size:1.8vw;letter-spacing:-.02em}
+  .tile .go{display:flex;align-items:center;justify-content:space-between;gap:.6vw;margin-top:2vh;padding-top:1.6vh;border-top:2px solid var(--paper-shade);
+    font-weight:800;font-size:.95vw;color:var(--gold-d);line-height:1.25}
+  .tile .go span{flex:none;width:2.4vw;height:2.4vw;border-radius:50%;background:var(--navy);display:grid;place-items:center}
   .tile .go span svg{width:1.2vw;height:1.2vw}
 
-  #home .feeder{right:3.2vw;top:13vh;bottom:13vh;width:30vw}
+  #home .feeder{right:3.2vw;top:13vh;bottom:13vh;width:27vw}
   .qrsheet .ink{align-items:center;text-align:center;justify-content:center}
   .qrsheet h3{font-family:var(--disp);font-weight:800;font-size:1.75vw;letter-spacing:-.02em;line-height:1.15}
   .qrsheet .q{margin:3vh 0 2.6vh;display:flex;justify-content:center}
@@ -265,6 +265,9 @@
     <symbol id="i-down" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
       <rect x="18" y="6" width="28" height="52" rx="5"/></g>
       <path d="M32 18v20M24 30l8 8 8-8" fill="none" stroke="#E0B44C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M12 6h26l10 10v42H12z"/><path d="M38 6v10h10"/><path d="M19 28h20M19 35h14"/></g>
+      <path d="M30 50l14-14 5 5-14 14h-5z" fill="#E0B44C"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H6M11 6l-6 6 6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
@@ -283,16 +286,20 @@
       <p>Наведи камеру на код справа или выбери услугу — покажем, что делать.</p>
       <div class="tiles">
         <button class="tile" onclick="openSvc('print')">
-          <div><svg><use href="#i-print"/></svg><h2>Печать</h2><div class="price"><b>5</b> сом за страницу</div></div>
+          <div><svg><use href="#i-print"/></svg><h2>Печать</h2><div class="price"><b>5</b> сом за стр.</div></div>
           <div class="go">PDF, Word, фото<span><svg><use href="#i-arrow"/></svg></span></div>
         </button>
         <button class="tile" onclick="openSvc('copy')">
-          <div><svg><use href="#i-copy"/></svg><h2>Копия</h2><div class="price"><b>6</b> сом за страницу</div></div>
+          <div><svg><use href="#i-copy"/></svg><h2>Копия</h2><div class="price"><b>6</b> сом за стр.</div></div>
           <div class="go">Ксерокс документа<span><svg><use href="#i-arrow"/></svg></span></div>
         </button>
         <button class="tile" onclick="openSvc('scan')">
-          <div><svg><use href="#i-scan"/></svg><h2>Скан</h2><div class="price"><b>6</b> сом за страницу</div></div>
+          <div><svg><use href="#i-scan"/></svg><h2>Скан</h2><div class="price"><b>6</b> сом за стр.</div></div>
           <div class="go">Файл в телефон<span><svg><use href="#i-arrow"/></svg></span></div>
+        </button>
+        <button class="tile" onclick="openSvc('docs')">
+          <div><svg><use href="#i-doc"/></svg><h2>Шаблоны</h2><div class="price"><b>5</b> сом за лист</div></div>
+          <div class="go">Заявления, титульный<span><svg><use href="#i-arrow"/></svg></span></div>
         </button>
       </div>
     </div>
@@ -499,7 +506,7 @@ function openSvc(key){
   if(Date.now() < blockUntil) return;   // касание, которое разбудило экран, не открывает услугу
   disarmIdle(); stopFlow(); cur = {};
   show('svc');
-  if(key === 'print') printToScreen(); else copyScan(key);
+  if(key === 'print') printToScreen(); else if(key === 'docs') docsScreen(); else copyScan(key);
 }
 
 /* Печать: файл с телефона появляется на экране */
@@ -541,6 +548,21 @@ function printOnPhone(){
   paper('<h3 style="--i:0">Сканируй,<br>чтобы распечатать</h3><div class="q" id="qrPh" style="--i:1"></div><small style="--i:2">Всё делается в телефоне</small>');
   qr($('qrPh'), orderUrl('print'), 512);
   setTimer(SVC_SEC, 'Вернёмся на главный экран через %s с', goHome);
+}
+
+/* Шаблоны документов: заполняются в телефоне */
+function docsScreen(){
+  stopFlow();
+  const steps = [["i-phone", "Наведи камеру телефона на код справа"],
+                 ["i-doc",   "Выбери шаблон и заполни поля — лист видно сразу"],
+                 ["i-out",   "Оплати 5 сом — документ выйдет здесь"]];
+  pane(BACK + head('Шаблоны', '5 сом за лист') +
+       '<p class="lead2" style="margin-bottom:3vh">Заявление на отработку, объяснительная, пересдача, справка, титульный лист для СРС и реферата.</p>' +
+       stepsHtml(steps));
+  runSteps(steps);
+  paper('<h3 style="--i:0">Сканируй<br>и заполни</h3><div class="q" id="qrDocs" style="--i:1"></div><small style="--i:2">Оформим по правилам и распечатаем</small>');
+  qr($('qrDocs'), SITE + '/templates.html?t=' + encodeURIComponent(TERMINAL), 512);
+  setTimer(SVC_SEC + 20, 'Вернёмся на главный экран через %s с', goHome);
 }
 
 /* Заказ пришёл на экран: копии и оплата */
