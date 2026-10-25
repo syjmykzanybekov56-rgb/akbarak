@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0E2340">
 <title>АкБарак — шаблоны документов</title>
+<script src="/i18n.js"></script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -97,7 +98,7 @@
 <div class="wrap">
   <div class="top">
     <a class="logo" id="home"><svg><use href="#mark"/></svg><div><span class="a">Ак</span>Барак</div></a>
-    <button class="back" id="backBtn" style="display:none" onclick="showList()">← Все шаблоны</button>
+    <div data-ak-lang="small"></div>
   </div>
 
   <section id="listView">
@@ -107,11 +108,13 @@
   </section>
 
   <section id="formView" style="display:none">
-    <h1 id="tTitle"></h1>
+    <button class="back" id="backBtn" style="margin-top:22px" onclick="showList()">← Все шаблоны</button>
+    <h1 id="tTitle" style="margin-top:18px"></h1>
     <p class="lead" id="tDesc"></p>
     <div class="form" id="form"></div>
+    <p class="note">Документ печатается на русском языке — заполняйте поля по-русски.</p>
     <div class="ptitle">Так будет выглядеть лист</div>
-    <div class="a4" id="a4"><div class="page" id="page"></div></div>
+    <div class="a4" id="a4" data-no-i18n><div class="page" id="page"></div></div>
     <div class="err" id="err"></div>
     <p class="note">ФИО, курс и группа запомнятся на этом телефоне, чтобы в следующий раз не вводить их заново. Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</p>
   </section>
@@ -151,7 +154,7 @@ async function load(){
 function showList(){
   tpl = null;
   $('listView').style.display = ''; $('formView').style.display = 'none';
-  $('backBtn').style.display = 'none'; $('payBar').style.display = 'none';
+  $('payBar').style.display = 'none';
   window.scrollTo(0, 0);
 }
 
@@ -177,7 +180,7 @@ function openTpl(id){
   $('form').innerHTML = html;
   $('form').querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => { el.parentNode.classList.remove('bad'); render(); }));
   $('listView').style.display = 'none'; $('formView').style.display = '';
-  $('backBtn').style.display = ''; $('payBar').style.display = 'block'; $('err').style.display = 'none';
+  $('payBar').style.display = 'block'; $('err').style.display = 'none';
   copies = 1; drawCopies(); render(); window.scrollTo(0, 0);
 }
 

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>АкБарак — терминал</title>
+<script src="/i18n.js"></script>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
@@ -102,6 +103,8 @@
   .foot{position:absolute;left:3.2vw;right:3.2vw;bottom:3vh;display:flex;align-items:center;gap:2vw;font-weight:700;font-size:1.05vw;color:var(--text-dim)}
   .news{flex:1;overflow:hidden;white-space:nowrap;mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
   .news span{display:inline-block;padding-left:100%;animation:tick 42s linear infinite}
+  .news span i{font-style:normal}
+  .news span b{color:var(--gold);margin:0 2.4vw;font-weight:700}
   @keyframes tick{to{transform:translateX(-100%)}}
   .count b{font-family:var(--disp);color:var(--gold);font-weight:700}
 
@@ -281,7 +284,7 @@
 <section id="home" class="view room on">
   <header class="bar">
     <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
-    <div class="right"><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+    <div class="right"><div data-ak-lang="big"></div><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
   </header>
 
   <div class="stage">
@@ -331,7 +334,7 @@
 <section id="svc" class="view room">
   <header class="bar">
     <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
-    <div class="right"><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+    <div class="right"><div data-ak-lang="big"></div><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
   </header>
   <div class="stage"><div class="pane" id="pane"></div></div>
   <div class="feeder">
@@ -345,7 +348,7 @@
 <section id="attract" class="view room">
   <header class="bar">
     <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
-    <div class="right"><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+    <div class="right"><div data-ak-lang="big"></div><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
   </header>
   <div class="stage">
     <div class="say">
@@ -401,7 +404,8 @@ const SERVICES = {
 
 /* ─────────── Вспомогательное ─────────── */
 const $ = id => document.getElementById(id);
-const orderUrl = svc => SITE + "/?t=" + encodeURIComponent(TERMINAL) + (svc ? "&s=" + svc : "");
+const L = () => "&lang=" + I18N.lang;   // язык экрана передаём на телефон
+const orderUrl = svc => SITE + "/?t=" + encodeURIComponent(TERMINAL) + (svc ? "&s=" + svc : "") + L();
 function qr(el, text, size){
   el.innerHTML = "";
   try{ new QRCode(el, {text, width: size, height: size, colorDark: "#0F2747", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.M}); }
@@ -416,7 +420,7 @@ function clock(){
   document.querySelectorAll('.js-clock').forEach(e => e.textContent = t);
 }
 clock(); setInterval(clock, 10000);
-document.querySelectorAll('.js-news').forEach(e => e.textContent = NEWS.join('      ✦      '));
+document.querySelectorAll('.js-news').forEach(e => e.innerHTML = NEWS.map(n => '<i>' + n + '</i>').join('<b>✦</b>'));
 
 /* ─────────── Состояние принтера ─────────── */
 let sheetsToday = 0;
@@ -444,7 +448,12 @@ function show(id){
 
 /* главный */
 qr($('qrHome'), orderUrl(), 512);
-qr($('qrPartner'), SITE + '/?s=partner', 160);
+function homeQrs(){
+  qr($('qrHome'), orderUrl(), 512);
+  qr($('qrPartner'), SITE + '/?s=partner' + L(), 160);
+  qr($('qrAttract'), orderUrl(), 256);
+}
+I18N.onChange(homeQrs);
 function goHome(){
   stopFlow(); stopAttract();
   show('home'); feed($('homeSheet'));
@@ -528,7 +537,7 @@ async function printToScreen(){
   try{
     const d = await api('/kiosk/session', {terminal: TERMINAL});
     cur.session = d.session;
-    qr($('qrSess'), SITE + '/send.html?k=' + encodeURIComponent(d.session) + '&t=' + encodeURIComponent(TERMINAL), 512);
+    qr($('qrSess'), SITE + '/send.html?k=' + encodeURIComponent(d.session) + '&t=' + encodeURIComponent(TERMINAL) + L(), 512);
     clearInterval(pollT);
     pollT = setInterval(async () => {
       try{
@@ -565,7 +574,7 @@ function docsScreen(){
        stepsHtml(steps));
   runSteps(steps);
   paper('<h3 style="--i:0">Сканируй<br>и заполни</h3><div class="q" id="qrDocs" style="--i:1"></div><small style="--i:2">Оформим по правилам и распечатаем</small>');
-  qr($('qrDocs'), SITE + '/templates.html?t=' + encodeURIComponent(TERMINAL), 512);
+  qr($('qrDocs'), SITE + '/templates.html?t=' + encodeURIComponent(TERMINAL) + L(), 512);
   setTimer(SVC_SEC + 20, 'Вернёмся на главный экран через %s с', goHome);
 }
 
@@ -712,7 +721,7 @@ async function checkOrder(){
          '<p class="lead2">Файл откроется на телефоне — нажми «Скачать скан». Ссылка работает сутки.</p>' +
          '<div class="acts"><button class="btn ghost" onclick="cancelAndHome()">Готово</button></div>');
     paper('<h3 style="--i:0">Скачать скан</h3><div class="q" id="qrDl" style="--i:1"></div><small style="--i:2">Ссылка только для тебя</small>');
-    qr($('qrDl'), SITE + '/?order=' + cur.orderId + '&token=' + encodeURIComponent(cur.token), 512);
+    qr($('qrDl'), SITE + '/?order=' + cur.orderId + '&token=' + encodeURIComponent(cur.token) + L(), 512);
     setTimer(90, 'Вернёмся на главный экран через %s с', goHome);
   } else if(d.status === 'done'){
     stopFlow();
@@ -776,6 +785,7 @@ function printDoc(){
 function startAttract(){
   if(attractOn) return;
   stopFlow(); cur = {}; attractOn = true; docIdx = 0;
+  if(I18N.lang !== 'ru') I18N.set('ru');   // следующий студент начинает с русского
   show('attract'); printDoc();
   docTimer = setInterval(printDoc, DOC_SEC * 1000);
 }
