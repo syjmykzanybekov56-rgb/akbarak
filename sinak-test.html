@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0E2340">
+<title>Ак сынак — тест</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#081830;--ink:#0E2340;--navy:#0F2747;--navy2:#163562;--gold:#E0B44C;--dim:#9FB2CE;--ok:#3DDC84;--bad:#F2545B;
+        --disp:"Unbounded","Manrope",system-ui,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  html,body{min-height:100%;background:linear-gradient(180deg,var(--ink),var(--night));color:#fff;font-family:"Manrope",system-ui,sans-serif}
+  body{padding:18px 18px calc(24px + env(safe-area-inset-bottom))}
+  .wrap{max-width:520px;margin:0 auto}
+  .view{display:none} .view.on{display:block}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:18px}
+  .brand i{width:30px;height:30px;border-radius:50%;border:3px solid var(--gold);display:grid;place-items:center;font-style:normal;font-size:12px;color:var(--gold)}
+  h1{font-family:var(--disp);font-weight:800;font-size:26px;line-height:1.15;letter-spacing:-.02em;margin:26px 0 8px}
+  p.lead{color:var(--dim);font-weight:600;font-size:15px;line-height:1.5}
+  .rules{margin:20px 0;padding:16px;border-radius:12px;background:rgba(242,84,91,.1);border:1px solid rgba(242,84,91,.35)}
+  .rules b{display:block;color:#FFC9CC;font-size:15px;margin-bottom:6px}
+  .rules li{margin-left:18px;color:#F3D6D8;font-size:14px;line-height:1.55;font-weight:600}
+  label{display:block;font-weight:700;font-size:13px;color:var(--dim);margin:14px 0 6px}
+  input{width:100%;padding:14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;
+    font:inherit;font-weight:700;font-size:16px;outline:none;-webkit-user-select:text;user-select:text}
+  input:focus{border-color:var(--gold)}
+  .btn{width:100%;margin-top:20px;padding:17px;border:0;border-radius:999px;background:var(--gold);color:var(--night);font:inherit;font-weight:800;font-size:17px;cursor:pointer}
+  .btn:disabled{opacity:.5}
+  .err{display:none;margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(242,84,91,.14);color:#FFC9CC;font-weight:700;font-size:14px}
+
+  /* вопрос */
+  .qtop{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:14px;color:var(--dim);margin-top:6px}
+  .qtop b{font-family:var(--disp);color:#fff;font-size:18px}
+  .sec{font-family:var(--disp);font-size:22px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .sec.low{color:var(--bad)}
+  .bar{height:6px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;margin:10px 0 18px}
+  .bar i{display:block;height:100%;background:var(--gold);transform-origin:left;transition:transform 1s linear}
+  .qcard{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px}
+  canvas{display:block;width:100%}
+  .opts{display:grid;gap:10px}
+  .opt{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.06);cursor:pointer;text-align:left}
+  .opt:active,.opt.sel{border-color:var(--gold);background:rgba(224,180,76,.15)}
+  .opt .l{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:13px;color:#fff}
+  .opt canvas{flex:1;min-width:0}
+
+  /* итоги */
+  .big{font-family:var(--disp);font-weight:800;font-size:64px;letter-spacing:-.04em;color:var(--gold);margin-top:18px}
+  .stop{text-align:center;padding-top:40px}
+  .stop .ic{width:92px;height:92px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;font-size:44px}
+  .stop.bad .ic{background:rgba(242,84,91,.15)} .stop.good .ic{background:rgba(61,220,132,.15)}
+  .wait{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px;color:var(--dim);font-weight:700;font-size:14px}
+  .spin{width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--gold);animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><i>АК</i>Ак сынак</div>
+
+  <!-- вход -->
+  <section class="view on" id="vJoin">
+    <h1>Входной контроль</h1>
+    <p class="lead" id="jInfo">Введите ФИО и группу, затем нажмите «Начать».</p>
+    <div class="rules">
+      <b>Важно</b>
+      <ul>
+        <li>На каждый вопрос даётся ограниченное время.</li>
+        <li>Если вы свернёте браузер, откроете другое приложение или вкладку — попытка аннулируется.</li>
+        <li>Пройти тест можно только один раз.</li>
+      </ul>
+    </div>
+    <label for="fio">Фамилия и имя</label>
+    <input id="fio" autocomplete="name" placeholder="Асанов Бекжан">
+    <label for="grp">Группа</label>
+    <input id="grp" placeholder="37 ЛД-2">
+    <button class="btn" id="startBtn">Начать тест</button>
+    <div class="err" id="jErr"></div>
+  </section>
+
+  <!-- вопрос -->
+  <section class="view" id="vQ">
+    <div class="qtop"><span>Вопрос <b id="qNum">1</b> из <span id="qTot">5</span></span><span class="sec" id="qSec">25</span></div>
+    <div class="bar"><i id="qBar"></i></div>
+    <div class="qcard"><canvas id="qCanvas"></canvas></div>
+    <div class="opts" id="qOpts"></div>
+  </section>
+
+  <!-- аннулировано -->
+  <section class="view stop bad" id="vAnnul">
+    <div class="ic">✕</div>
+    <h1>Попытка аннулирована</h1>
+    <p class="lead">Вы вышли из теста. Если это была случайность (звонок, уведомление), подойдите к преподавателю — он может разрешить продолжить.</p>
+    <div class="wait" id="aWait"><div class="spin"></div>Ждём решения преподавателя…</div>
+    <button class="btn" id="resumeBtn" style="display:none">Продолжить тест</button>
+  </section>
+
+  <!-- готово -->
+  <section class="view stop good" id="vDone">
+    <div class="ic">✓</div>
+    <h1>Тест завершён</h1>
+    <div class="big" id="dScore">0%</div>
+    <p class="lead" id="dText"></p>
+  </section>
+</div>
+
+<script>
+const SERVER = "https://akbarak-production.up.railway.app";
+const CODE = (new URLSearchParams(location.search).get('c') || '').replace(/\D/g, '');
+const $ = id => document.getElementById(id);
+let me = null, cur = null, timer = null, polling = null, inQuestion = false, sending = false;
+
+function show(id){ document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id)); window.scrollTo(0, 0); }
+
+// данные запоминаем, чтобы не вводить каждый раз
+try{ const m = JSON.parse(localStorage.getItem('akbarak_me') || '{}'); if(m.fio_nom) $('fio').value = m.fio_nom.split(' ').slice(0, 2).join(' '); if(m.group) $('grp').value = m.group; }catch(e){}
+if(!CODE){ $('jInfo').textContent = 'Нет кода теста. Отсканируйте QR на экране преподавателя.'; $('startBtn').disabled = true; }
+
+async function api(path, body){
+  const r = await fetch(SERVER + path, body === undefined ? {cache: 'no-store'} :
+    {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(d.error || 'Ошибка сервера');
+  return d;
+}
+
+function fullscreen(){
+  const el = document.documentElement;
+  try{ (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el); }catch(e){}
+}
+
+/* ── вход ── */
+$('startBtn').addEventListener('click', async () => {
+  const name = $('fio').value.trim(), group = $('grp').value.trim();
+  if(name.split(/\s+/).length < 2){ return fail('Введите фамилию и имя'); }
+  $('startBtn').disabled = true; $('jErr').style.display = 'none';
+  fullscreen();
+  try{
+    me = await api('/sinak/join/' + CODE, {name, group});
+    try{ const m = JSON.parse(localStorage.getItem('akbarak_me') || '{}'); m.group = group; localStorage.setItem('akbarak_me', JSON.stringify(m)); }catch(e){}
+    $('qTot').textContent = me.n;
+    next();
+  }catch(e){ fail(e.message); $('startBtn').disabled = false; }
+});
+function fail(msg){ $('jErr').textContent = msg; $('jErr').style.display = 'block'; }
+
+/* ── вопрос: текст рисуется картинкой, чтобы его нельзя было выделить и скопировать ── */
+function drawText(canvas, text, size, color, weight){
+  const dpr = Math.max(2, window.devicePixelRatio || 1);
+  const w = canvas.parentElement.clientWidth - (canvas.parentElement.classList.contains('opt') ? 84 : 32);
+  const ctx = canvas.getContext('2d');
+  const font = (weight || 700) + ' ' + size + 'px Manrope, system-ui, sans-serif';
+  ctx.font = font;
+  const lines = [], words = text.split(' ');
+  let line = '';
+  for(const word of words){
+    const t = line ? line + ' ' + word : word;
+    if(ctx.measureText(t).width > w && line){ lines.push(line); line = word; } else line = t;
+  }
+  if(line) lines.push(line);
+  const lh = Math.round(size * 1.35);
+  canvas.width = w * dpr; canvas.height = (lines.length * lh + 4) * dpr;
+  canvas.style.width = w + 'px'; canvas.style.height = (lines.length * lh + 4) + 'px';
+  ctx.scale(dpr, dpr); ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'top';
+  lines.forEach((l, i) => ctx.fillText(l, 0, i * lh + 2));
+}
+
+async function next(){
+  clearInterval(timer);
+  let q;
+  try{ q = await api('/sinak/q/' + me.sid + '?token=' + encodeURIComponent(me.token)); }
+  catch(e){ setTimeout(next, 1500); return; }
+  if(q.status === 'annulled'){ return annulled(); }
+  if(q.status === 'done' || q.status === 'closed'){ return done(q); }
+  cur = q;
+  show('vQ'); inQuestion = true; sending = false;
+  $('qNum').textContent = q.idx + 1;
+  drawText($('qCanvas'), q.q, 18, '#0F2747', 800);
+  $('qOpts').innerHTML = q.a.map((a, i) => '<button class="opt" data-i="' + i + '"><span class="l">' + 'АБВГД'[i] + '</span><canvas></canvas></button>').join('');
+  $('qOpts').querySelectorAll('.opt').forEach((b, i) => {
+    drawText(b.querySelector('canvas'), q.a[i], 16, '#FFFFFF', 700);
+    b.addEventListener('click', () => answer(i, b));
+  });
+  let left = q.left;
+  const paint = () => {
+    $('qSec').textContent = left; $('qSec').classList.toggle('low', left <= 5);
+    $('qBar').style.transform = 'scaleX(' + Math.max(0, left / q.sec) + ')';
+  };
+  paint();
+  timer = setInterval(() => { left--; paint(); if(left <= 0){ clearInterval(timer); answer(null); } }, 1000);
+}
+
+async function answer(choice, btn){
+  if(sending) return;
+  sending = true; clearInterval(timer);
+  if(btn) btn.classList.add('sel');
+  try{ await api('/sinak/answer/' + me.sid, {token: me.token, idx: cur.idx, choice}); }catch(e){}
+  next();
+}
+
+/* ── выход из теста = аннулирование ── */
+function leave(reason){
+  if(!inQuestion || !me) return;
+  inQuestion = false; clearInterval(timer);
+  const body = JSON.stringify({token: me.token, reason});
+  // sendBeacon успевает отправить, даже если вкладка уже сворачивается
+  if(!(navigator.sendBeacon && navigator.sendBeacon(SERVER + '/sinak/leave/' + me.sid, new Blob([body], {type: 'text/plain'})))){
+    fetch(SERVER + '/sinak/leave/' + me.sid, {method: 'POST', body, keepalive: true}).catch(() => {});
+  }
+  annulled();
+}
+document.addEventListener('visibilitychange', () => { if(document.hidden) leave('свернул браузер или открыл другое приложение'); });
+window.addEventListener('pagehide', () => leave('закрыл страницу'));
+window.addEventListener('blur', () => setTimeout(() => { if(!document.hasFocus()) leave('переключился на другое окно'); }, 400));
+document.addEventListener('fullscreenchange', () => { if(!document.fullscreenElement && inQuestion) leave('вышел из полноэкранного режима'); });
+
+function annulled(){
+  inQuestion = false; clearInterval(timer);
+  show('vAnnul'); $('resumeBtn').style.display = 'none'; $('aWait').style.display = '';
+  clearInterval(polling);
+  polling = setInterval(async () => {
+    try{
+      const q = await api('/sinak/q/' + me.sid + '?token=' + encodeURIComponent(me.token));
+      if(q.status === 'active'){ clearInterval(polling); $('aWait').style.display = 'none'; $('resumeBtn').style.display = 'block'; }
+      if(q.status === 'done' || q.status === 'closed'){ clearInterval(polling); done(q); }
+    }catch(e){}
+  }, 2500);
+}
+$('resumeBtn').addEventListener('click', () => { fullscreen(); next(); });
+
+function done(q){
+  inQuestion = false; clearInterval(timer); clearInterval(polling);
+  show('vDone');
+  const score = q.score != null ? q.score : Math.round(100 * (q.correct || 0) / (q.n || 1));
+  $('dScore').textContent = score + '%';
+  $('dText').textContent = 'Правильных ответов: ' + (q.correct || 0) + ' из ' + q.n + '. Результат уже у преподавателя.';
+  try{ document.exitFullscreen && document.fullscreenElement && document.exitFullscreen(); }catch(e){}
+}
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy', e => e.preventDefault());
+</script>
+</body>
+</html>
