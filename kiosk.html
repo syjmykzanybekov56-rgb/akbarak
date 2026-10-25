@@ -672,7 +672,7 @@ async function payOrder(){
        '<div class="wait"><div class="spin"></div>Ждём оплату…</div>' +
        '<div class="acts"><button class="btn ghost" onclick="cancelAndHome()">Отменить заказ</button></div>');
   runSteps(steps);
-  paper('<h3 style="--i:0">Сканируй<br>для оплаты</h3><div class="q" id="qrPay" style="--i:1"></div><small style="--i:2">Сумма: ' + cur.total + ' сом</small>');
+  paper('<h3 style="--i:0">Сканируй<br>для оплаты</h3><div class="q" id="qrPay" style="--i:1"></div><small style="--i:2">Сумма: ' + cur.total + ' сом<br>Оплачивая, вы принимаете публичную оферту: akbarak.vercel.app/oferta.html</small>');
   setTimer(240, 'Заказ отменится через %s с без оплаты', cancelAndHome, false);
   try{
     const r = await fetch(SERVER + '/create_payment/' + cur.orderId, {method: 'POST'});
