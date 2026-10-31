@@ -12,6 +12,8 @@
     TG_CHAT_ID         ваш chat_id в Telegram (необязательно)
     COLOR_ENABLED      "1" — разрешить цветную печать и фото (по умолчанию выключено:
                        Pantum M6500W печатает только ч/б)
+    DUPLEX_ENABLED     "1" — разрешить двустороннюю печать и брошюры (включайте, когда
+                       стоит принтер с автоматическим дуплексом)
     CASH_ENABLED       "1" — разрешить оплату наличными (по умолчанию выключено:
                        купюроприёмника нет, иначе печать бесплатная)
     FILE_TTL_HOURS     через сколько часов удалять файлы (по умолчанию 24)
@@ -62,6 +64,8 @@ TG_CHAT_ID = os.getenv("TG_CHAT_ID", "")
 CASH_ENABLED = os.getenv("CASH_ENABLED", "0") == "1"
 COLOR_ENABLED = os.getenv("COLOR_ENABLED", "0") == "1"
 NO_COLOR_MSG = "Цветная печать и фото пока недоступны — сейчас только ч/б"
+DUPLEX_ENABLED = os.getenv("DUPLEX_ENABLED", "0") == "1"
+NO_DUPLEX_MSG = "Двусторонняя печать и брошюры пока недоступны — сейчас только односторонняя"
 FILE_TTL_HOURS = int(os.getenv("FILE_TTL_HOURS", "24"))
 DEFAULT_TERMINAL = os.getenv("DEFAULT_TERMINAL", "kgma-1")
 SITE_URL = os.getenv("SITE_URL", "https://akbarak.vercel.app").rstrip("/")
@@ -80,6 +84,9 @@ PRICES = {
     "copy_bw": 6, "copy_color": 12,
     "scan_bw": 6, "scan_color": 12,
 }
+# Двусторонняя печать и брошюра — цена за ЛИСТ (обе стороны). Поменяйте здесь.
+SHEET_PRICES = {"bw": 8, "color": 18}
+SIDES = ("single", "duplex", "booklet")   # односторонняя / двусторонняя / брошюра
 PHOTO_PRICES = [  # (подстрока в названии формата, цена)
     ("паспорт", 50),
     ("10×15", 15), ("10x15", 15),
@@ -152,6 +159,7 @@ def init_db():
         "ALTER TABLE orders ADD COLUMN refund TEXT DEFAULT ''",
         "ALTER TABLE orders ADD COLUMN access_token TEXT",
         "ALTER TABLE orders ADD COLUMN alerted INTEGER DEFAULT 0",
+        "ALTER TABLE orders ADD COLUMN sides TEXT DEFAULT 'single'",
     ]:
         try:
             conn.execute(stmt)
@@ -185,7 +193,7 @@ sinak.register(app, db)
 
 # Колонки, которые отдаём терминалу (без больших/секретных полей)
 PUBLIC_COLS = ("id, file_name, print_type, pages, copies, total, payment, page_range, status, "
-               "created_at, paid_at, group_id, terminal_id, order_type, photo_format, error, refund")
+               "created_at, paid_at, group_id, terminal_id, order_type, photo_format, error, refund, sides")
 
 
 # ─────────────────────── Telegram-уведомления ───────────────────────
@@ -276,6 +284,24 @@ def clamp(value, low, high, default):
         return default
 
 
+def order_total(order_type, print_type, sides, pages, copies):
+    """Единственное место, где считается цена печати документа.
+    single  — каждая страница по цене PRICES;
+    duplex  — по 2 страницы на лист по цене SHEET_PRICES, нечётная последняя — как одна страница;
+    booklet — по 4 страницы на лист (2 на каждой стороне, сгиб пополам), цена листа SHEET_PRICES."""
+    pages = max(1, int(pages or 1))
+    copies = max(1, int(copies or 1))
+    kind = order_type if order_type in ("copy", "scan") else "print"
+    if kind != "print" or sides not in ("duplex", "booklet"):
+        return PRICES[f"{kind}_{print_type}"] * pages * copies
+    sheet = SHEET_PRICES[print_type]
+    if sides == "duplex":
+        per_copy = (pages // 2) * sheet + (pages % 2) * PRICES[f"print_{print_type}"]
+    else:
+        per_copy = -(-pages // 4) * sheet   # округление вверх
+    return per_copy * copies
+
+
 def photo_price(fmt: str):
     f = (fmt or "").lower()
     for key, price in PHOTO_PRICES:
@@ -289,6 +315,13 @@ def photo_price(fmt: str):
 @app.route("/", methods=["GET"])
 def index():
     return jsonify({"status": "АкБарак сервер работает!"})
+
+
+@app.route("/config", methods=["GET"])
+def config():
+    """Что сейчас умеет терминал — сайт прячет недоступные режимы."""
+    return jsonify({"color": COLOR_ENABLED, "duplex": DUPLEX_ENABLED,
+                    "prices": PRICES, "sheet_prices": SHEET_PRICES})
 
 
 @app.errorhandler(413)
@@ -331,6 +364,13 @@ def upload():
 
         if (photo_format or request.form.get("print_type") == "color") and not COLOR_ENABLED:
             return jsonify({"error": NO_COLOR_MSG}), 400
+        sides = request.form.get("sides") or "single"
+        if sides not in SIDES:
+            sides = "single"
+        if photo_format:
+            sides = "single"
+        if sides != "single" and not DUPLEX_ENABLED:
+            return jsonify({"error": NO_DUPLEX_MSG}), 400
         if photo_format:
             unit = photo_price(photo_format)
             if unit is None:
@@ -357,6 +397,9 @@ def upload():
                 file.save(file_path)
                 saved.append(file_path)
 
+                file_sides = sides
+                if ext in (".jpg", ".jpeg", ".png"):
+                    file_sides = "single"   # картинка — это одна страница
                 if order_type == "photo":
                     pages, rng = 1, None
                 else:
@@ -371,14 +414,15 @@ def upload():
                         pages = real or client_pages
                     pages = max(1, min(MAX_PAGES, pages))
 
-                total = (unit if order_type == "photo" else unit * pages * copies)
+                total = (unit if order_type == "photo"
+                         else order_total(order_type, print_type, file_sides, pages, copies))
                 grand_total += total
                 cur = conn.execute(
                     "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, "
-                    "page_range, status, created_at, group_id, terminal_id, order_type, photo_format, access_token) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "page_range, status, created_at, group_id, terminal_id, order_type, photo_format, access_token, "
+                    "sides) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (file.filename, file_path, print_type, pages, copies, total, payment, rng, status,
-                     now(), group_id, terminal, order_type, photo_format or None, token))
+                     now(), group_id, terminal, order_type, photo_format or None, token, file_sides))
                 order_ids.append(cur.lastrowid)
             if session_id:
                 conn.execute("UPDATE kiosk_sessions SET order_id=? WHERE id=?", (order_ids[0], session_id))
@@ -467,7 +511,7 @@ def kiosk_options(order_id):
         return jsonify({"error": "Заказ не найден"}), 404
     try:
         copies = clamp(data.get("copies"), 1, 50, 1)
-        items = conn.execute("SELECT id, pages, print_type, order_type FROM orders "
+        items = conn.execute("SELECT id, pages, print_type, order_type, sides FROM orders "
                              "WHERE group_id=? AND status='pending_payment'", (group_id,)).fetchall()
         if not items:
             return jsonify({"error": "Заказ уже оплачен"}), 409
@@ -475,8 +519,8 @@ def kiosk_options(order_id):
         for i in items:
             if i["order_type"] == "photo":
                 continue
-            unit = PRICES[f"{i['order_type'] if i['order_type'] in ('copy', 'scan') else 'print'}_{i['print_type']}"]
-            item_total = unit * (i["pages"] or 1) * copies
+            item_total = order_total(i["order_type"], i["print_type"], i["sides"] or "single",
+                                     i["pages"] or 1, copies)
             total += item_total
             conn.execute("UPDATE orders SET copies=?, total=? WHERE id=?", (copies, item_total, i["id"]))
         conn.commit()
