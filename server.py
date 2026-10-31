@@ -496,10 +496,34 @@ def kiosk_session_get(session_id):
         "order_id": sess["order_id"],
         "token": first["access_token"],
         "files": [{"name": i["file_name"], "pages": i["pages"]} for i in items],
+        "preview": f"/kiosk/preview/{sess['order_id']}",
         "copies": items[0]["copies"] if items else 1,
         "unit": PRICES["print_" + (items[0]["print_type"] if items else "bw")],
         "total": sum(i["total"] for i in items),
     })
+
+
+@app.route("/kiosk/preview/<int:order_id>/<int:idx>", methods=["GET"])
+def kiosk_preview(order_id, idx):
+    """Файл заказа для предпросмотра на экране терминала — только с ключом заказа
+    и только пока заказ не напечатан (потом файл удаляется)."""
+    conn, group_id = _group_by_token(order_id, request.args.get("token"))
+    if not conn:
+        return jsonify({"error": "Заказ не найден"}), 404
+    try:
+        items = conn.execute("SELECT file_path, file_name, status FROM orders WHERE group_id=? ORDER BY id",
+                             (group_id,)).fetchall()
+    finally:
+        conn.close()
+    if not 0 <= idx < len(items):
+        return jsonify({"error": "Файл не найден"}), 404
+    row = items[idx]
+    if row["status"] not in ("pending_payment", "new", "printing") or not row["file_path"] \
+            or not os.path.exists(row["file_path"]):
+        return jsonify({"error": "Файл уже недоступен"}), 404
+    resp = send_file(row["file_path"], download_name=row["file_name"])
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.route("/kiosk/options/<int:order_id>", methods=["POST"])
