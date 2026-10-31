@@ -8,8 +8,9 @@
   2. Рядом с этим файлом создайте файл worker_key.txt и вставьте в него
      значение WORKER_KEY из Railway (если ключ на сервере ещё не задан — файл не нужен).
   3. Для печати DOC/DOCX/TXT нужен Microsoft Word или бесплатный LibreOffice.
-  4. Двусторонняя печать и брошюры работают, только если принтер умеет
-     автоматический дуплекс (и на сервере включено DUPLEX_ENABLED=1).
+  4. Двусторонняя печать и брошюры: на сервере включите DUPLEX_ENABLED=1.
+     Если принтер не умеет печатать с двух сторон сам — MANUAL_DUPLEX = True
+     (печатаются лицевые стороны, вы переворачиваете пачку и жмёте Enter).
 """
 
 import logging
@@ -31,6 +32,17 @@ TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
 SCAN_DPI = 150
+
+# Двусторонняя печать на принтере БЕЗ автоматического дуплекса (сейчас Pantum M6500W).
+# True  — принтер печатает лицевые стороны, программа ждёт, вы переворачиваете пачку,
+#         кладёте её обратно в лоток и нажимаете Enter в этом окне — печатаются обороты.
+# False — принтер сам печатает с двух сторон (когда купите принтер с дуплексом).
+MANUAL_DUPLEX = True
+# Настройки ручного переворота — подбираются тестовой печатью (akbarak_test_8.pdf):
+BACK_REVERSE = True          # печатать обороты в обратном порядке
+BACK_ROTATE_DUPLEX = 0       # повернуть оборот на 180°, если он вверх ногами (0 или 180)
+BACK_ROTATE_BOOKLET = 180    # то же для брошюры
+MANUAL_WAIT_MIN = 15         # сколько ждать переворота, потом заказ — ошибка
 COPY_DPI = 200
 
 LIBREOFFICE_PATHS = [
@@ -242,6 +254,84 @@ def make_booklet(pdf_path, page_range=None):
     return out
 
 
+def split_for_manual_duplex(pdf_path, page_range, copies, rotate):
+    """Делит PDF на два файла: лицевые стороны и обороты (для ручного переворота).
+    Копии раскладываются листами, нечётное число страниц дополняется пустой."""
+    from pypdf import PdfReader, PdfWriter
+    reader = PdfReader(pdf_path)
+    pages = [reader.pages[i] for i in _page_list(page_range, len(reader.pages))]
+    if not pages:
+        raise ValueError("нет страниц для печати")
+    if len(pages) % 2:
+        pages.append(None)
+    sheets = [(pages[i], pages[i + 1]) for i in range(0, len(pages), 2)] * copies
+    fronts, backs = PdfWriter(), PdfWriter()
+    w = float(pages[0].mediabox.width)
+    h = float(pages[0].mediabox.height)
+    for front, _ in sheets:
+        fronts.add_page(front) if front is not None else fronts.add_blank_page(w, h)
+    order = list(reversed(sheets)) if BACK_REVERSE else sheets
+    for _, back in order:
+        if back is None:
+            backs.add_blank_page(w, h)
+        else:
+            backs.add_page(back)
+            if rotate:
+                backs.pages[-1].rotate(rotate)
+    base = os.path.splitext(pdf_path)[0]
+    paths = (base + "_fronts.pdf", base + "_backs.pdf")
+    for writer, path in zip((fronts, backs), paths):
+        with open(path, "wb") as f:
+            writer.write(f)
+    return paths[0], paths[1], len(sheets)
+
+
+def wait_for_flip(oid, sheets):
+    """Ждёт, пока человек перевернёт пачку и нажмёт Enter. True — можно печатать обороты."""
+    log.info("=" * 60)
+    log.info("📄 Заказ #%s: лицевые стороны напечатаны (%s л.).", oid, sheets)
+    log.info("   Возьмите пачку из лотка, НЕ меняя порядок листов, переверните")
+    log.info("   и положите в лоток подачи. Затем нажмите Enter в этом окне.")
+    log.info("   (ждём %s мин.)", MANUAL_WAIT_MIN)
+    log.info("=" * 60)
+    print("\a", end="", flush=True)                 # звуковой сигнал
+    deadline = time.time() + MANUAL_WAIT_MIN * 60
+    try:
+        import msvcrt                                # Windows
+        while msvcrt.kbhit():
+            msvcrt.getwch()                          # убрать старые нажатия
+        while time.time() < deadline:
+            if msvcrt.kbhit() and msvcrt.getwch() in ("\r", "\n"):
+                return True
+            time.sleep(0.2)
+        return False
+    except ImportError:
+        try:
+            input()
+            return True
+        except EOFError:
+            return False
+
+
+def print_manual_duplex(oid, pdf_path, page_range, copies, color, booklet):
+    """Двусторонняя печать на принтере без дуплекса: лицо → переворот → оборот."""
+    rotate = BACK_ROTATE_BOOKLET if booklet else BACK_ROTATE_DUPLEX
+    try:
+        fronts, backs, sheets = split_for_manual_duplex(pdf_path, page_range, copies, rotate)
+    except Exception as e:
+        return f"не удалось подготовить двустороннюю печать: {e}"
+    try:
+        err = print_file(fronts, 1, None, color, "single")
+        if err:
+            return err
+        if not wait_for_flip(oid, sheets):
+            return "не перевернули листы вовремя — обороты не напечатаны"
+        log.info("Печатаю обороты заказа #%s", oid)
+        return print_file(backs, 1, None, color, "single")
+    finally:
+        _remove(fronts, backs)
+
+
 def print_file(path, copies=1, page_range=None, color=False, sides="single"):
     """Возвращает None при успехе или текст ошибки.
     sides: single — с одной стороны; duplex — переворот по длинному краю;
@@ -374,7 +464,11 @@ def handle_print(oid, order):
                 booklet = make_booklet(printable, order.get("page_range"))
             except Exception as e:
                 return f"не удалось собрать брошюру: {e}"
+            if MANUAL_DUPLEX:
+                return print_manual_duplex(oid, booklet, None, copies, color, True)
             return print_file(booklet, copies, None, color, "booklet")
+        if sides == "duplex" and MANUAL_DUPLEX:
+            return print_manual_duplex(oid, printable, order.get("page_range"), copies, color, False)
         return print_file(printable, copies, order.get("page_range"), color, sides)
     finally:
         _remove(src, printable if printable != src else None, booklet)
