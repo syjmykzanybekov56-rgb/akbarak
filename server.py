@@ -497,6 +497,7 @@ def kiosk_session_get(session_id):
         "token": first["access_token"],
         "files": [{"name": i["file_name"], "pages": i["pages"]} for i in items],
         "preview": f"/kiosk/preview/{sess['order_id']}",
+        "duplex": DUPLEX_ENABLED,
         "copies": items[0]["copies"] if items else 1,
         "unit": PRICES["print_" + (items[0]["print_type"] if items else "bw")],
         "total": sum(i["total"] for i in items),
@@ -528,14 +529,19 @@ def kiosk_preview(order_id, idx):
 
 @app.route("/kiosk/options/<int:order_id>", methods=["POST"])
 def kiosk_options(order_id):
-    """Изменить число копий на экране — только пока заказ не оплачен."""
+    """Изменить число копий и стороны печати на экране — только пока заказ не оплачен."""
     data = request.get_json(silent=True) or {}
+    sides = data.get("sides")
+    if sides is not None and sides not in SIDES:
+        return jsonify({"error": "Неизвестный режим печати"}), 400
+    if sides not in (None, "single") and not DUPLEX_ENABLED:
+        return jsonify({"error": NO_DUPLEX_MSG}), 400
     conn, group_id = _group_by_token(order_id, data.get("token"))
     if not conn:
         return jsonify({"error": "Заказ не найден"}), 404
     try:
         copies = clamp(data.get("copies"), 1, 50, 1)
-        items = conn.execute("SELECT id, pages, print_type, order_type, sides FROM orders "
+        items = conn.execute("SELECT id, pages, print_type, order_type, sides, file_name FROM orders "
                              "WHERE group_id=? AND status='pending_payment'", (group_id,)).fetchall()
         if not items:
             return jsonify({"error": "Заказ уже оплачен"}), 409
@@ -543,12 +549,16 @@ def kiosk_options(order_id):
         for i in items:
             if i["order_type"] == "photo":
                 continue
-            item_total = order_total(i["order_type"], i["print_type"], i["sides"] or "single",
-                                     i["pages"] or 1, copies)
+            item_sides = i["sides"] or "single"
+            if sides is not None:
+                is_image = os.path.splitext(i["file_name"] or "")[1].lower() in (".jpg", ".jpeg", ".png")
+                item_sides = "single" if is_image else sides   # картинка — одна страница
+            item_total = order_total(i["order_type"], i["print_type"], item_sides, i["pages"] or 1, copies)
             total += item_total
-            conn.execute("UPDATE orders SET copies=?, total=? WHERE id=?", (copies, item_total, i["id"]))
+            conn.execute("UPDATE orders SET copies=?, total=?, sides=? WHERE id=?",
+                         (copies, item_total, item_sides, i["id"]))
         conn.commit()
-        return jsonify({"success": True, "copies": copies, "total": total})
+        return jsonify({"success": True, "copies": copies, "total": total, "sides": sides or "single"})
     finally:
         conn.close()
 

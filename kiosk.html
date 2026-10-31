@@ -154,6 +154,11 @@
   .stepper button:disabled{opacity:.3}
   .stepper output{font-family:var(--disp);font-weight:800;font-size:3.6vw;min-width:5vw;text-align:center;font-variant-numeric:tabular-nums}
   .sum{font-family:var(--disp);font-weight:800;font-size:4.4vw;letter-spacing:-.03em;color:var(--gold);line-height:1}
+  .sides{display:flex;gap:.6vw}
+  .sides button{height:5.6vw;padding:0 1.5vw;border-radius:2.8vw;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+    font-weight:800;font-size:1.3vw;white-space:nowrap}
+  .sides button.on{background:var(--gold);border-color:var(--gold);color:var(--night)}
+  .sides button:disabled{opacity:.45}
   .sum small{font-family:var(--body);font-size:1.3vw;color:var(--text-dim);font-weight:700;letter-spacing:0;margin-left:.6vw}
   .acts{display:flex;align-items:center;gap:1.4vw;margin-top:auto}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:1vw;padding:2.6vh 3vw;border-radius:999px;font-weight:800;font-size:1.5vw}
@@ -602,13 +607,17 @@ function docsScreen(){
 /* Заказ пришёл на экран: копии и оплата */
 function showOrder(d){
   stopFlow();
-  cur = {orderId: d.order_id, token: d.token, unit: d.unit, files: d.files, copies: d.copies || 1, total: d.total, type: 'print'};
+  cur = {orderId: d.order_id, token: d.token, unit: d.unit, files: d.files, copies: d.copies || 1, total: d.total, type: 'print',
+         sides: 'single', duplex: !!d.duplex};
   const pages = d.files.reduce((a, f) => a + (f.pages || 1), 0);
   cur.pages = pages;
   pane(head('Ваш заказ', ruPages(pages)) +
     '<ul class="files">' + d.files.map(f => '<li><svg><use href="#i-copy"/></svg><span>' + esc(f.name) + '</span><small>' + ruPages(f.pages || 1) + '</small></li>').join('') + '</ul>' +
     '<div class="opts"><div><div class="opt-l">Копий каждого файла</div><div class="stepper">' +
       '<button id="cMinus" onclick="setCopies(-1)">−</button><output id="cVal">1</output><button id="cPlus" onclick="setCopies(1)">+</button></div></div>' +
+      (cur.duplex ? '<div><div class="opt-l">Стороны</div><div class="sides" id="sidesSel">' +
+        [['single', 'Одна'], ['duplex', 'Две'], ['booklet', 'Брошюра']].map(([k, t]) =>
+          '<button data-s="' + k + '" onclick="setSides(\'' + k + '\')">' + t + '</button>').join('') + '</div></div>' : '') +
       '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
     '<div class="acts"><button class="btn main" id="payBtn" onclick="payOrder()"></button><button class="btn ghost" onclick="cancelAndHome()">Отменить</button></div>');
   drawOrder();
@@ -739,6 +748,7 @@ function receiptHtml(){
 }
 function drawOrder(){
   $('cVal').textContent = cur.copies;
+  document.querySelectorAll('#sidesSel button').forEach(b => b.classList.toggle('on', b.dataset.s === cur.sides));
   $('cMinus').disabled = cur.copies <= 1;
   $('cPlus').disabled = cur.copies >= 20;
   $('sumVal').innerHTML = cur.total + '<small>сом</small>';
@@ -751,14 +761,30 @@ function drawOrder(){
 let copiesSave = null;
 function setCopies(delta){
   cur.copies = Math.max(1, Math.min(20, cur.copies + delta));
-  cur.total = cur.unit * cur.pages * cur.copies;   // сразу показываем, сервер подтвердит
+  if(cur.sides === 'single') cur.total = cur.unit * cur.pages * cur.copies;   // сразу показываем, сервер подтвердит
   drawOrder();
+  saveOptions();
+}
+function setSides(s){
+  if(s === cur.sides) return;
+  cur.sides = s;
+  drawOrder();
+  saveOptions();
+}
+// Цену считает сервер: ждём его ответ, пока кнопка оплаты выключена
+function saveOptions(){
   $('payBtn').disabled = true;
   clearTimeout(copiesSave);
   copiesSave = setTimeout(async () => {
-    try{ const r = await api('/kiosk/options/' + cur.orderId, {token: cur.token, copies: cur.copies}); cur.total = r.total; drawOrder(); }
-    catch(e){}
-    $('payBtn').disabled = false;
+    try{
+      const r = await api('/kiosk/options/' + cur.orderId, {token: cur.token, copies: cur.copies, sides: cur.sides});
+      cur.total = r.total; drawOrder();
+      $('payBtn').disabled = false;
+    }catch(e){
+      cur.sides = 'single'; drawOrder();             // режим недоступен — вернём одну сторону
+      try{ const r = await api('/kiosk/options/' + cur.orderId, {token: cur.token, copies: cur.copies, sides: 'single'}); cur.total = r.total; drawOrder(); }catch(e2){}
+      $('payBtn').disabled = false;
+    }
   }, 450);
 }
 
