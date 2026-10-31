@@ -4,10 +4,12 @@
 Каждые 5 секунд забирает оплаченные заказы с сервера и печатает.
 
 Настройка (один раз):
-  1. pip install requests pywin32 pillow
+  1. pip install requests pywin32 pillow pypdf
   2. Рядом с этим файлом создайте файл worker_key.txt и вставьте в него
      значение WORKER_KEY из Railway (если ключ на сервере ещё не задан — файл не нужен).
   3. Для печати DOC/DOCX/TXT нужен Microsoft Word или бесплатный LibreOffice.
+  4. Двусторонняя печать и брошюры работают, только если принтер умеет
+     автоматический дуплекс (и на сервере включено DUPLEX_ENABLED=1).
 """
 
 import logging
@@ -185,11 +187,69 @@ def to_printable(path):
     return None
 
 
-def print_file(path, copies=1, page_range=None):
-    """Возвращает None при успехе или текст ошибки."""
+def _page_list(page_range, total):
+    """«1-3,5» → [0, 1, 2, 4] (номера с нуля). Пусто — все страницы."""
+    if not page_range:
+        return list(range(total))
+    pages = []
+    for part in str(page_range).replace(" ", "").split(","):
+        if "-" in part:
+            a, b = part.split("-", 1)
+            pages += range(int(a), int(b) + 1)
+        elif part:
+            pages.append(int(part))
+    return [p - 1 for p in pages if 1 <= p <= total]
+
+
+def make_booklet(pdf_path, page_range=None):
+    """Собирает брошюру: на каждом листе А4 (альбомном) по 2 страницы А5 с каждой стороны,
+    в таком порядке, чтобы после сгиба пополам получилась книжечка. Возвращает путь к новому PDF."""
+    from pypdf import PdfReader, PdfWriter, PageObject, Transformation
+    reader = PdfReader(pdf_path)
+    src = [reader.pages[i] for i in _page_list(page_range, len(reader.pages))]
+    if not src:
+        raise ValueError("нет страниц для брошюры")
+    while len(src) % 4:
+        src.append(None)              # пустые страницы в конце
+    n = len(src)
+    W, H = 842, 595                   # А4 альбомный, в пунктах
+    half = W / 2
+
+    def place(sheet, page, left):
+        if page is None:
+            return
+        page.transfer_rotation_to_content()
+        box = page.mediabox
+        pw, ph = float(box.width), float(box.height)
+        k = min(half / pw, H / ph)
+        x = (0 if left else half) + (half - pw * k) / 2 - float(box.left) * k
+        y = (H - ph * k) / 2 - float(box.bottom) * k
+        sheet.merge_transformed_page(page, Transformation().scale(k).translate(x, y))
+
+    writer = PdfWriter()
+    for i in range(n // 4):
+        front = PageObject.create_blank_page(width=W, height=H)
+        place(front, src[n - 1 - 2 * i], True)
+        place(front, src[2 * i], False)
+        back = PageObject.create_blank_page(width=W, height=H)
+        place(back, src[2 * i + 1], True)
+        place(back, src[n - 2 - 2 * i], False)
+        writer.add_page(front)
+        writer.add_page(back)
+    out = os.path.splitext(pdf_path)[0] + "_booklet.pdf"
+    with open(out, "wb") as f:
+        writer.write(f)
+    return out
+
+
+def print_file(path, copies=1, page_range=None, color=False, sides="single"):
+    """Возвращает None при успехе или текст ошибки.
+    sides: single — с одной стороны; duplex — переворот по длинному краю;
+    booklet — уже собранная брошюра, переворот по короткому краю."""
     if not os.path.exists(SUMATRA):
         return "SumatraPDF не найден"
-    settings = f"copies={copies},monochrome"
+    settings = f"copies={copies},{'color' if color else 'monochrome'}"
+    settings += {"duplex": ",duplexlong", "booklet": ",duplexshort"}.get(sides, ",simplex")
     if page_range:
         settings += f",{page_range}"
     cmd = [SUMATRA, "-print-to", PRINTER_NAME, "-print-settings", settings, "-silent", path]
@@ -285,12 +345,12 @@ def handle_scan(oid):
         _remove(path)
 
 
-def handle_copy(oid, copies):
+def handle_copy(oid, copies, color=False):
     path = scan_to_jpeg(oid, COPY_DPI)
     if not path:
         return "не удалось отсканировать оригинал"
     try:
-        return print_file(path, copies)
+        return print_file(path, copies, color=color)
     finally:
         _remove(path)
 
@@ -299,14 +359,25 @@ def handle_print(oid, order):
     src = download_file(oid, order.get("file_name"))
     if not src:
         return "не удалось скачать файл с сервера"
-    printable = None
+    printable = booklet = None
+    color = order.get("print_type") == "color"
+    sides = order.get("sides") or "single"
+    copies = int(order.get("copies") or 1)
     try:
         printable = to_printable(src)
         if not printable:
             return "не удалось открыть DOC/DOCX: установите Word или LibreOffice"
-        return print_file(printable, int(order.get("copies") or 1), order.get("page_range"))
+        if not printable.lower().endswith(".pdf"):
+            sides = "single"              # картинка — одна страница
+        if sides == "booklet":
+            try:
+                booklet = make_booklet(printable, order.get("page_range"))
+            except Exception as e:
+                return f"не удалось собрать брошюру: {e}"
+            return print_file(booklet, copies, None, color, "booklet")
+        return print_file(printable, copies, order.get("page_range"), color, sides)
     finally:
-        _remove(src, printable if printable != src else None)
+        _remove(src, printable if printable != src else None, booklet)
 
 
 def process(order):
@@ -324,7 +395,7 @@ def process(order):
     if kind == "scan":
         error = handle_scan(oid)
     elif kind == "copy":
-        error = handle_copy(oid, int(order.get("copies") or 1))
+        error = handle_copy(oid, int(order.get("copies") or 1), order.get("print_type") == "color")
     else:
         error = handle_print(oid, order)
 

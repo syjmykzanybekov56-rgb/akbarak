@@ -396,6 +396,14 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
           <button class="pill" onclick="setColor(this,'color',10)">Цвет · 10с</button>
         </div>
       </div>
+      <div class="set-row" id="sides-row" style="display:none">
+        <span class="set-lbl">Стороны</span>
+        <div class="pills">
+          <button class="pill on" onclick="setSides(this,'single')">Одна</button>
+          <button class="pill" onclick="setSides(this,'duplex')">Две</button>
+          <button class="pill" onclick="setSides(this,'booklet')">Брошюра</button>
+        </div>
+      </div>
       <div class="set-row column">
         <span class="set-lbl">Диапазон страниц</span>
         <input class="range-input" id="page-range" type="text" placeholder="Все страницы (или: 1-5, 1,3,5)" oninput="calcRange(this.value)">
@@ -802,7 +810,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-let state = {price:5, type:'bw', copies:1, pages:1};
+let state = {price:5, type:'bw', copies:1, pages:1, sides:'single'};
+let SHEET = {bw:8, color:18};   // цена листа при двусторонней печати и брошюре (сервер пришлёт свои)
 let cstate = {price:6, ccopies:1, cpages:1};
 let sstate = {price:6, spages:1};
 let photoState = {format:'', price:0};
@@ -1130,6 +1139,24 @@ function setColor(btn, type, price){
   state.type = type; state.price = price;
   recalcPrint();
 }
+function setSides(btn, sides){
+  btn.closest('.pills').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  state.sides = sides;
+  recalcPrint();
+}
+// Та же формула, что на сервере (order_total): там цена всё равно пересчитывается
+function priceFor(pages){
+  const page = state.price, sheet = SHEET[state.type];
+  if(state.sides === 'duplex') return Math.floor(pages/2)*sheet + (pages%2)*page;
+  if(state.sides === 'booklet') return Math.ceil(pages/4)*sheet;
+  return pages*page;
+}
+// Сервер говорит, что сейчас умеет терминал: показываем двустороннюю печать, только если она есть
+fetch(SERVER+'/config').then(r=>r.json()).then(c=>{
+  if(c.sheet_prices) SHEET = c.sheet_prices;
+  if(c.duplex) document.getElementById('sides-row').style.display='';
+}).catch(()=>{});
 function setPill(btn){
   btn.closest('.pills').querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
@@ -1188,9 +1215,16 @@ function calcRange(val){
 
 function recalcPrint(){
   const nFiles = Math.max(1, (document.getElementById('file-input')?.files?.length) || 1);
-  const t = state.price * state.copies * state.pages * nFiles;
+  const t = priceFor(state.pages) * state.copies * nFiles;
   document.getElementById('v-total').textContent=t+' сом';
-  const detail = state.pages+' стр × '+state.copies+' коп × '+state.price+' сом'+(nFiles>1?' × '+nFiles+' файла':'');
+  const files = nFiles>1?' × '+nFiles+' файла':'';
+  let detail;
+  if(state.sides === 'duplex')
+    detail = state.pages+' стр, с двух сторон × '+state.copies+' коп'+files;
+  else if(state.sides === 'booklet')
+    detail = state.pages+' стр, брошюра '+Math.ceil(state.pages/4)+' л. × '+state.copies+' коп'+files;
+  else
+    detail = state.pages+' стр × '+state.copies+' коп × '+state.price+' сом'+files;
   document.getElementById('v-detail').textContent=detail;
   document.getElementById('v-pay-print').innerHTML=t+' <span>сом</span>';
 }
@@ -1260,6 +1294,7 @@ async function submitPrint(payment){
   fd.append('print_type',state.type);
   fd.append('copies',state.copies);
   fd.append('pages',state.pages);
+  fd.append('sides',state.sides);
   fd.append('total',total);
   fd.append('payment',payment);
   fd.append('margins',margins);
