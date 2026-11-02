@@ -202,12 +202,19 @@ function fill(text, v, preview){
   return [out, empty];
 }
 
+// Эмблема КГМА показывается, только если файл icons/kgma.png есть на сайте
+let HAS_LOGO = false;
+(() => { const i = new Image(); i.onload = () => { HAS_LOGO = true; render(); }; i.src = '/icons/kgma.png'; })();
+
 function render(){
   if(!tpl) return;
   const v = values();
   const page = $('page');
   page.innerHTML = tpl.blocks.map(b => {
     const st = 'margin-top:calc(var(--u)*' + (b.before || 0) + ');margin-bottom:calc(var(--u)*' + (b.after || 0) + ');';
+    if(b.type === 'logo'){
+      return HAS_LOGO ? '<p class="c" style="' + st + '"><img src="/icons/kgma.png" alt="Эмблема КГМА" style="height:calc(var(--u)*' + (b.h || 72) + ')"></p>' : '';
+    }
     if(b.type === 'sign'){
       const [d] = fill('{date}', v, true), [s] = fill('{fio_short}', v, true);
       return '<p class="sign" style="' + st + '"><span>' + d + '</span><span>____________&nbsp; ' + s + '</span></p>';

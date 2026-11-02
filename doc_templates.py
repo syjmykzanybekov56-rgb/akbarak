@@ -24,6 +24,7 @@ FIELDS = DATA["fields"]
 TEMPLATES = {t["id"]: t for t in DATA["templates"]}
 
 FONT = "Times New Roman"
+LOGO_PATH = os.path.join(HERE, "icons", "kgma.png")   # эмблема КГМА для титульных листов
 TOKEN = re.compile(r"\{(\w+)(?::([^{}|]*)\|([^{}]*))?\}")
 
 
@@ -94,6 +95,16 @@ def build_docx(template_id, raw_values, path):
         pf.space_before = Pt(b.get("before", 0))
         pf.space_after = Pt(b.get("after", 0))
         pf.line_spacing = 1.15
+
+        if b.get("type") == "logo":
+            # эмблема КГМА; пока файла нет — блок пропускаем
+            if os.path.exists(LOGO_PATH):
+                pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                pf.line_spacing = 1
+                p.add_run().add_picture(LOGO_PATH, height=Pt(b.get("h", 72)))
+            else:
+                p._element.getparent().remove(p._element)
+            continue
 
         if b.get("type") == "sign":
             # дата слева, подпись справа
