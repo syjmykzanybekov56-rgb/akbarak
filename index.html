@@ -82,6 +82,11 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .ad-sheet ul{margin:6px 0 16px 18px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.75);font-weight:600}
 .ad-sheet .st-btn{margin-bottom:8px}
 .ad-close{background:rgba(255,255,255,.08)!important;color:#fff!important}
+.install-card{display:flex;align-items:center;gap:12px;margin:0 20px 18px;padding:14px;border-radius:18px;background:rgba(245,166,35,0.10);border:1px solid rgba(245,166,35,0.35)}
+.install-ico{font-size:28px}
+.install-ttl{font-size:14px;font-weight:900;color:#fff;margin-bottom:3px}
+.install-sub{font-size:12px;line-height:1.4;color:rgba(255,255,255,0.6);font-weight:600}
+.install-btn{flex:none;border:none;border-radius:12px;padding:10px 12px;background:var(--gold);color:#000;font-weight:900;font-size:13px;cursor:pointer}
 .sec-ttl{padding:0 20px 12px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:2px;text-transform:uppercase}
 
 /* ── SERVICE GRID ── */
@@ -323,6 +328,15 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       </div>
     </div>
 
+    <div class="install-card" id="install-card" style="display:none">
+      <div class="install-ico">📲</div>
+      <div style="flex:1">
+        <div class="install-ttl">Печать прямо из WhatsApp</div>
+        <div class="install-sub">Установите АкБарак — он появится в меню «Поделиться» в WhatsApp, Telegram и «Файлах».</div>
+      </div>
+      <button class="install-btn" onclick="installApp()">Установить</button>
+    </div>
+
     <div class="sec-ttl">Услуги</div>
     <div class="svc-grid">
       <div class="svc-card featured" onclick="go('s-print')">
@@ -379,7 +393,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="page-sub">Загрузи файл для печати</div>
 
     <div class="upload-zone" id="upload-zone">
-      <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple onchange="handleFiles(this)">
+      <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png" multiple onchange="handleFiles(this)">
       <div class="upload-ico">📎</div>
       <div class="upload-ttl">Нажми чтобы выбрать</div>
       <div class="upload-sub">или перетащи файл сюда</div>
@@ -1081,8 +1095,54 @@ async function openStatus(id, token, fromLink){
   stTimer = setInterval(checkStatus, 3000);
 }
 
+// ── «Поделиться» на Android: сайт, установленный как приложение, принимает файлы ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+let installPrompt = null;
+const isInstalled = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installPrompt = e;
+  if(!isInstalled()) document.getElementById('install-card').style.display = 'flex';
+});
+window.addEventListener('appinstalled', () => { document.getElementById('install-card').style.display = 'none'; });
+async function installApp(){
+  if(!installPrompt) return;
+  installPrompt.prompt();
+  try{ await installPrompt.userChoice; }catch(e){}
+  installPrompt = null;
+  document.getElementById('install-card').style.display = 'none';
+}
+// Файлы, присланные через «Поделиться»: достаём из кэша service worker и открываем печать
+async function openSharedFiles(){
+  try{
+    const cache = await caches.open('akbarak-share');
+    const listResp = await cache.match('/shared/list');
+    const keys = listResp ? await listResp.json() : [];
+    const dt = new DataTransfer();
+    for(const key of keys){
+      const r = await cache.match(key);
+      if(!r) continue;
+      const name = decodeURIComponent(r.headers.get('x-file-name') || 'файл');
+      const blob = await r.blob();
+      dt.items.add(new File([blob], name, {type: blob.type}));
+    }
+    for(const k of await cache.keys()) await cache.delete(k);
+    history.replaceState(null, '', '/');
+    if(!dt.files.length){ alert('Не удалось получить файл. Выберите его вручную.'); go('s-print'); return; }
+    const input = document.getElementById('file-input');
+    input.files = dt.files;
+    go('s-print');
+    handleFiles(input);
+  }catch(e){
+    history.replaceState(null, '', '/');
+    go('s-print');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const q = new URLSearchParams(location.search);
+  if(q.has('shared')){ openSharedFiles(); return; }
   const id = q.get('order'), token = q.get('token');
   if(id && token){ rememberOrder(id, token); openStatus(id, token, true); return; }
   // QR с экрана терминала может сразу открыть нужную услугу: ?s=print|copy|scan
