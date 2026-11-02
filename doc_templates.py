@@ -43,14 +43,19 @@ def clean_values(tpl, raw):
             allowed = [o[0] for o in spec["options"]]
             if val not in allowed:
                 val = spec.get("def", allowed[0])
-        if not val and not spec.get("optional"):
-            raise TemplateError(f"Заполните поле «{spec['label']}»")
+        # Пустое поле — не ошибка: на листе будет линия, студент допишет ручкой
         values[key] = val
     return values
 
 
+def blank(key):
+    """Линия для поля, которое студент допишет ручкой."""
+    spec = FIELDS.get(key, {})
+    return " ".join(["_" * spec.get("blank", 20)] * spec.get("blank_lines", 1))
+
+
 def fill(text, values):
-    """Подставляет значения. Возвращает (текст, есть_ли_пустые_поля)."""
+    """Подставляет значения; пустое поле — линия ____. Возвращает (текст, есть_ли_пустые_поля)."""
     empty = False
 
     def sub(m):
@@ -61,6 +66,7 @@ def fill(text, values):
         val = values.get(key, "")
         if not val:
             empty = True
+            return blank(key)
         return val
 
     return TOKEN.sub(sub, text), empty
@@ -122,9 +128,6 @@ def build_docx(template_id, raw_values, path):
             continue
 
         text, empty = fill(b["t"], values)
-        if empty and b.get("opt"):
-            p._element.getparent().remove(p._element)
-            continue
         if b.get("u"):
             text = text.upper()
 
