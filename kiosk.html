@@ -177,6 +177,15 @@
   .receipt .tot{display:flex;justify-content:space-between;align-items:baseline;margin-top:2vh;font-weight:800;font-size:1.3vw}
   .receipt .tot b{font-family:var(--disp);font-size:2.6vw;letter-spacing:-.03em}
   .bigicon{width:12vw;height:12vw;margin:auto;color:var(--navy)}
+  /* Рекламный лист */
+  .ad-tag{align-self:flex-start;background:var(--gold);color:var(--night);font-weight:800;font-size:.95vw;
+    padding:.5vh .8vw;border-radius:.4vw;margin-bottom:1.6vh;letter-spacing:.02em}
+  .ad-pic{flex:1;min-height:0;border-radius:.6vw;background:var(--paper-shade);display:flex;align-items:center;justify-content:center;overflow:hidden;margin:1.4vh 0}
+  .ad-pic img{width:100%;height:100%;object-fit:cover}
+  .ad-pic svg{width:58%;height:auto}
+  .ad-txt{font-weight:700;font-size:1.15vw;line-height:1.4;color:var(--navy)}
+  .ad-price{font-family:var(--disp);font-weight:800;font-size:2.2vw;color:var(--navy);margin-top:1vh}
+  .ad-call{margin-top:1.4vh;font-weight:800;font-size:1.25vw;color:var(--gold-d)}
   /* Предпросмотр файла на листе */
   .pv{display:flex;flex-direction:column;height:100%;gap:1.4vh}
   .pv-files{display:flex;align-items:center;gap:.8vw;font-weight:800;font-size:1.05vw}
@@ -414,6 +423,22 @@ const NOTICES = [
 let CFG = {color: false, prices: {copy_bw: 6, copy_color: 12, scan_bw: 6, scan_color: 12}};
 fetch(SERVER + '/config', {cache: 'no-store'}).then(r => r.json()).then(c => { CFG = c; }).catch(() => {});
 const MAX_SHEETS = 30;
+// Реклама: ads.json рядом с сайтом (меняется без кода). Обновляем раз в 10 минут.
+let ADS = {enabled: false, items: []};
+function loadAds(){ fetch('/ads.json', {cache: 'no-store'}).then(r => r.json()).then(a => { ADS = a; }).catch(() => {}); }
+loadAds(); setInterval(loadAds, 10 * 60 * 1000);
+const AD_ICONS = {
+  coat: '<svg viewBox="0 0 100 100" fill="none" stroke-linejoin="round" stroke-linecap="round">' +
+        '<path d="M36 10 50 24 64 10 84 20 93 62 81 64 77 42V92H23V42L19 64 7 62 16 20Z" fill="#FFFFFF" stroke="#0F2747" stroke-width="3.5"/>' +
+        '<path d="M36 10 45 46M64 10 55 46M50 24V92" stroke="#0F2747" stroke-width="3"/>' +
+        '<rect x="59" y="58" width="12" height="12" rx="2" stroke="#E0B44C" stroke-width="3"/>' +
+        '<circle cx="50" cy="56" r="2.6" fill="#E0B44C"/><circle cx="50" cy="70" r="2.6" fill="#E0B44C"/></svg>',
+  suture: '<svg viewBox="0 0 100 100" fill="none" stroke-linecap="round">' +
+        '<rect x="10" y="22" width="80" height="56" rx="10" fill="#F4CDBE" stroke="#0F2747" stroke-width="3.5"/>' +
+        '<path d="M22 50H78" stroke="#B5524A" stroke-width="3"/>' +
+        '<path d="M28 42 32 58M40 42 44 58M52 42 56 58M64 42 68 58" stroke="#0F2747" stroke-width="3"/>' +
+        '<path d="M70 16C86 16 92 30 84 40" stroke="#9FB2CE" stroke-width="4"/><circle cx="70" cy="16" r="3" fill="#9FB2CE"/></svg>'
+};
 const SERVICES = {
   print: {title: "Печать", price: "5 сом за страницу", qrTitle: "Сканируй, чтобы распечатать",
           note: "Откроется печать на сайте АкБарак",
@@ -956,6 +981,18 @@ function docs(){
   D.push({h: "Скан — сразу в телефон", p: "Положи лист на стекло, выбери «Скан» и сохрани файл. Можно сразу отправить преподавателю.",
     html: '<div class="doc-h" style="--i:0">Скан</div><div class="doc-sub" style="--i:1">приходит файлом на телефон</div>' +
           '<div class="scanbox" style="--i:2"><div class="beam"></div>' + lines(7, 0) + '</div>'});
+  // Рекламные листы — после первого листа, чтобы не начинать заставку с рекламы
+  if(ADS.enabled && Array.isArray(ADS.items)){
+    const ads = ADS.items.filter(a => a && a.title).map(a => ({
+      h: a.title, p: (a.text || '') + ' Заказ: ' + (ADS.phone || ''),
+      html: '<div class="ad-tag" style="--i:0">' + esc(ADS.label || 'Для медиков') + '</div>' +
+            '<div class="doc-h" style="--i:1">' + esc(a.title) + '</div>' +
+            '<div class="ad-pic" style="--i:2">' + (a.image ? '<img src="/' + esc(a.image) + '" alt="">' : (AD_ICONS[a.icon] || '')) + '</div>' +
+            '<div class="ad-txt" style="--i:3">' + esc(a.text || '') + '</div>' +
+            (a.price ? '<div class="ad-price" style="--i:4">' + esc(a.price) + '</div>' : '') +
+            '<div class="ad-call" style="--i:5">Заказ: ' + esc(ADS.phone || '') + '</div>'}));
+    D.splice(1, 0, ...ads);
+  }
   if(sheetsToday > 0) D.push({h: "Нами уже пользуются", p: "Столько листов студенты напечатали здесь сегодня.",
     html: '<div class="doc-h" style="--i:0">Сегодня напечатано</div>' + lines(3, 1, [100, 80, 90]) +
           '<div class="big-n" style="--i:4">' + sheetsToday + '</div><div class="doc-sub" style="--i:5">листов в этом терминале</div>'});

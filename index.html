@@ -62,6 +62,15 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .price-lbl{font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;letter-spacing:0.5px;margin-top:3px;text-transform:uppercase}
 
 /* ── SECTION TITLE ── */
+.ads-row{display:flex;gap:10px;padding:0 20px 20px;overflow-x:auto;scroll-snap-type:x mandatory}
+.ad-card{flex:0 0 82%;scroll-snap-align:start;display:flex;gap:12px;align-items:center;padding:14px;border-radius:20px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(245,166,35,0.25);color:#fff;text-decoration:none}
+.ad-card:only-child{flex-basis:100%}
+.ad-img{flex:none;width:72px;height:72px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.ad-img img{width:100%;height:100%;object-fit:cover}.ad-img svg{width:58px;height:58px}
+.ad-name{font-size:15px;font-weight:900;margin-bottom:4px}
+.ad-desc{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.4;font-weight:600}
+.ad-buy{margin-top:6px;font-size:12px;font-weight:800;color:var(--gold)}
 .sec-ttl{padding:0 20px 12px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:2px;text-transform:uppercase}
 
 /* ── SERVICE GRID ── */
@@ -336,6 +345,11 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         <div class="svc-desc">Заявления, титульный</div>
         <div class="svc-arr">→</div>
       </div>
+    </div>
+
+    <div id="ads-block" style="display:none">
+      <div class="sec-ttl" id="ads-label">Для медиков</div>
+      <div class="ads-row" id="ads-row"></div>
     </div>
 
     <div class="stats-row">
@@ -968,6 +982,33 @@ function renderStatus(d){
       '?token=' + encodeURIComponent(stOrder.token) + '">⬇ Скачать скан</a>';
   }
 }
+
+// Реклама из ads.json (её же показывает экран терминала)
+const AD_ICONS = {
+  coat: '<svg viewBox="0 0 100 100" fill="none" stroke-linejoin="round" stroke-linecap="round">' +
+        '<path d="M36 10 50 24 64 10 84 20 93 62 81 64 77 42V92H23V42L19 64 7 62 16 20Z" fill="#FFFFFF" stroke="#0F2747" stroke-width="3.5"/>' +
+        '<path d="M36 10 45 46M64 10 55 46M50 24V92" stroke="#0F2747" stroke-width="3"/>' +
+        '<rect x="59" y="58" width="12" height="12" rx="2" stroke="#E0B44C" stroke-width="3"/>' +
+        '<circle cx="50" cy="56" r="2.6" fill="#E0B44C"/><circle cx="50" cy="70" r="2.6" fill="#E0B44C"/></svg>',
+  suture: '<svg viewBox="0 0 100 100" fill="none" stroke-linecap="round">' +
+        '<rect x="10" y="22" width="80" height="56" rx="10" fill="#F4CDBE" stroke="#0F2747" stroke-width="3.5"/>' +
+        '<path d="M22 50H78" stroke="#B5524A" stroke-width="3"/>' +
+        '<path d="M28 42 32 58M40 42 44 58M52 42 56 58M64 42 68 58" stroke="#0F2747" stroke-width="3"/>' +
+        '<path d="M70 16C86 16 92 30 84 40" stroke="#9FB2CE" stroke-width="4"/><circle cx="70" cy="16" r="3" fill="#9FB2CE"/></svg>'
+};
+function renderAds(a){
+  if(!a || !a.enabled || !Array.isArray(a.items) || !a.items.length) return;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const tel = 'tel:+996' + String(a.phone || '').replace(/\D/g, '').replace(/^0/, '');
+  document.getElementById('ads-label').textContent = a.label || 'Для медиков';
+  document.getElementById('ads-row').innerHTML = a.items.filter(i => i && i.title).map(i =>
+    '<a class="ad-card" href="' + tel + '"><div class="ad-img">' +
+      (i.image ? '<img src="/' + esc(i.image) + '" alt="">' : (AD_ICONS[i.icon] || '')) + '</div>' +
+    '<div><div class="ad-name">' + esc(i.title) + '</div><div class="ad-desc">' + esc(i.text || '') + '</div>' +
+    '<div class="ad-buy">' + (i.price ? esc(i.price) + ' · ' : '') + 'Заказать: ' + esc(a.phone || '') + '</div></div></a>').join('');
+  document.getElementById('ads-block').style.display = '';
+}
+fetch('/ads.json', {cache: 'no-store'}).then(r => r.json()).then(renderAds).catch(() => {});
 
 async function scanNext(){
   if(!stOrder) return;
