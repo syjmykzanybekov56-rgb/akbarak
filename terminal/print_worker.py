@@ -31,7 +31,7 @@ SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-02 скан v2"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-02 v3 копии"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -334,13 +334,53 @@ def print_manual_duplex(oid, pdf_path, page_range, copies, color, booklet):
         _remove(fronts, backs)
 
 
+def expand_copies(pdf_path, copies, page_range=None, even=False):
+    """PDF, в котором весь документ повторён copies раз подряд (1-2-3, 1-2-3…).
+    even=True — каждая копия дополняется до чётного числа страниц, чтобы при
+    двусторонней печати следующая копия начиналась с нового листа."""
+    from pypdf import PdfReader, PdfWriter
+    reader = PdfReader(pdf_path)
+    pages = [reader.pages[i] for i in _page_list(page_range, len(reader.pages))]
+    if not pages:
+        raise ValueError("нет страниц для печати")
+    writer = PdfWriter()
+    box = pages[0].mediabox
+    for _ in range(copies):
+        for page in pages:
+            writer.add_page(page)
+        if even and len(pages) % 2:
+            writer.add_blank_page(float(box.width), float(box.height))
+    out = os.path.splitext(pdf_path)[0] + f"_x{copies}.pdf"
+    with open(out, "wb") as f:
+        writer.write(f)
+    return out
+
+
 def print_file(path, copies=1, page_range=None, color=False, sides="single"):
     """Возвращает None при успехе или текст ошибки.
     sides: single — с одной стороны; duplex — переворот по длинному краю;
-    booklet — уже собранная брошюра, переворот по короткому краю."""
+    booklet — уже собранная брошюра, переворот по короткому краю.
+    Копии печатаем сами: SumatraPDF и некоторые драйверы игнорируют copies
+    (например, для JPG выходила одна копия вместо семи)."""
     if not os.path.exists(SUMATRA):
         return "SumatraPDF не найден"
-    settings = f"copies={copies},{'color' if color else 'monochrome'}"
+    copies = max(1, int(copies or 1))
+    if copies > 1:
+        if path.lower().endswith(".pdf"):
+            try:
+                many = expand_copies(path, copies, page_range, even=sides != "single")
+            except Exception as e:
+                return f"не удалось подготовить копии: {e}"
+            try:
+                return print_file(many, 1, None, color, sides)
+            finally:
+                _remove(many)
+        for n in range(copies):                    # картинка: отдельное задание на каждую копию
+            err = print_file(path, 1, page_range, color, sides)
+            if err:
+                return f"копия {n + 1} из {copies}: {err}"
+        return None
+    settings = f"copies=1,{'color' if color else 'monochrome'}"
     settings += {"duplex": ",duplexlong", "booklet": ",duplexshort"}.get(sides, ",simplex")
     if page_range:
         settings += f",{page_range}"
