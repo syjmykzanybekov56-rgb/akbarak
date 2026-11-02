@@ -71,6 +71,17 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .ad-name{font-size:15px;font-weight:900;margin-bottom:4px}
 .ad-desc{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.4;font-weight:600}
 .ad-buy{margin-top:6px;font-size:12px;font-weight:800;color:var(--gold)}
+.ad-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
+.ad-modal.show{display:flex}
+.ad-sheet{width:100%;max-width:480px;max-height:92vh;overflow:auto;background:#0B1B33;border-radius:24px 24px 0 0;padding:16px 20px 24px;color:#fff}
+.ad-sheet img{width:100%;border-radius:16px;background:#fff;display:block}
+.ad-sheet .ad-ico{width:100%;aspect-ratio:4/3;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center}
+.ad-sheet .ad-ico svg{width:45%}
+.ad-sheet h3{font-size:22px;font-weight:900;margin:16px 0 4px}
+.ad-sheet .ad-p{font-size:24px;font-weight:900;color:var(--gold);margin-bottom:10px}
+.ad-sheet ul{margin:6px 0 16px 18px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.75);font-weight:600}
+.ad-sheet .st-btn{margin-bottom:8px}
+.ad-close{background:rgba(255,255,255,.08)!important;color:#fff!important}
 .sec-ttl{padding:0 20px 12px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:2px;text-transform:uppercase}
 
 /* ── SERVICE GRID ── */
@@ -347,6 +358,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       </div>
     </div>
 
+    <div class="ad-modal" id="ad-modal" onclick="if(event.target===this)closeAd()"><div class="ad-sheet" id="ad-sheet"></div></div>
     <div id="ads-block" style="display:none">
       <div class="sec-ttl" id="ads-label">Для медиков</div>
       <div class="ads-row" id="ads-row"></div>
@@ -1001,13 +1013,30 @@ function renderAds(a){
   const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const tel = 'tel:+996' + String(a.phone || '').replace(/\D/g, '').replace(/^0/, '');
   document.getElementById('ads-label').textContent = a.label || 'Для медиков';
-  document.getElementById('ads-row').innerHTML = a.items.filter(i => i && i.title).map(i =>
-    '<a class="ad-card" href="' + tel + '"><div class="ad-img">' +
+  ADS_SITE = a;
+  document.getElementById('ads-row').innerHTML = a.items.filter(i => i && i.title).map((i, n) =>
+    '<a class="ad-card" href="#" onclick="openAd(' + n + ');return false"><div class="ad-img">' +
       (i.image ? '<img src="/' + esc(i.image) + '" alt="">' : (AD_ICONS[i.icon] || '')) + '</div>' +
     '<div><div class="ad-name">' + esc(i.title) + '</div><div class="ad-desc">' + esc(i.text || '') + '</div>' +
-    '<div class="ad-buy">' + (i.price ? esc(i.price) + ' · ' : '') + 'Заказать: ' + esc(a.phone || '') + '</div></div></a>').join('');
+    '<div class="ad-buy">' + (i.price ? esc(i.price) + ' · ' : '') + 'Подробнее →</div></div></a>').join('');
   document.getElementById('ads-block').style.display = '';
 }
+let ADS_SITE = null;
+function openAd(n){
+  const a = ADS_SITE, i = a && a.items.filter(x => x && x.title)[n];
+  if(!i) return;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const tel = 'tel:+996' + String(a.phone || '').replace(/\D/g, '').replace(/^0/, '');
+  document.getElementById('ad-sheet').innerHTML =
+    (i.image ? '<img src="/' + esc(i.image) + '" alt="">' : '<div class="ad-ico">' + (AD_ICONS[i.icon] || '') + '</div>') +
+    '<h3>' + esc(i.title) + '</h3>' + (i.price ? '<div class="ad-p">' + esc(i.price) + '</div>' : '') +
+    '<div class="ad-desc" style="font-size:14px">' + esc(i.text || '') + '</div>' +
+    (Array.isArray(i.details) && i.details.length ? '<ul>' + i.details.map(d => '<li>' + esc(d) + '</li>').join('') + '</ul>' : '') +
+    '<a class="st-btn gold" href="' + tel + '">📞 Заказать: ' + esc(a.phone || '') + '</a>' +
+    '<button class="st-btn ad-close" onclick="closeAd()">Закрыть</button>';
+  document.getElementById('ad-modal').classList.add('show');
+}
+function closeAd(){ document.getElementById('ad-modal').classList.remove('show'); }
 fetch('/ads.json', {cache: 'no-store'}).then(r => r.json()).then(renderAds).catch(() => {});
 
 async function scanNext(){
