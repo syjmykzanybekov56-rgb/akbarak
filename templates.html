@@ -70,6 +70,8 @@
   .a4 p.ind{text-indent:calc(var(--u)*35.4)}
   .a4 p.sign{display:flex;justify-content:space-between}
   .a4 .ph{color:#9AA6B6;font-style:italic}
+  .a4 p{overflow-wrap:anywhere}
+  .blank-hint{margin:0 0 14px;padding:10px 12px;border-radius:12px;background:rgba(224,180,76,.12);color:#F3D58A;font-size:13px;font-weight:700;line-height:1.4}
 
   /* нижняя панель оплаты */
   .pay{position:fixed;left:0;right:0;bottom:0;padding:12px 18px calc(12px + env(safe-area-inset-bottom));
@@ -169,7 +171,7 @@ function openTpl(id){
     let val = me[k] || '';
     if(f.auto === 'date') val = today();
     if(f.auto === 'year') val = String(new Date().getFullYear());
-    const lbl = '<label for="f_' + k + '">' + esc(f.label) + (f.optional ? ' <i>— можно пусто</i>' : '') + '</label>';
+    const lbl = '<label for="f_' + k + '">' + esc(f.label) + '</label>';
     if(f.type === 'select'){
       const cur = val || f.def;
       return '<div class="fld">' + lbl + '<select id="f_' + k + '" data-k="' + k + '">' +
@@ -179,7 +181,7 @@ function openTpl(id){
     return '<div class="fld">' + lbl + '<input id="f_' + k + '" data-k="' + k + '" maxlength="' + (f.max || 120) + '"' + mode +
       ' placeholder="' + esc(f.ph || '') + '" value="' + esc(val) + '"></div>';
   }).join('');
-  $('form').innerHTML = html;
+  $('form').innerHTML = '<p class="blank-hint">Любое поле можно оставить пустым — на листе будет линия, впишете ручкой.</p>' + html;
   $('form').querySelectorAll('input,select').forEach(el => el.addEventListener('input', () => { el.parentNode.classList.remove('bad'); render(); }));
   $('listView').style.display = 'none'; $('formView').style.display = '';
   $('payBar').style.display = 'block'; $('err').style.display = 'none';
@@ -198,7 +200,7 @@ function fill(text, v, preview){
   const out = text.replace(/\{(\w+)(?::([^{}|]*)\|([^{}]*))?\}/g, (m, k, male, female) => {
     if(male !== undefined) return v[k] === 'f' ? female : male;
     const val = v[k] || '';
-    if(!val){ empty = true; return preview ? '<span class="ph">' + esc((DATA.fields[k] || {}).ph || k) + '</span>' : ''; }
+    if(!val){ empty = true; const f = DATA.fields[k] || {}; return Array(f.blank_lines || 1).fill('_'.repeat(f.blank || 20)).join(' '); }
     return preview ? esc(val) : val;
   });
   return [out, empty];
@@ -222,10 +224,6 @@ function render(){
       return '<p class="sign" style="' + st + '"><span>' + d + '</span><span>____________&nbsp; ' + s + '</span></p>';
     }
     let [t, empty] = fill(b.t, v, true);
-    if(empty && b.opt){
-      const optEmpty = (b.t.match(/\{(\w+)\}/g) || []).some(m => !v[m.slice(1, -1)]);
-      if(optEmpty) return '';
-    }
     if(b.u) t = t.replace(/(^|>)([^<]+)/g, (m, a, txt) => a + txt.toUpperCase());
     const cls = (b.a === 'c' ? 'c' : b.a === 'hdr' ? 'hdr' : b.a === 'l' ? 'l' : 'j') + (b.ind ? ' ind' : '');
     const label = b.label ? '<b>' + esc(b.label) + '</b> ' : '';
@@ -245,13 +243,7 @@ function setCopies(d){ copies = Math.max(1, Math.min(10, copies + d)); drawCopie
 
 async function order(){
   const v = values();
-  // проверка обязательных полей
-  let firstBad = null;
-  tpl.fields.forEach(k => {
-    const f = DATA.fields[k];
-    if(!f.optional && f.type !== 'select' && !v[k]){ const el = $('f_' + k); el.parentNode.classList.add('bad'); firstBad = firstBad || el; }
-  });
-  if(firstBad){ firstBad.focus(); firstBad.scrollIntoView({block: 'center', behavior: 'smooth'}); return; }
+  // обязательных полей нет: пустое место студент дописывает ручкой
 
   // запоминаем свои данные на этом телефоне
   const me = store.get();
