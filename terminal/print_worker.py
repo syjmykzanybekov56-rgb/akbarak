@@ -32,6 +32,7 @@ TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
 SCAN_DPI = 150
+SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
 # Двусторонняя печать на принтере БЕЗ автоматического дуплекса (сейчас Pantum M6500W).
 # True  — принтер печатает лицевые стороны, программа ждёт, вы переворачиваете пачку,
@@ -363,7 +364,7 @@ def _remove(*paths):
 # ─────────────────────── Сканер ───────────────────────
 
 
-def scan_to_jpeg(order_id, dpi):
+def scan_to_jpeg(order_id, dpi, color=False, sheet=1):
     """Сканирует лист со стекла. Возвращает путь к JPEG (до 1 МБ) или None."""
     try:
         import win32com.client
@@ -384,12 +385,12 @@ def scan_to_jpeg(order_id, dpi):
         try:
             item.Properties("Horizontal Resolution").Value = dpi
             item.Properties("Vertical Resolution").Value = dpi
-            item.Properties("Current Intent").Value = 4  # оттенки серого
+            item.Properties("Current Intent").Value = 1 if color else 4  # 1 — цвет, 4 — оттенки серого
         except Exception as e:
             log.warning("Настройки сканера: %s", e)
 
         image = item.Transfer("{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}")
-        tmp_path = os.path.join(tempfile.gettempdir(), f"scan_{order_id}.jpg")
+        tmp_path = os.path.join(tempfile.gettempdir(), f"scan_{order_id}_{sheet}.jpg")
         _remove(tmp_path)
         image.SaveFile(tmp_path)
         if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
@@ -421,28 +422,85 @@ def kind_of(order):
     return name if name in ("scan", "copy") else "print"
 
 
-def handle_scan(oid):
-    path = scan_to_jpeg(oid, SCAN_DPI)
-    if not path:
+def wait_next_sheet(oid, sheet):
+    """Ждёт, пока студент положит лист № sheet и нажмёт кнопку на экране или в телефоне."""
+    deadline = time.time() + SCAN_WAIT_MIN * 60
+    log.info("Заказ #%s: ждём лист %s (кнопка «Сканировать» на экране или в телефоне)", oid, sheet)
+    while time.time() < deadline:
+        resp = api("GET", f"/scan_go/{oid}", timeout=10)
+        if resp is not None and resp.ok:
+            d = resp.json()
+            if d.get("status") not in (None, "printing"):
+                return False                          # заказ отменили
+            if int(d.get("go") or 1) >= sheet:
+                return True
+        time.sleep(1.5)
+    return False
+
+
+def scan_sheets(oid, sheets, dpi, color):
+    """Сканирует листы по одному. Возвращает список путей к JPEG (может быть меньше sheets,
+    если студент ушёл, не положив следующий лист)."""
+    paths = []
+    for sheet in range(1, sheets + 1):
+        if sheet > 1:
+            api("POST", f"/scan_progress/{oid}", json={"done": sheet - 1}, timeout=10)
+            if not wait_next_sheet(oid, sheet):
+                log.warning("Заказ #%s: следующий лист не положили — отсканировано %s из %s",
+                            oid, len(paths), sheets)
+                break
+        path = scan_to_jpeg(oid, dpi, color, sheet)
+        if not path:
+            break
+        paths.append(path)
+        log.info("Заказ #%s: лист %s из %s отсканирован", oid, sheet, sheets)
+    api("POST", f"/scan_progress/{oid}", json={"done": len(paths)}, timeout=10)
+    return paths
+
+
+def images_to_pdf(paths, out_path, dpi, repeat=1):
+    """Склеивает сканы в один PDF. repeat — сколько раз повторить весь комплект (для копий)."""
+    from PIL import Image
+    images = [Image.open(p).convert("RGB") for p in paths] * repeat
+    images[0].save(out_path, "PDF", save_all=True, append_images=images[1:], resolution=dpi)
+    return out_path
+
+
+def handle_scan(oid, order):
+    sheets = int(order.get("pages") or 1)
+    color = order.get("print_type") == "color"
+    paths = scan_sheets(oid, sheets, SCAN_DPI, color)
+    if not paths:
         return "не удалось отсканировать"
+    upload = paths[0]
+    if len(paths) > 1:
+        upload = images_to_pdf(paths, os.path.join(tempfile.gettempdir(), f"scan_{oid}.pdf"), SCAN_DPI)
     try:
-        with open(path, "rb") as f:
-            resp = api("POST", f"/scan_upload/{oid}", files={"file": f}, timeout=120)
+        with open(upload, "rb") as f:
+            resp = api("POST", f"/scan_upload/{oid}", files={"file": f}, timeout=180)
         if resp is None or not resp.ok:
             return "не удалось загрузить скан на сервер"
         return None
     finally:
-        _remove(path)
+        _remove(*paths, upload if upload not in paths else None)
 
 
-def handle_copy(oid, copies, color=False):
-    path = scan_to_jpeg(oid, COPY_DPI)
-    if not path:
+def handle_copy(oid, order):
+    sheets = int(order.get("pages") or 1)
+    copies = int(order.get("copies") or 1)
+    color = order.get("print_type") == "color"
+    paths = scan_sheets(oid, sheets, COPY_DPI, color)
+    if not paths:
         return "не удалось отсканировать оригинал"
+    pdf = None
     try:
-        return print_file(path, copies, color=color)
+        if len(paths) == 1:
+            return print_file(paths[0], copies, color=color)
+        # весь комплект по порядку, столько раз, сколько копий
+        pdf = images_to_pdf(paths, os.path.join(tempfile.gettempdir(), f"copy_{oid}.pdf"), COPY_DPI, copies)
+        return print_file(pdf, 1, color=color)
     finally:
-        _remove(path)
+        _remove(*paths, pdf)
 
 
 def handle_print(oid, order):
@@ -487,9 +545,9 @@ def process(order):
     report(oid, "printing")
 
     if kind == "scan":
-        error = handle_scan(oid)
+        error = handle_scan(oid, order)
     elif kind == "copy":
-        error = handle_copy(oid, int(order.get("copies") or 1), order.get("print_type") == "color")
+        error = handle_copy(oid, order)
     else:
         error = handle_print(oid, order)
 

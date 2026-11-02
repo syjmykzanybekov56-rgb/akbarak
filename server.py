@@ -74,6 +74,7 @@ OFFLINE_ALERT_MIN = 5      # терминал молчит дольше — ув
 STUCK_ALERT_MIN = 10       # оплаченный заказ не напечатан дольше — уведомление
 MAX_UPLOAD_MB = 25
 MAX_PAGES = 500
+MAX_SCAN_SHEETS = 30       # сколько листов можно отсканировать/скопировать за один заказ
 ALLOWED_EXT = {".pdf", ".doc", ".docx", ".txt", ".jpg", ".jpeg", ".png"}
 
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
@@ -160,6 +161,8 @@ def init_db():
         "ALTER TABLE orders ADD COLUMN access_token TEXT",
         "ALTER TABLE orders ADD COLUMN alerted INTEGER DEFAULT 0",
         "ALTER TABLE orders ADD COLUMN sides TEXT DEFAULT 'single'",
+        "ALTER TABLE orders ADD COLUMN scan_done INTEGER DEFAULT 0",   # сколько листов уже отсканировано
+        "ALTER TABLE orders ADD COLUMN scan_go INTEGER DEFAULT 1",     # до какого листа студент разрешил сканировать
     ]:
         try:
             conn.execute(stmt)
@@ -633,10 +636,12 @@ def order():
             return jsonify({"error": err}), 400
 
         color = bool(data.get("color")) or clamp(data.get("price"), 0, 1000, 0) >= PRICES[f"{order_type}_color"]
-        if color and not COLOR_ENABLED:
+        # Цветной скан делает сам сканер — цветной принтер нужен только для цветной копии
+        if color and order_type == "copy" and not COLOR_ENABLED:
             return jsonify({"error": NO_COLOR_MSG}), 400
         print_type = "color" if color else "bw"
-        pages = 1  # сканер берёт со стекла один лист за раз
+        # Листы кладут на стекло по одному: после каждого студент нажимает «следующий лист»
+        pages = clamp(data.get("pages"), 1, MAX_SCAN_SHEETS, 1)
         copies = clamp(data.get("copies"), 1, 20, 1) if order_type == "copy" else 1
         total = PRICES[f"{order_type}_{print_type}"] * pages * copies
         token = secrets.token_urlsafe(16)
@@ -901,6 +906,51 @@ def scan_upload(order_id):
     return jsonify({"success": True})
 
 
+# ─────────────────────── Скан и копия нескольких листов ───────────────────────
+# Терминал сканирует лист, сообщает /scan_progress и ждёт, пока студент положит
+# следующий лист и нажмёт кнопку (/scan_next) на экране терминала или в телефоне.
+
+@app.route("/scan_next/<int:order_id>", methods=["POST"])
+def scan_next(order_id):
+    data = request.get_json(silent=True) or {}
+    conn = db()
+    try:
+        row = conn.execute("SELECT access_token, status, pages, scan_done, scan_go FROM orders WHERE id=?",
+                           (order_id,)).fetchone()
+        if not row or not row["access_token"] or not secrets.compare_digest(data.get("token") or "", row["access_token"]):
+            return jsonify({"error": "Заказ не найден"}), 404
+        done = row["scan_done"] or 0
+        if row["status"] != "printing" or done >= (row["pages"] or 1):
+            return jsonify({"error": "Сейчас нечего сканировать"}), 409
+        conn.execute("UPDATE orders SET scan_go=? WHERE id=?", (done + 1, order_id))
+        conn.commit()
+        return jsonify({"success": True, "sheet": done + 1})
+    finally:
+        conn.close()
+
+
+@app.route("/scan_go/<int:order_id>", methods=["GET"])
+@require_worker
+def scan_go(order_id):
+    conn = db()
+    row = conn.execute("SELECT status, scan_go FROM orders WHERE id=?", (order_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"error": "Заказ не найден"}), 404
+    return jsonify({"go": row["scan_go"] or 1, "status": row["status"]})
+
+
+@app.route("/scan_progress/<int:order_id>", methods=["POST"])
+@require_worker
+def scan_progress(order_id):
+    done = clamp((request.get_json(silent=True) or {}).get("done"), 0, MAX_SCAN_SHEETS, 0)
+    conn = db()
+    conn.execute("UPDATE orders SET scan_done=? WHERE id=?", (done, order_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
 @app.route("/order_status/<int:order_id>", methods=["GET"])
 def order_status(order_id):
     """Статус заказа для страницы «Мой заказ». Доступ — только по ключу заказа."""
@@ -912,7 +962,7 @@ def order_status(order_id):
         if not row or not row["access_token"] or not secrets.compare_digest(token, row["access_token"]):
             return jsonify({"error": "Заказ не найден"}), 404
         items = conn.execute(
-            "SELECT id, order_type, status, pages, copies, total, error, refund, "
+            "SELECT id, order_type, status, pages, copies, total, error, refund, scan_done, scan_go, "
             "(scan_data IS NOT NULL) AS has_scan FROM orders WHERE group_id=? ORDER BY id",
             (row["group_id"],)).fetchall()
         term = conn.execute("SELECT last_seen, printer_status FROM terminals WHERE id=?",
@@ -937,9 +987,20 @@ def order_status(order_id):
     printer = None
     if term:
         printer = term["printer_status"] if term["printer_status"] not in (None, "ok") else "ok"
+    first = items[0] if items else None
+    sheets = scanned = 0
+    waiting_next = False
+    if first and first["order_type"] in ("scan", "copy"):
+        sheets = first["pages"] or 1
+        scanned = first["scan_done"] or 0
+        waiting_next = (first["status"] == "printing" and 0 < scanned < sheets
+                        and (first["scan_go"] or 1) <= scanned)
     return jsonify({
         "order_id": order_id,
         "status": overall,
+        "sheets": sheets,
+        "scanned": scanned,
+        "waiting_next": waiting_next,
         "type": items[0]["order_type"] if items else "print",
         "total": sum(i["total"] for i in items),
         "files": len(items),
@@ -972,8 +1033,10 @@ def scan_status(order_id):
 def scan_download(order_id):
     row = _scan_row(order_id)
     if row and row["scan_data"]:
-        return send_file(io.BytesIO(row["scan_data"]), mimetype="image/jpeg",
-                         as_attachment=True, download_name=f"scan_{order_id}.jpg")
+        data = bytes(row["scan_data"])
+        is_pdf = data[:4] == b"%PDF"            # несколько листов приходят одним PDF
+        return send_file(io.BytesIO(data), mimetype="application/pdf" if is_pdf else "image/jpeg",
+                         as_attachment=True, download_name=f"scan_{order_id}.{'pdf' if is_pdf else 'jpg'}")
     return jsonify({"error": "Файл не найден"}), 404
 
 
