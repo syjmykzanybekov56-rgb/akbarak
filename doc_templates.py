@@ -90,6 +90,13 @@ def build_docx(template_id, raw_values, path):
     normal.element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
 
     for b in tpl["blocks"]:
+        if b.get("pos") == "bottom":
+            # строка внизу листа (город и год): в нижний колонтитул, чтобы всегда стояла внизу
+            text, _ = fill(b["t"], values)
+            fp = sec.footer.paragraphs[0]
+            fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            _font(fp.add_run(text), b.get("s", 14), b.get("b", False))
+            continue
         p = doc.add_paragraph()
         pf = p.paragraph_format
         pf.space_before = Pt(b.get("before", 0))
@@ -124,6 +131,8 @@ def build_docx(template_id, raw_values, path):
         align = b.get("a", "j")
         if align == "c":
             pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        elif align == "l":
+            pf.alignment = WD_ALIGN_PARAGRAPH.LEFT
         elif align == "hdr":
             pf.left_indent = Cm(8.5)
             pf.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -132,6 +141,8 @@ def build_docx(template_id, raw_values, path):
             pf.line_spacing = 1.5
         if b.get("ind"):
             pf.first_line_indent = Cm(1.25)
+        if b.get("label"):
+            _font(p.add_run(b["label"] + " "), b.get("s", 14), True)
         _font(p.add_run(text), b.get("s", 14), b.get("b", False))
 
     doc.save(path)
