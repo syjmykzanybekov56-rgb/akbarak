@@ -64,6 +64,8 @@
   .a4 p{font-size:calc(var(--u)*14);line-height:1.15;margin:0}
   .a4 p.hdr{margin-left:calc(var(--u)*241)}
   .a4 p.c{text-align:center}
+  .a4 p.l{text-align:left}
+  .a4 .bottom{position:absolute;left:calc(var(--u)*85);right:calc(var(--u)*42.5);bottom:calc(var(--u)*30)}
   .a4 p.j{text-align:justify;line-height:1.5}
   .a4 p.ind{text-indent:calc(var(--u)*35.4)}
   .a4 p.sign{display:flex;justify-content:space-between}
@@ -114,7 +116,7 @@
     <div class="form" id="form"></div>
     <p class="note">Документ печатается на русском языке — заполняйте поля по-русски.</p>
     <div class="ptitle">Так будет выглядеть лист</div>
-    <div class="a4" id="a4" data-no-i18n><div class="page" id="page"></div></div>
+    <div class="a4" id="a4" data-no-i18n><div class="page" id="page"></div><div class="bottom" id="pageBottom"></div></div>
     <div class="err" id="err"></div>
     <p class="note">ФИО, курс и группа запомнятся на этом телефоне, чтобы в следующий раз не вводить их заново. Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</p>
   </section>
@@ -210,7 +212,7 @@ function render(){
   if(!tpl) return;
   const v = values();
   const page = $('page');
-  page.innerHTML = tpl.blocks.map(b => {
+  const para = b => {
     const st = 'margin-top:calc(var(--u)*' + (b.before || 0) + ');margin-bottom:calc(var(--u)*' + (b.after || 0) + ');';
     if(b.type === 'logo'){
       return HAS_LOGO ? '<p class="c" style="' + st + '"><img src="/icons/kgma.png" alt="Эмблема КГМА" style="height:calc(var(--u)*' + (b.h || 72) + ')"></p>' : '';
@@ -225,9 +227,12 @@ function render(){
       if(optEmpty) return '';
     }
     if(b.u) t = t.replace(/(^|>)([^<]+)/g, (m, a, txt) => a + txt.toUpperCase());
-    const cls = (b.a === 'c' ? 'c' : b.a === 'hdr' ? 'hdr' : 'j') + (b.ind ? ' ind' : '');
-    return '<p class="' + cls + '" style="' + st + 'font-size:calc(var(--u)*' + (b.s || 14) + ');' + (b.b ? 'font-weight:700;' : '') + '">' + t + '</p>';
-  }).join('');
+    const cls = (b.a === 'c' ? 'c' : b.a === 'hdr' ? 'hdr' : b.a === 'l' ? 'l' : 'j') + (b.ind ? ' ind' : '');
+    const label = b.label ? '<b>' + esc(b.label) + '</b> ' : '';
+    return '<p class="' + cls + '" style="' + st + 'font-size:calc(var(--u)*' + (b.s || 14) + ');' + (b.b ? 'font-weight:700;' : '') + '">' + label + t + '</p>';
+  };
+  page.innerHTML = tpl.blocks.filter(b => b.pos !== 'bottom').map(para).join('');
+  $('pageBottom').innerHTML = tpl.blocks.filter(b => b.pos === 'bottom').map(para).join('');
 }
 function scaleA4(){ const w = $('a4').getBoundingClientRect().width; if(w) $('a4').style.setProperty('--u', (w / 595) + 'px'); }
 new ResizeObserver(scaleA4).observe($('a4'));
