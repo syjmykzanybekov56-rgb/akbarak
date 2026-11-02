@@ -867,7 +867,7 @@ def terminal_info(terminal_id):
                             (terminal_id[:40],)).fetchone()
         row = conn.execute(
             "SELECT COALESCE(SUM(pages * copies), 0) AS sheets, COUNT(*) AS orders FROM orders "
-            "WHERE terminal_id=? AND status IN ('done','scan_ready') AND created_at >= ?",
+            "WHERE terminal_id=? AND status IN ('printed','done','scan_ready') AND created_at >= ?",
             (terminal_id[:40], day_start)).fetchone()
     finally:
         conn.close()
@@ -977,7 +977,7 @@ def order_status(order_id):
         overall = "cancelled"
     elif any(s == "failed" for s in statuses):
         overall = "failed"
-    elif all(s in ("done", "scan_ready") for s in statuses):
+    elif all(s in ("printed", "done", "scan_ready") for s in statuses):   # /done ставит 'printed'
         overall = "done"
     elif any(s == "printing" for s in statuses):
         overall = "printing"
