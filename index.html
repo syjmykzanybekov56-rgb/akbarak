@@ -498,7 +498,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         </div>
       </div>
       <div class="set-row">
-        <span class="set-lbl">Страниц</span>
+        <span class="set-lbl">Листов</span>
         <div class="ctr">
           <button class="ctr-btn" onclick="adjC('cpages',-1)">−</button>
           <span class="ctr-val" id="v-cpages">1</span>
@@ -597,7 +597,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         </div>
       </div>
       <div class="set-row">
-        <span class="set-lbl">Страниц</span>
+        <span class="set-lbl">Листов</span>
         <div class="ctr">
           <button class="ctr-btn" onclick="adjS(-1)">−</button>
           <span class="ctr-val" id="v-spages">1</span>
@@ -798,12 +798,16 @@ const SERVER = "https://akbarak-production.up.railway.app";
 const FEATURES = { color: false, photo: false };
 
 document.addEventListener('DOMContentLoaded', () => {
-  if(!FEATURES.color){
-    document.querySelectorAll('button.pill').forEach(b => {
-      const a = b.getAttribute('onclick') || '';
-      if(a.includes("'color'") || a.includes('setCopy(this,12)') || a.includes('setScan(this,12)')) b.style.display = 'none';
-    });
-  }
+  // Цветной скан делает сам сканер — его не прячем. Цветную печать и копию показываем,
+  // только когда сервер говорит, что стоит цветной принтер (COLOR_ENABLED=1).
+  const colorPills = () => Array.from(document.querySelectorAll('button.pill')).filter(b => {
+    const a = b.getAttribute('onclick') || '';
+    return a.includes("'color'") || a.includes('setCopy(this,12)');
+  });
+  if(!FEATURES.color) colorPills().forEach(b => b.style.display = 'none');
+  fetch(SERVER + '/config').then(r => r.json()).then(c => {
+    if(c.color) colorPills().forEach(b => b.style.display = '');
+  }).catch(() => {});
   if(!FEATURES.photo){
     document.querySelectorAll('.svc-card').forEach(c => {
       if((c.getAttribute('onclick') || '').includes("'s-photo'")) c.style.display = 'none';
@@ -916,6 +920,16 @@ function renderStatus(d){
     if(d.status === 'printing'){ icon = '📠'; title = 'Сканируем…'; text = 'Не поднимайте крышку несколько секунд.'; }
     if(d.status === 'done'){ icon = '📄'; title = 'Скан готов!'; text = 'Нажмите кнопку ниже, чтобы сохранить файл в телефон.'; }
   }
+  // Несколько листов: после каждого ждём, пока положат следующий
+  const multi = (type === 'scan' || type === 'copy') && d.sheets > 1;
+  if(multi && d.status === 'printing'){
+    if(d.waiting_next){
+      icon = '📄'; title = 'Лист ' + d.scanned + ' из ' + d.sheets + ' готов';
+      text = 'Положите следующий лист на стекло лицом вниз, закройте крышку и нажмите кнопку ниже.';
+    } else {
+      title = (type === 'scan' ? 'Сканируем' : 'Копируем') + ' лист ' + Math.min(d.sheets, (d.scanned || 0) + 1) + ' из ' + d.sheets + '…';
+    }
+  }
   if(d.status === 'failed'){
     text = d.refund === 'needed' || d.refund === 'done'
       ? 'Заказ не выполнен. Деньги вернём — если остались вопросы, напишите нам: <b>0773 731 212</b>.'
@@ -946,10 +960,23 @@ function renderStatus(d){
   if(d.status === 'pending_payment'){
     act.innerHTML = '<button class="st-btn gold" onclick="goToGoPayCheckout(' + d.order_id + ')">Оплатить ' + d.total + ' сом</button>';
   }
+  if(multi && d.status === 'printing' && d.waiting_next && stOrder){
+    act.innerHTML = '<button class="st-btn gold" id="st-next" onclick="scanNext()">Сканировать лист ' + (d.scanned + 1) + '</button>';
+  }
   if(type === 'scan' && d.scan_ready && stOrder){
     act.innerHTML = '<a class="st-btn" download href="' + SERVER + '/scan_download/' + stOrder.id +
       '?token=' + encodeURIComponent(stOrder.token) + '">⬇ Скачать скан</a>';
   }
+}
+
+async function scanNext(){
+  if(!stOrder) return;
+  const b = document.getElementById('st-next'); if(b) b.disabled = true;
+  try{
+    await fetch(SERVER + '/scan_next/' + stOrder.id, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({token: stOrder.token})});
+  }catch(e){}
+  checkStatus();
 }
 
 async function checkStatus(){
@@ -1175,12 +1202,12 @@ function adj(k,d){
   recalcPrint();
 }
 function adjC(k,d){
-  cstate[k]=Math.max(1,Math.min(k==='cpages'?1:20,cstate[k]+d)); // со стекла — один лист
+  cstate[k]=Math.max(1,Math.min(k==='cpages'?30:20,cstate[k]+d)); // листы кладут на стекло по одному
   document.getElementById('v-'+k).textContent=cstate[k];
   recalcCopy();
 }
 function adjS(d){
-  sstate.spages=1; // со стекла сканируется один лист
+  sstate.spages=Math.max(1,Math.min(30,sstate.spages+d)); // листы кладут на стекло по одному
   document.getElementById('v-spages').textContent=sstate.spages;
   recalcScan();
 }

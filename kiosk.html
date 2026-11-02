@@ -410,6 +410,10 @@ const NOTICES = [
   {title: "Объявление деканата", text: "Здесь будут объявления деканата и студсовета: изменения в расписании, сроки сессии, мероприятия и конференции."},
 ];
 
+// Что сейчас умеет терминал (сервер /config): цветная копия — только с цветным принтером
+let CFG = {color: false, prices: {copy_bw: 6, copy_color: 12, scan_bw: 6, scan_color: 12}};
+fetch(SERVER + '/config', {cache: 'no-store'}).then(r => r.json()).then(c => { CFG = c; }).catch(() => {});
+const MAX_SHEETS = 30;
 const SERVICES = {
   print: {title: "Печать", price: "5 сом за страницу", qrTitle: "Сканируй, чтобы распечатать",
           note: "Откроется печать на сайте АкБарак",
@@ -792,17 +796,23 @@ function saveOptions(){
 function copyScan(key){
   stopFlow();
   const s = SERVICES[key];
-  cur = {type: key, copies: 1, unit: 6};
-  const total = () => cur.unit * cur.copies;
+  cur = {type: key, copies: 1, sheets: 1, color: false};
+  const unit = () => (CFG.prices || {})[key + (cur.color ? '_color' : '_bw')] || (cur.color ? 12 : 6);
+  const total = () => unit() * cur.sheets * cur.copies;
+  const canColor = key === 'scan' || CFG.color;      // цветной скан делает сканер, цветную копию — принтер
   pane(BACK + head(s.title, s.price) +
-    '<p class="lead2">Подними крышку, положи лист на стекло лицом вниз и закрой.</p>' +
-    '<div class="opts" style="margin-top:4vh">' +
+    '<p class="lead2">Подними крышку, положи первый лист на стекло лицом вниз и закрой.</p>' +
+    '<div class="opts" style="margin-top:3vh;flex-wrap:wrap;row-gap:3vh">' +
+      '<div><div class="opt-l">Сколько листов</div><div class="stepper"><button id="shMinus" onclick="csSheets(-1)">−</button><output id="shVal">1</output><button id="shPlus" onclick="csSheets(1)">+</button></div></div>' +
       (key === 'copy' ? '<div><div class="opt-l">Сколько копий</div><div class="stepper"><button id="cMinus" onclick="csCopies(-1)">−</button><output id="cVal">1</output><button id="cPlus" onclick="csCopies(1)">+</button></div></div>' : '') +
+      (canColor ? '<div><div class="opt-l">Цвет</div><div class="sides" id="colorSel"><button data-c="0" onclick="csColor(false)">Ч/Б</button><button data-c="1" onclick="csColor(true)">Цвет</button></div></div>' : '') +
       '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
     '<div class="acts"><button class="btn main" id="payBtn" onclick="csPay()"></button></div>' +
     '<button class="switch" onclick="csPhone(\'' + key + '\')">Удобнее заказать в телефоне</button>');
   cur.draw = () => {
     if($('cVal')){ $('cVal').textContent = cur.copies; $('cMinus').disabled = cur.copies <= 1; $('cPlus').disabled = cur.copies >= 20; }
+    $('shVal').textContent = cur.sheets; $('shMinus').disabled = cur.sheets <= 1; $('shPlus').disabled = cur.sheets >= MAX_SHEETS;
+    document.querySelectorAll('#colorSel button').forEach(b => b.classList.toggle('on', (b.dataset.c === '1') === cur.color));
     $('sumVal').innerHTML = total() + '<small>сом</small>';
     $('payBtn').textContent = (key === 'scan' ? 'Сканировать за ' : 'Оплатить ') + total() + ' сом';
   };
@@ -811,6 +821,8 @@ function copyScan(key){
   setTimer(SVC_SEC + 20, 'Вернёмся на главный экран через %s с', goHome);
 }
 function csCopies(delta){ cur.copies = Math.max(1, Math.min(20, cur.copies + delta)); cur.draw(); }
+function csSheets(delta){ cur.sheets = Math.max(1, Math.min(MAX_SHEETS, cur.sheets + delta)); cur.draw(); }
+function csColor(on){ cur.color = on; cur.draw(); }
 function csPhone(key){
   stopFlow();
   const s = SERVICES[key];
@@ -824,7 +836,7 @@ function csPhone(key){
 async function csPay(){
   $('payBtn').disabled = true;
   try{
-    const d = await api('/order', {type: cur.type, copies: cur.copies, payment: 'gopay', terminal: TERMINAL});
+    const d = await api('/order', {type: cur.type, copies: cur.copies, pages: cur.sheets, color: cur.color, payment: 'gopay', terminal: TERMINAL});
     cur.orderId = d.order_id; cur.token = d.token; cur.total = d.total;
     payOrder();
   }catch(e){
@@ -864,16 +876,29 @@ async function checkOrder(){
   try{ d = await api('/order_status/' + cur.orderId + '?token=' + encodeURIComponent(cur.token)); }catch(e){ return; }
   if(d.status === 'pending_payment') return;
   cur.paid = true;
-  if(d.status === cur.shown && !(d.type === 'scan' && d.scan_ready && !cur.scanShown)) return;
-  cur.shown = d.status;
+  const key = d.status + ':' + (d.scanned || 0) + ':' + (d.waiting_next ? 1 : 0);
+  if(key === cur.shown && !(d.type === 'scan' && d.scan_ready && !cur.scanShown)) return;
+  cur.shown = key;
   const t = d.type || cur.type;
   const verb = t === 'scan' ? 'Сканируем…' : (t === 'copy' ? 'Копируем…' : 'Печатаем…');
   const warn = d.printer && d.printer !== 'ok'
     ? '<div class="wait" style="color:#FFE7B0">⚠ ' + esc(String(d.printer).replace(/^задание ждёт:\s*/, '')) + '. Мы уже знаем, заказ выполнится.</div>' : '';
 
+  if(d.status === 'printing' && d.waiting_next){
+    // Лист отсканирован — ждём, пока положат следующий
+    stopFlow(); pollT = setInterval(checkOrder, 2000);
+    const next = d.scanned + 1;
+    pane(head('Лист ' + d.scanned + ' из ' + d.sheets + ' готов') + '<div class="big-state">Положите лист ' + next + '</div>' +
+         '<p class="lead2">Поднимите крышку, замените лист на следующий лицом вниз, закройте и нажмите кнопку.</p>' +
+         '<div class="acts"><button class="btn main" id="nextBtn" onclick="scanNext()">Сканировать лист ' + next + '</button></div>');
+    paper('<svg class="bigicon" style="--i:0"><use href="#i-lid"/></svg><h3 style="--i:1">Лист ' + next + ' из ' + d.sheets + '<br>на стекло</h3><small style="--i:2">Лицом вниз, крышку закрыть</small>');
+    setTimer(300, 'Если что-то пошло не так: 0773 731 212', goHome, false);
+    return;
+  }
   if(d.status === 'paid' || d.status === 'printing'){
     stopFlow(); pollT = setInterval(checkOrder, 2500);
-    pane(head('Оплачено', cur.total + ' сом') + '<div class="big-state">' + verb + '</div>' +
+    const progress = d.sheets > 1 && t !== 'print' ? '<p class="lead2">Лист ' + Math.min(d.sheets, (d.scanned || 0) + 1) + ' из ' + d.sheets + '</p>' : '';
+    pane(head('Оплачено', cur.total + ' сом') + '<div class="big-state">' + verb + '</div>' + progress +
          '<p class="lead2">' + (t === 'print' ? 'Лист выйдет через несколько секунд.' : 'Не поднимайте крышку, пока не закончим.') + '</p>' + warn);
     paper('<div class="doc-h" style="--i:0">' + verb + '</div>' + lines(10, 1), '');
     setTimer(300, 'Если что-то пошло не так: 0773 731 212', goHome, false);
@@ -900,6 +925,12 @@ async function checkOrder(){
   } else {
     stopFlow(); goHome();
   }
+}
+
+async function scanNext(){
+  if($('nextBtn')) $('nextBtn').disabled = true;
+  try{ await api('/scan_next/' + cur.orderId, {token: cur.token}); }catch(e){}
+  checkOrder();
 }
 
 /* ─────────── Заставка: листы выходят из принтера ─────────── */
