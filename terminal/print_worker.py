@@ -31,7 +31,8 @@ SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-SCAN_DPI = 150
+VERSION = "2026-11-02 скан v2"   # видно в окне при запуске — так проверяете, что стоит новая версия
+SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
 # Двусторонняя печать на принтере БЕЗ автоматического дуплекса (сейчас Pantum M6500W).
@@ -44,7 +45,7 @@ BACK_REVERSE = True          # печатать обороты в обратно
 BACK_ROTATE_DUPLEX = 0       # повернуть оборот на 180°, если он вверх ногами (0 или 180)
 BACK_ROTATE_BOOKLET = 180    # то же для брошюры
 MANUAL_WAIT_MIN = 15         # сколько ждать переворота, потом заказ — ошибка
-COPY_DPI = 200
+COPY_DPI = 300
 
 LIBREOFFICE_PATHS = [
     r"C:\Program Files\LibreOffice\program\soffice.exe",
@@ -364,8 +365,24 @@ def _remove(*paths):
 # ─────────────────────── Сканер ───────────────────────
 
 
+SCAN_PAGE_MAX_MB = 3          # один лист скана
+SCAN_UPLOAD_MAX_MB = 22       # весь скан (сервер принимает до 25 МБ)
+
+
+def _wia_set(item, prop_id, name, value):
+    """Ставит настройку сканера по номеру (не зависит от языка Windows), иначе по имени."""
+    for key in (prop_id, name):
+        try:
+            item.Properties(key).Value = value
+            return True
+        except Exception:
+            pass
+    log.warning("Сканер не принял настройку %s = %s", name, value)
+    return False
+
+
 def scan_to_jpeg(order_id, dpi, color=False, sheet=1):
-    """Сканирует лист со стекла. Возвращает путь к JPEG (до 1 МБ) или None."""
+    """Сканирует лист со стекла (цвет или оттенки серого). Возвращает путь к JPEG или None."""
     try:
         import win32com.client
         from PIL import Image
@@ -382,12 +399,13 @@ def scan_to_jpeg(order_id, dpi, color=False, sheet=1):
             return None
 
         item = scanner.Items(1)
-        try:
-            item.Properties("Horizontal Resolution").Value = dpi
-            item.Properties("Vertical Resolution").Value = dpi
-            item.Properties("Current Intent").Value = 1 if color else 4  # 1 — цвет, 4 — оттенки серого
-        except Exception as e:
-            log.warning("Настройки сканера: %s", e)
+        # Порядок важен: смена режима сбрасывает разрешение, поэтому сначала режим, потом dpi.
+        # Режимы WIA: 1 — цвет, 2 — оттенки серого, 4 — чёрно-белый текст (1 бит, плохо для документов).
+        _wia_set(item, "6146", "Current Intent", 1 if color else 2)
+        _wia_set(item, "4103", "Data Type", 3 if color else 2)        # 3 — цвет, 2 — серый
+        _wia_set(item, "4104", "Bits Per Pixel", 24 if color else 8)
+        _wia_set(item, "6147", "Horizontal Resolution", dpi)
+        _wia_set(item, "6148", "Vertical Resolution", dpi)
 
         image = item.Transfer("{B96B3CAB-0728-11D3-9D7B-0000F81EF32E}")
         tmp_path = os.path.join(tempfile.gettempdir(), f"scan_{order_id}_{sheet}.jpg")
@@ -396,13 +414,14 @@ def scan_to_jpeg(order_id, dpi, color=False, sheet=1):
         if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
             return None
 
-        img = Image.open(tmp_path).convert("RGB")
-        quality = 85
-        while quality > 20:
-            img.save(tmp_path, "JPEG", quality=quality)
-            if os.path.getsize(tmp_path) <= 1024 * 1024:
+        img = Image.open(tmp_path).convert("RGB" if color else "L")
+        # Хорошее качество; жмём сильнее, только если лист вышел очень тяжёлым
+        quality = 90
+        while True:
+            img.save(tmp_path, "JPEG", quality=quality, dpi=(dpi, dpi))
+            if os.path.getsize(tmp_path) <= SCAN_PAGE_MAX_MB * 1024 * 1024 or quality <= 70:
                 break
-            quality -= 15
+            quality -= 10
         return tmp_path
     except Exception as e:
         log.exception("Ошибка сканирования: %s", e)
@@ -458,12 +477,22 @@ def scan_sheets(oid, sheets, dpi, color):
     return paths
 
 
-def images_to_pdf(paths, out_path, dpi, repeat=1):
-    """Склеивает сканы в один PDF. repeat — сколько раз повторить весь комплект (для копий)."""
+def images_to_pdf(paths, out_path, dpi, repeat=1, max_mb=None):
+    """Склеивает сканы в один PDF. repeat — сколько раз повторить весь комплект (для копий).
+    max_mb — если файл вышел тяжелее, пересобираем с меньшим размером (для загрузки на сервер)."""
     from PIL import Image
-    images = [Image.open(p).convert("RGB") for p in paths] * repeat
-    images[0].save(out_path, "PDF", save_all=True, append_images=images[1:], resolution=dpi)
-    return out_path
+    base = [Image.open(p) for p in paths]
+    base = [im if im.mode in ("RGB", "L") else im.convert("RGB") for im in base]
+    scale, quality = 1.0, 88
+    while True:
+        images = base if scale == 1.0 else [im.resize((int(im.width * scale), int(im.height * scale)), Image.LANCZOS)
+                                            for im in base]
+        images = images * repeat
+        images[0].save(out_path, "PDF", save_all=True, append_images=images[1:],
+                       resolution=dpi * scale, quality=quality)
+        if not max_mb or os.path.getsize(out_path) <= max_mb * 1024 * 1024 or scale < 0.4:
+            return out_path
+        scale, quality = scale * 0.75, 75
 
 
 def handle_scan(oid, order):
@@ -474,7 +503,8 @@ def handle_scan(oid, order):
         return "не удалось отсканировать"
     upload = paths[0]
     if len(paths) > 1:
-        upload = images_to_pdf(paths, os.path.join(tempfile.gettempdir(), f"scan_{oid}.pdf"), SCAN_DPI)
+        upload = images_to_pdf(paths, os.path.join(tempfile.gettempdir(), f"scan_{oid}.pdf"), SCAN_DPI,
+                               max_mb=SCAN_UPLOAD_MAX_MB)
     try:
         with open(upload, "rb") as f:
             resp = api("POST", f"/scan_upload/{oid}", files={"file": f}, timeout=180)
@@ -563,7 +593,7 @@ def process(order):
 
 
 def main():
-    log.info("🖨 АкБарак авто-печать запущена. Терминал: %s, принтер: %s", TERMINAL_ID, PRINTER_NAME)
+    log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
     log.info("Ключ терминала: %s", "задан" if WORKER_KEY else "не задан")
 
