@@ -95,8 +95,9 @@
   #home .feeder{right:3.2vw;top:13vh;bottom:13vh;width:27vw}
   .qrsheet .ink{align-items:center;text-align:center;justify-content:center}
   .qrsheet h3{font-family:var(--disp);font-weight:800;font-size:1.75vw;letter-spacing:-.02em;line-height:1.15}
-  .qrsheet .q{margin:3vh 0 2.6vh;display:flex;justify-content:center}
-  .qrsheet .q img,.qrsheet .q canvas{width:20vw !important;height:20vw !important;max-width:32vh;max-height:32vh;image-rendering:pixelated}
+  .qrsheet .q{margin:3vh 0 2.6vh;display:flex;justify-content:center;width:100%}
+  /* QR всегда с белыми полями по бокам: не шире 74% листа, на любом экране ровно по центру */
+  .qrsheet .q img,.qrsheet .q canvas{width:74% !important;height:auto !important;aspect-ratio:1;max-width:32vh;image-rendering:pixelated}
   .qrsheet small{font-weight:700;font-size:1vw;color:#51627C;line-height:1.5}
   .qrsheet .tag{font-family:var(--disp);font-weight:700;color:var(--gold-d);font-size:1.2vw;margin-top:1.4vh}
 
