@@ -31,7 +31,7 @@ SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-02 v3 копии"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-03 v4 ID-карта"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -535,9 +535,63 @@ def images_to_pdf(paths, out_path, dpi, repeat=1, max_mb=None):
         scale, quality = scale * 0.75, 75
 
 
+def _crop_document(img):
+    """Находит документ (карту) на белом фоне скана и обрезает поля вокруг."""
+    from PIL import ImageFilter, ImageOps
+    small = ImageOps.grayscale(img).resize((img.width // 4, img.height // 4))
+    small = small.filter(ImageFilter.MedianFilter(5))
+    w, h = small.size
+    edge = int(min(w, h) * 0.015)                         # тени у краёв стекла не считаем
+    mask = small.point(lambda v: 255 if v < 225 else 0).crop((edge, edge, w - edge, h - edge))
+    box = mask.getbbox()
+    if not box:
+        return img
+    left, top, right, bottom = [(c + edge) * 4 for c in box]
+    pad = 24
+    box = (max(0, left - pad), max(0, top - pad), min(img.width, right + pad), min(img.height, bottom + pad))
+    if (box[2] - box[0]) * (box[3] - box[1]) > 0.8 * img.width * img.height:
+        return img                                        # не нашли карту — оставляем как есть
+    return img.crop(box)
+
+
+def compose_idcard(paths, dpi, color, out_path):
+    """Лицевая и обратная сторона на одном листе А4, в натуральную величину."""
+    from PIL import Image
+    mode = "RGB" if color else "L"
+    page_w, page_h = int(8.27 * dpi), int(11.69 * dpi)   # А4
+    sheet = Image.new(mode, (page_w, page_h), "white")
+    margin = int(0.6 * dpi)
+    slot_h = (page_h - 3 * margin) // 2
+    y = margin
+    for p in paths[:2]:
+        side = _crop_document(Image.open(p).convert(mode))
+        k = min(1.0, (page_w - 2 * margin) / side.width, slot_h / side.height)
+        if k < 1.0:
+            side = side.resize((int(side.width * k), int(side.height * k)), Image.LANCZOS)
+        sheet.paste(side, ((page_w - side.width) // 2, y))
+        y += side.height + int(0.6 * dpi)                 # обе стороны рядом, сверху листа
+    sheet.save(out_path, "JPEG", quality=90, dpi=(dpi, dpi))
+    return out_path
+
+
 def handle_scan(oid, order):
     sheets = int(order.get("pages") or 1)
     color = order.get("print_type") == "color"
+    if order.get("sides") == "idcard":
+        paths = scan_sheets(oid, 2, SCAN_DPI, color)
+        if not paths:
+            return "не удалось отсканировать"
+        sheet = compose_idcard(paths, SCAN_DPI, color, os.path.join(tempfile.gettempdir(), f"id_{oid}.jpg"))
+        pdf = images_to_pdf([sheet], os.path.join(tempfile.gettempdir(), f"scan_{oid}.pdf"), SCAN_DPI,
+                            max_mb=SCAN_UPLOAD_MAX_MB)
+        try:
+            with open(pdf, "rb") as f:
+                resp = api("POST", f"/scan_upload/{oid}", files={"file": f}, timeout=180)
+            if resp is None or not resp.ok:
+                return "не удалось загрузить скан на сервер"
+            return None
+        finally:
+            _remove(*paths, sheet, pdf)
     paths = scan_sheets(oid, sheets, SCAN_DPI, color)
     if not paths:
         return "не удалось отсканировать"
@@ -559,6 +613,15 @@ def handle_copy(oid, order):
     sheets = int(order.get("pages") or 1)
     copies = int(order.get("copies") or 1)
     color = order.get("print_type") == "color"
+    if order.get("sides") == "idcard":
+        paths = scan_sheets(oid, 2, COPY_DPI, color)
+        if not paths:
+            return "не удалось отсканировать документ"
+        sheet = compose_idcard(paths, COPY_DPI, color, os.path.join(tempfile.gettempdir(), f"id_{oid}.jpg"))
+        try:
+            return print_file(sheet, copies, color=color)
+        finally:
+            _remove(*paths, sheet)
     paths = scan_sheets(oid, sheets, COPY_DPI, color)
     if not paths:
         return "не удалось отсканировать оригинал"
