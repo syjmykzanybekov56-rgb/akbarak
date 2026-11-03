@@ -643,16 +643,23 @@ def order():
         # Листы кладут на стекло по одному: после каждого студент нажимает «следующий лист»
         pages = clamp(data.get("pages"), 1, MAX_SCAN_SHEETS, 1)
         copies = clamp(data.get("copies"), 1, 20, 1) if order_type == "copy" else 1
-        total = PRICES[f"{order_type}_{print_type}"] * pages * copies
+        idcard = bool(data.get("idcard"))
+        if idcard:
+            # ID-карта/паспорт: две стороны сканируются по очереди, а на выходе один лист —
+            # и цена как за один лист
+            pages = 2
+            total = PRICES[f"{order_type}_{print_type}"] * copies
+        else:
+            total = PRICES[f"{order_type}_{print_type}"] * pages * copies
         token = secrets.token_urlsafe(16)
         status = "pending_payment" if is_online_payment(payment) else "new"
 
         conn = db()
         cur = conn.execute(
             "INSERT INTO orders (file_name, print_type, pages, copies, total, payment, status, created_at, "
-            "group_id, terminal_id, order_type, access_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "group_id, terminal_id, order_type, access_token, sides) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (order_type, print_type, pages, copies, total, payment, status, now(), uuid.uuid4().hex,
-             (data.get("terminal") or DEFAULT_TERMINAL)[:40], order_type, token))
+             (data.get("terminal") or DEFAULT_TERMINAL)[:40], order_type, token, "idcard" if idcard else "single"))
         order_id = cur.lastrowid
         conn.commit()
         conn.close()
@@ -962,7 +969,7 @@ def order_status(order_id):
         if not row or not row["access_token"] or not secrets.compare_digest(token, row["access_token"]):
             return jsonify({"error": "Заказ не найден"}), 404
         items = conn.execute(
-            "SELECT id, order_type, status, pages, copies, total, error, refund, scan_done, scan_go, "
+            "SELECT id, order_type, status, pages, copies, total, error, refund, scan_done, scan_go, sides, "
             "(scan_data IS NOT NULL) AS has_scan FROM orders WHERE group_id=? ORDER BY id",
             (row["group_id"],)).fetchall()
         term = conn.execute("SELECT last_seen, printer_status FROM terminals WHERE id=?",
@@ -1001,6 +1008,7 @@ def order_status(order_id):
         "sheets": sheets,
         "scanned": scanned,
         "waiting_next": waiting_next,
+        "idcard": bool(first and first["sides"] == "idcard"),
         "type": items[0]["order_type"] if items else "print",
         "total": sum(i["total"] for i in items),
         "files": len(items),

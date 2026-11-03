@@ -538,6 +538,13 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         </div>
       </div>
       <div class="set-row">
+        <span class="set-lbl">Документ</span>
+        <div class="pills">
+          <button class="pill on" onclick="setIdCopy(this,false)">Листы</button>
+          <button class="pill" onclick="setIdCopy(this,true)">ID-карта · 2 стороны</button>
+        </div>
+      </div>
+      <div class="set-row" id="cpages-row">
         <span class="set-lbl">Листов</span>
         <div class="ctr">
           <button class="ctr-btn" onclick="adjC('cpages',-1)">−</button>
@@ -637,6 +644,13 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         </div>
       </div>
       <div class="set-row">
+        <span class="set-lbl">Документ</span>
+        <div class="pills">
+          <button class="pill on" onclick="setIdScan(this,false)">Листы</button>
+          <button class="pill" onclick="setIdScan(this,true)">ID-карта · 2 стороны</button>
+        </div>
+      </div>
+      <div class="set-row" id="spages-row">
         <span class="set-lbl">Листов</span>
         <div class="ctr">
           <button class="ctr-btn" onclick="adjS(-1)">−</button>
@@ -962,7 +976,10 @@ function renderStatus(d){
   }
   // Несколько листов: после каждого ждём, пока положат следующий
   const multi = (type === 'scan' || type === 'copy') && d.sheets > 1;
-  if(multi && d.status === 'printing'){
+  if(multi && d.status === 'printing' && d.idcard){
+    if(d.waiting_next){ icon = '🪪'; title = 'Лицевая сторона готова'; text = 'Переверните карту обратной стороной вниз на то же место, закройте крышку и нажмите кнопку ниже.'; }
+    else title = (type === 'scan' ? 'Сканируем ' : 'Копируем ') + ((d.scanned || 0) ? 'обратную сторону…' : 'лицевую сторону…');
+  } else if(multi && d.status === 'printing'){
     if(d.waiting_next){
       icon = '📄'; title = 'Лист ' + d.scanned + ' из ' + d.sheets + ' готов';
       text = 'Положите следующий лист на стекло лицом вниз, закройте крышку и нажмите кнопку ниже.';
@@ -1001,7 +1018,7 @@ function renderStatus(d){
     act.innerHTML = '<button class="st-btn gold" onclick="goToGoPayCheckout(' + d.order_id + ')">Оплатить ' + d.total + ' сом</button>';
   }
   if(multi && d.status === 'printing' && d.waiting_next && stOrder){
-    act.innerHTML = '<button class="st-btn gold" id="st-next" onclick="scanNext()">Сканировать лист ' + (d.scanned + 1) + '</button>';
+    act.innerHTML = '<button class="st-btn gold" id="st-next" onclick="scanNext()">' + (d.idcard ? 'Сканировать обратную сторону' : 'Сканировать лист ' + (d.scanned + 1)) + '</button>';
   }
   if(type === 'scan' && d.scan_ready && stOrder){
     act.innerHTML = '<a class="st-btn" download href="' + SERVER + '/scan_download/' + stOrder.id +
@@ -1385,16 +1402,19 @@ function recalcPrint(){
   document.getElementById('v-detail').textContent=detail;
   document.getElementById('v-pay-print').innerHTML=t+' <span>сом</span>';
 }
+// ID-карта / паспорт: две стороны на одном листе, цена как за один лист
+function setIdCopy(btn,on){ setPill(btn); cstate.idcard=on; document.getElementById('cpages-row').style.display=on?'none':''; recalcCopy(); }
+function setIdScan(btn,on){ setPill(btn); sstate.idcard=on; document.getElementById('spages-row').style.display=on?'none':''; recalcScan(); }
 function recalcCopy(){
-  const t=cstate.price*cstate.ccopies*cstate.cpages;
+  const t=cstate.price*cstate.ccopies*(cstate.idcard?1:cstate.cpages);
   document.getElementById('v-ctotal').textContent=t+' сом';
-  document.getElementById('v-cdetail').textContent=cstate.cpages+' стр × '+cstate.ccopies+' коп × '+cstate.price+' сом';
+  document.getElementById('v-cdetail').textContent=cstate.idcard ? 'ID-карта, 2 стороны на 1 листе × '+cstate.ccopies+' коп' : cstate.cpages+' стр × '+cstate.ccopies+' коп × '+cstate.price+' сом';
   document.getElementById('v-pay-copy').innerHTML=t+' <span>сом</span>';
 }
 function recalcScan(){
-  const t=sstate.price*sstate.spages;
+  const t=sstate.price*(sstate.idcard?1:sstate.spages);
   document.getElementById('v-stotal').textContent=t+' сом';
-  document.getElementById('v-sdetail').textContent=sstate.spages+' стр × '+sstate.price+' сом';
+  document.getElementById('v-sdetail').textContent=sstate.idcard ? 'ID-карта, 2 стороны на 1 листе' : sstate.spages+' стр × '+sstate.price+' сом';
   document.getElementById('v-pay-scan').innerHTML=t+' <span>сом</span>';
 }
 
@@ -1468,7 +1488,7 @@ async function submitPrint(payment){
 async function submitCopy(payment){
   document.getElementById('loading').classList.add('show');
   const total=cstate.price*cstate.ccopies*cstate.cpages;
-  const data = await sendOrder('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'copy',color:cstate.price>=12,pages:cstate.cpages,copies:cstate.ccopies,payment,terminal:TERMINAL})});
+  const data = await sendOrder('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'copy',color:cstate.price>=12,pages:cstate.cpages,copies:cstate.ccopies,idcard:!!cstate.idcard,payment,terminal:TERMINAL})});
   if(!data){ document.getElementById('loading').classList.remove('show'); return; }
   await finishOrder(data, 'copy');
 }
@@ -1478,7 +1498,7 @@ let lastScanOrderId = null;
 async function submitScan(payment){
   document.getElementById('loading').classList.add('show');
   const total=sstate.price*sstate.spages;
-  const data = await sendOrder('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'scan',color:sstate.price>=12,pages:sstate.spages,payment,terminal:TERMINAL})});
+  const data = await sendOrder('/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'scan',color:sstate.price>=12,pages:sstate.spages,idcard:!!sstate.idcard,payment,terminal:TERMINAL})});
   if(!data){ document.getElementById('loading').classList.remove('show'); return; }
   lastScanOrderId = data.order_id;
   try{ localStorage.setItem('akbarak_scan', JSON.stringify({id:data.order_id, token:data.token})); }catch(e){}
