@@ -31,7 +31,7 @@ SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-03 v4 ID-карта"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-03 v5 ID-карта"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -535,41 +535,81 @@ def images_to_pdf(paths, out_path, dpi, repeat=1, max_mb=None):
         scale, quality = scale * 0.75, 75
 
 
+def _span(prof, lo, hi, gap):
+    """Самый длинный непрерывный участок профиля, где «чернила» есть, но это не сплошная полоса."""
+    best, start, last = None, None, None
+    for i, v in enumerate(prof):
+        if lo < v < hi:
+            if start is None or i - last > gap:
+                start = i
+            last = i
+            if best is None or last - start > best[1] - best[0]:
+                best = (start, last)
+    return best
+
+
 def _crop_document(img):
-    """Находит документ (карту) на белом фоне скана и обрезает поля вокруг."""
-    from PIL import ImageFilter, ImageOps
-    small = ImageOps.grayscale(img).resize((img.width // 4, img.height // 4))
-    small = small.filter(ImageFilter.MedianFilter(5))
-    w, h = small.size
-    edge = int(min(w, h) * 0.015)                         # тени у краёв стекла не считаем
-    mask = small.point(lambda v: 255 if v < 225 else 0).crop((edge, edge, w - edge, h - edge))
-    box = mask.getbbox()
-    if not box:
-        return img
-    left, top, right, bottom = [(c + edge) * 4 for c in box]
-    pad = 24
-    box = (max(0, left - pad), max(0, top - pad), min(img.width, right + pad), min(img.height, bottom + pad))
-    if (box[2] - box[0]) * (box[3] - box[1]) > 0.8 * img.width * img.height:
-        return img                                        # не нашли карту — оставляем как есть
+    """Находит документ (карту) на белом фоне скана и вырезает его.
+    Тёмные полосы по краям стекла и тени крышки не мешают: они тянутся через весь лист,
+    а карта — нет. Если карту найти не удалось, возвращает None."""
+    from PIL import Image, ImageFilter, ImageOps
+    k = 4
+    small = ImageOps.grayscale(img).resize((img.width // k, img.height // k)).filter(ImageFilter.MedianFilter(5))
+    mask = small.point(lambda v: 255 if v < 238 else 0)
+    w, h = mask.size
+
+    def only(box):                                        # маска, где оставлен только участок box
+        m = Image.new("L", (w, h), 0)
+        m.paste(mask.crop(box), box[:2])
+        return m
+
+    def cols(m):
+        return list(m.resize((w, 1), Image.BOX).getdata())
+
+    def rows(m):
+        return list(m.resize((1, h), Image.BOX).getdata())
+
+    lo, hi = 0.03 * 255, 0.75 * 255
+    xs = _span(cols(mask), lo, hi, w // 30)
+    if not xs:
+        return None
+    ys = _span(rows(only((xs[0], 0, xs[1] + 1, h))), 0.02 * 255, hi, h // 30)
+    if not ys:
+        return None
+    xs2 = _span(cols(only((0, ys[0], w, ys[1] + 1))), 0.01 * 255, hi, w // 30)
+    if xs2:
+        xs = xs2
+    bw, bh = xs[1] - xs[0], ys[1] - ys[0]
+    if bw < w * 0.12 or bh < h * 0.06 or (bw > w * 0.9 and bh > h * 0.9):
+        return None
+    pad = 3
+    box = (max(0, (xs[0] - pad) * k), max(0, (ys[0] - pad) * k),
+           min(img.width, (xs[1] + pad) * k), min(img.height, (ys[1] + pad) * k))
     return img.crop(box)
 
 
 def compose_idcard(paths, dpi, color, out_path):
-    """Лицевая и обратная сторона на одном листе А4, в натуральную величину."""
+    """Лицевая и обратная сторона на одном листе А4: в верхней части, одна под другой,
+    в натуральную величину, отступ сверху 2 см, между сторонами 1 см."""
     from PIL import Image
     mode = "RGB" if color else "L"
-    page_w, page_h = int(8.27 * dpi), int(11.69 * dpi)   # А4
+    cm = dpi / 2.54
+    page_w, page_h = int(21.0 * cm), int(29.7 * cm)       # А4
     sheet = Image.new(mode, (page_w, page_h), "white")
-    margin = int(0.6 * dpi)
-    slot_h = (page_h - 3 * margin) // 2
-    y = margin
+    top, gap, side_margin = int(2 * cm), int(1 * cm), int(1.5 * cm)
+    slot_h = (page_h - 2 * top - gap) // 2
+    y = top
     for p in paths[:2]:
-        side = _crop_document(Image.open(p).convert(mode))
-        k = min(1.0, (page_w - 2 * margin) / side.width, slot_h / side.height)
-        if k < 1.0:
-            side = side.resize((int(side.width * k), int(side.height * k)), Image.LANCZOS)
+        src = Image.open(p).convert(mode)
+        side = _crop_document(src)
+        if side is None:
+            log.warning("ID-карта: не нашёл края документа на скане — кладу скан целиком")
+            side = src
+        f = min(1.0, (page_w - 2 * side_margin) / side.width, slot_h / side.height)
+        if f < 1.0:
+            side = side.resize((int(side.width * f), int(side.height * f)), Image.LANCZOS)
         sheet.paste(side, ((page_w - side.width) // 2, y))
-        y += side.height + int(0.6 * dpi)                 # обе стороны рядом, сверху листа
+        y += side.height + gap
     sheet.save(out_path, "JPEG", quality=90, dpi=(dpi, dpi))
     return out_path
 
