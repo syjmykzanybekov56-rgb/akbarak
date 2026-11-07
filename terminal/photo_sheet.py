@@ -20,7 +20,44 @@ SIZES = {                          # мм, сетка (колонки, ряды)
     "30x40x8": ((30, 40), (4, 2)), # 8 штук помельче
     "25x35": ((25, 35), (4, 2)),
 }
-GOLD, NAVY, GRID = (226, 176, 74), (20, 40, 61), (150, 150, 150)
+GOLD, NAVY, GRID = (245, 166, 35), (13, 34, 64), (150, 150, 150)
+
+
+WHITE = (255, 255, 255)
+BRAND_NAVY, BRAND_GOLD = (13, 34, 64), (245, 166, 35)   # как на сайте: #0D2240, #F5A623
+
+
+def draw_logo(width, with_sub=True):
+    """Логотип АкБарак как на сайте: знак «А» + AK/BARAK + Smart Print Network, на тёмно-синей плашке."""
+    s = 4                                            # рисуем крупно и уменьшаем — края ровнее
+    h = round(width * (0.42 if with_sub else 0.32)) * s
+    w = width * s
+    img = Image.new("RGB", (w, h), BRAND_NAVY)
+    d = ImageDraw.Draw(img)
+    mh = h * (0.62 if with_sub else 0.72)            # высота знака
+    k = mh / 40
+    ox, oy = h * 0.16, (h - mh) / 2
+    P = lambda pts: [(ox + x * k, oy + y * k) for x, y in pts]
+    d.polygon(P([(18, 3), (3, 37), (10, 37), (18, 17), (26, 37), (33, 37)]), fill=WHITE)
+    d.polygon(P([(18, 3), (26, 37), (33, 37)]), fill=BRAND_GOLD)
+    d.rounded_rectangle([*P([(8, 27)])[0], *P([(28, 31)])[0]], radius=2 * k, fill=WHITE)
+    d.rounded_rectangle([*P([(18, 27)])[0], *P([(28, 31)])[0]], radius=2 * k, fill=BRAND_GOLD)
+    tx = ox + 36 * k + h * 0.08
+    tw = w - tx - h * 0.12
+    name_px = int(mh * 0.62)
+    while name_px > 8 and d.textlength("AKBARAK", font=_font(name_px, True)) > tw:
+        name_px -= 2
+    fb = _font(name_px, True)
+    ty = oy + (mh * 0.08 if with_sub else (mh - name_px) / 2)
+    d.text((tx, ty), "AK", font=fb, fill=WHITE)
+    d.text((tx + d.textlength("AK", font=fb), ty), "BARAK", font=fb, fill=BRAND_GOLD)
+    if with_sub:
+        sub_px = int(name_px * 0.42)
+        fs = _font(sub_px)
+        while sub_px > 6 and d.textlength("Smart Print Network", font=fs) > tw:
+            sub_px -= 1; fs = _font(sub_px)
+        d.text((tx + 2, ty + name_px * 1.12), "Smart Print Network", font=fs, fill=(190, 200, 215))
+    return img.resize((width, h // s), Image.LANCZOS)
 
 
 def mm(v):
@@ -99,20 +136,22 @@ def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=None, f
     date = datetime.now().strftime("%d.%m.%Y")
     if pwid < mm(24):
         # узкая полоска (8 фото на листе) — пишем вертикально, без QR
-        line = f"АкБарак   {pw}×{ph} мм · {cols * rows} шт   {date}" + (f"   #{order_id}" if order_id else "")
+        line = f"{pw}×{ph} мм · {cols * rows} шт   {date}" + (f"   #{order_id}" if order_id else "")
         strip = Image.new("RGB", (H - mm(6), pwid), "white")
+        logo = draw_logo(round(pwid / 0.32), with_sub=False)
+        logo = logo.resize((round(logo.width * pwid / logo.height), pwid), Image.LANCZOS)
+        strip.paste(logo, (0, 0))
         sd = ImageDraw.Draw(strip)
-        f = _font(min(mm(4), pwid - mm(3)), True)
-        while f.size > 10 and sd.textlength(line, font=f) > strip.width:
+        room = strip.width - logo.width - mm(3)
+        f = _font(min(mm(3.6), pwid - mm(4)), True)
+        while f.size > 10 and sd.textlength(line, font=f) > room:
             f = _font(f.size - 2, True)
-        sd.text((strip.width // 2, pwid // 2), line, font=f, fill=NAVY, anchor="mm")
+        sd.text((logo.width + mm(3) + room // 2, pwid // 2), line, font=f, fill=NAVY, anchor="mm")
         sheet.paste(strip.rotate(90, expand=True), (px0, mm(3)))
     else:
-        y = mm(5)
-        d.text((cx, y), "АкБарак", font=fit("АкБарак", mm(7), True), fill=NAVY, anchor="mt")
-        y += mm(9)
-        d.rectangle([px0 + mm(1), y, px0 + pwid - mm(1), y + mm(1)], fill=GOLD)
-        y += mm(4)
+        logo = draw_logo(pwid)
+        sheet.paste(logo, (px0, mm(3)))
+        y = mm(3) + logo.height + mm(4)
         for t, px, b in (("Фото на", mm(3.4), True), ("документы", mm(3.4), True),
                          (f"{pw}×{ph} мм · {cols * rows} шт", mm(2.9), False), (date, mm(2.9), False),
                          (f"Заказ #{order_id}" if order_id else "", mm(2.9), False)):
