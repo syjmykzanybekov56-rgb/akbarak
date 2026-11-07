@@ -1101,6 +1101,20 @@ def admin_reprint(order_id):
     return jsonify({"success": True})
 
 
+@app.route("/admin/free/<int:order_id>", methods=["POST"])
+@require_admin
+def admin_free(order_id):
+    """Владелец печатает для себя: неоплаченный заказ уходит в печать бесплатно (сумма 0)."""
+    conn = db()
+    cur = conn.execute("UPDATE orders SET status='new', paid_at=?, total=0, payment='free' "
+                       "WHERE id=? AND status IN ('pending_payment','rejected')", (now(), order_id))
+    conn.commit()
+    conn.close()
+    if not cur.rowcount:
+        return jsonify({"error": "Этот заказ уже оплачен или закрыт"}), 409
+    return jsonify({"success": True})
+
+
 @app.route("/admin/refunded/<int:order_id>", methods=["POST"])
 @require_admin
 def admin_refunded(order_id):
@@ -1149,6 +1163,8 @@ def admin():
         acts = ""
         if o["status"] in ("failed", "printing", "printed"):
             acts += btn("reprint", o["id"], "Перепечатать", "#2a4f7c")
+        if o["status"] in ("pending_payment", "rejected"):
+            acts += btn("free", o["id"], "Печать бесплатно", "#22c55e")
         if o["status"] in ("pending_payment", "new", "printing", "failed"):
             acts += btn("cancel", o["id"], "Отменить", "#ef4444")
         if o["refund"] == "needed":
@@ -1201,7 +1217,7 @@ td{{padding:10px 12px;font-size:13px;border-top:1px solid rgba(255,255,255,0.05)
 <tbody>{rows}</tbody></table></div>
 <script>
 const KEY = new URLSearchParams(location.search).get("key");
-const ASK = {{cancel:"Отменить заказ?", reprint:"Отправить на печать ещё раз?", refunded:"Отметить, что деньги вернули?"}};
+const ASK = {{cancel:"Отменить заказ?", reprint:"Отправить на печать ещё раз?", refunded:"Отметить, что деньги вернули?", free:"Напечатать этот заказ бесплатно (для себя)?"}};
 async function act(a, id){{
   if(!window.confirm(ASK[a])) return;
   const r = await fetch("/admin/"+a+"/"+id, {{method:"POST", headers:{{"X-Admin-Key":KEY}}}});
