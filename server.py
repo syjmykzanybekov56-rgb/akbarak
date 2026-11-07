@@ -62,7 +62,7 @@ WORKER_KEY = os.getenv("WORKER_KEY", "")
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN", "")
 TG_CHAT_ID = os.getenv("TG_CHAT_ID", "")
 CASH_ENABLED = os.getenv("CASH_ENABLED", "0") == "1"
-COLOR_ENABLED = os.getenv("COLOR_ENABLED", "0") == "1"
+COLOR_ENABLED = os.getenv("COLOR_ENABLED", "1") == "1"
 NO_COLOR_MSG = "Цветная печать и фото пока недоступны — сейчас только ч/б"
 DUPLEX_ENABLED = os.getenv("DUPLEX_ENABLED", "0") == "1"
 NO_DUPLEX_MSG = "Двусторонняя печать и брошюры пока недоступны — сейчас только односторонняя"
