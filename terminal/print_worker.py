@@ -26,12 +26,24 @@ import requests
 # ─────────────────────── Настройки ───────────────────────
 
 SERVER = "https://akbarak-production.up.railway.app"
-PRINTER_NAME = "Pantum M6500W series"
+def _default_printer():
+    """Принтер берётся тот, что стоит «по умолчанию» в Windows (зелёная галочка).
+    Можно задать явно переменной окружения AKBARAK_PRINTER."""
+    name = os.getenv("AKBARAK_PRINTER")
+    if name:
+        return name
+    try:
+        import win32print
+        return win32print.GetDefaultPrinter()
+    except Exception:
+        return "Pantum M6500W series"
+
+PRINTER_NAME = _default_printer()
 SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-03 v5 ID-карта"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-08 v6 принтер по умолчанию"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
