@@ -43,7 +43,7 @@ SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-08 v6 принтер по умолчанию"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-08 v7 сканер по умолчанию"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -440,14 +440,30 @@ def scan_to_jpeg(order_id, dpi, color=False, sheet=1):
         from PIL import Image
 
         dm = win32com.client.Dispatch("WIA.DeviceManager")
-        scanner = None
+        # Сканеров в Windows может быть несколько (старый Pantum остаётся в системе,
+        # даже когда отключён). Сначала пробуем сканер той же марки, что принтер
+        # по умолчанию, потом остальные; отключённые («не в режиме ONLINE») пропускаем.
+        infos = []
         for i in range(dm.DeviceInfos.Count):
             info = dm.DeviceInfos.Item(i + 1)
             if info.Type == 1:
+                try:
+                    name = str(info.Properties("Name").Value)
+                except Exception:
+                    name = ""
+                infos.append((name, info))
+        brand = (PRINTER_NAME.split() or [""])[0].lower()
+        infos.sort(key=lambda t: 0 if brand and brand in t[0].lower() else 1)
+        scanner = None
+        for name, info in infos:
+            try:
                 scanner = info.Connect()
+                log.info("Сканер: %s", name or "без имени")
                 break
+            except Exception as e:
+                log.warning("Сканер «%s» недоступен, пробую следующий: %s", name, e)
         if not scanner:
-            log.error("Сканер не найден!")
+            log.error("Сканер не найден! Проверьте, что принтер со сканером включён и подключён по USB.")
             return None
 
         item = scanner.Items(1)
