@@ -359,7 +359,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
     <div class="menu-body">
       <div class="menu-item" onclick="toggleMenu();go('s-home')"><span class="menu-item-ico">🏠</span>Главная</div>
       <div class="menu-item" onclick="toggleMenu();go('s-how')"><span class="menu-item-ico">📖</span>Инструкция</div>
-      <div class="menu-item" onclick="toggleMenu();go('s-partner')"><span class="menu-item-ico">🤝</span>Сотрудничество</div>
+      <div class="menu-item" onclick="location.href='/partner.html'"><span class="menu-item-ico">🤝</span>Сотрудничество</div>
       <div class="menu-item" onclick="toggleMenu();go('s-about')"><span class="menu-item-ico">ℹ️</span>О нас</div>
       <div class="menu-item" onclick="location.href='/oferta.html'"><span class="menu-item-ico">📜</span>Публичная оферта</div>
       <div class="menu-item" onclick="location.href='/privacy.html'"><span class="menu-item-ico">🔒</span>Конфиденциальность</div>
@@ -882,7 +882,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
     </div>
     <div style="margin:0 20px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;padding:20px">
       <div style="font-size:14px;font-weight:800;color:var(--white);margin-bottom:14px">Свяжитесь с нами</div>
-      <div style="font-size:14px;color:rgba(var(--fg),0.5);font-weight:600;line-height:2.2">📞 <span style="color:var(--white)">0773 731 212</span><br>✉️ <span style="color:var(--white)">akbarak@gmail.com</span><br>📍 <span style="color:var(--white)">Бишкек, КГМА</span></div>
+      <div style="font-size:14px;color:rgba(var(--fg),0.5);font-weight:600;line-height:2.2">📞 <span style="color:var(--white)">0773 731 212</span><br>✉️ <span style="color:var(--white)">akbarakksma@gmail.com</span><br>📍 <span style="color:var(--white)">Бишкек, КГМА</span></div>
     </div>
   </div>
 
@@ -1235,7 +1235,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if(id && token){ rememberOrder(id, token); openStatus(id, token, true); return; }
   // QR с экрана терминала может сразу открыть нужную услугу: ?s=print|copy|scan
   const svc = q.get('s');
-  if(['print','copy','scan','partner'].includes(svc)){ go('s-' + svc); return; }
+  if(svc === 'partner'){ location.replace('/partner.html'); return; }
+  if(['print','copy','scan'].includes(svc)){ go('s-' + svc); return; }
   let saved = null; try{ saved = JSON.parse(localStorage.getItem('akbarak_last')||'null'); }catch(e){}
   if(saved && saved.id && saved.token && Date.now() - (saved.ts || 0) < 24*60*60*1000){
     openStatus(saved.id, saved.token, false);

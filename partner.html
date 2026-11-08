@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>АкБарак — терминал в ваш вуз</title>
+<meta name="description" content="Терминал самообслуживания АкБарак: печать, копия и скан с телефона. Для вузов, колледжей и ЦОНов — бесплатно, нужны только место и розетка.">
+<meta name="theme-color" content="#14283D">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Golos+Text:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --paper:#FFFFFF; --ink:#14283D; --muted:#51627C; --line:#D9E0E9; --soft:#E6EBF2;
+  --gold:#E2A93B; --gold-t:#B8892A; --navy:#14283D; --navy2:#1C3758;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Golos Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1A2E; --paper:#12243B; --ink:#EEF2F7; --muted:#9FB0C6; --line:#22385A; --soft:#172C47; --gold-t:#E2A93B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1A2E; --paper:#12243B; --ink:#EEF2F7; --muted:#9FB0C6; --line:#22385A; --soft:#172C47; --gold-t:#E2A93B; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+.wrap{max-width:1100px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15;letter-spacing:-.015em}
+h1{font-size:clamp(30px,5.2vw,54px);font-weight:800}
+h1 .g{color:var(--gold-t)}
+h2{font-size:clamp(24px,3.4vw,34px);font-weight:700}
+h3{font-size:18px;font-weight:500}
+p{margin:0} a{color:inherit}
+a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:6px}
+.muted{color:var(--muted)}
+.label{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+
+/* лист бумаги: золотой уголок */
+.paper{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:4px 16px 16px 16px}
+.paper::after{content:"";position:absolute;top:-1px;right:-1px;width:30px;height:30px;border-top-right-radius:16px;
+  background:linear-gradient(225deg,var(--bg) 50%,var(--gold) 50%)}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:20px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo svg{width:42px;height:42px;filter:drop-shadow(0 1px 1px rgba(20,40,61,.35))}
+.logo b{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em}
+.logo b span{color:var(--gold)}
+nav{display:flex;gap:22px;flex-wrap:wrap}
+nav a{text-decoration:none;font-weight:500;color:var(--muted)} nav a:hover{color:var(--ink)}
+@media (max-width:820px){nav{display:none}}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:14px 22px;font:700 16px var(--body);
+  text-decoration:none;cursor:pointer;background:var(--gold);color:#14283D}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--line)}
+.btn.small{padding:10px 16px;font-size:15px}
+
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;padding-block:24px 56px}
+.hero>*{min-width:0}
+.hero .lead{font-size:clamp(17px,1.6vw,20px);color:var(--muted);max-width:34em;margin-top:20px}
+.hero .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+.who{display:inline-block;background:var(--soft);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:700;margin-bottom:18px}
+.kiosk{width:100%;max-width:300px;justify-self:center;height:auto;filter:drop-shadow(0 18px 30px rgba(20,40,61,.18))}
+@media (max-width:820px){.hero{grid-template-columns:1fr;gap:28px}.kiosk{max-width:220px}}
+@media (prefers-reduced-motion:no-preference){
+  .sheet-out{animation:feed 3.2s ease-in-out infinite}
+  @keyframes feed{0%,20%{transform:translateY(-22px);opacity:0}45%,85%{transform:translateY(0);opacity:1}100%{transform:translateY(0);opacity:0}}
+}
+
+.facts{display:grid;grid-template-columns:repeat(4,1fr);background:var(--navy);color:#fff;border-radius:18px;overflow:hidden;position:relative}
+.fact{padding:22px 24px;border-right:1px solid rgba(255,255,255,.1)} .fact:last-child{border-right:0}
+.fact .n{font-family:var(--display);font-size:clamp(24px,3vw,34px);font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
+.fact .n small{font-size:.5em;font-weight:500}
+.fact .t{color:#C9D3E0;font-size:15px;margin-top:4px}
+@media (max-width:760px){.facts{grid-template-columns:1fr 1fr}.fact:nth-child(2){border-right:0}.fact:nth-child(-n+2){border-bottom:1px solid rgba(255,255,255,.1)}}
+
+section{padding-block:72px 8px}
+.head{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:30px}
+.head p{max-width:36em}
+
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.step{padding:22px}
+.step .num{width:38px;height:38px;border-radius:50%;background:var(--navy);color:var(--gold);display:grid;place-items:center;
+  font-family:var(--display);font-weight:700;margin-bottom:16px}
+.step p{color:var(--muted);font-size:15px;margin-top:8px}
+@media (max-width:900px){.steps{grid-template-columns:1fr 1fr}} @media (max-width:520px){.steps{grid-template-columns:1fr}}
+
+.aud{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.card{padding:28px}
+.card h3{font-size:21px;margin-bottom:14px}
+.card ul{margin:0;padding-left:20px;display:grid;gap:8px}
+.card li::marker{color:var(--gold)}
+@media (max-width:760px){.aud{grid-template-columns:1fr}}
+
+.gets{display:grid;grid-template-columns:repeat(3,1fr);gap:28px 36px}
+.get{border-top:3px solid var(--gold);padding-top:16px}
+.get p{color:var(--muted);font-size:15px;margin-top:8px}
+@media (max-width:900px){.gets{grid-template-columns:1fr 1fr}} @media (max-width:520px){.gets{grid-template-columns:1fr}}
+
+.need{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.need table{width:100%;border-collapse:collapse;background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:16px}
+.need td{padding:14px 18px;border-top:1px solid var(--line);vertical-align:top}
+.need tr:first-child td{border-top:0}
+.need td:last-child{text-align:right;color:var(--muted);white-space:nowrap}
+.need td.ours{color:var(--gold-t);font-weight:700}
+.dark{background:var(--navy);color:#fff;border-radius:20px;padding:30px;position:relative;overflow:hidden}
+.dark::before{content:"";position:absolute;right:-70px;bottom:-70px;width:240px;height:240px;opacity:.35;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-70 -70 140 140'%3E%3Cg fill='none' stroke='%23E2A93B' stroke-linecap='round'%3E%3Ccircle r='44' stroke-width='5'/%3E%3Cg stroke-width='3.6'%3E%3Cpath d='M-34 -11Q0 -20 34 -11M-37 0H37M-34 11Q0 20 34 11M-11 -34Q-20 0 -11 34M0 -37V37M11 -34Q20 0 11 34'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat}
+.dark>*{position:relative}
+.dark .big{font-family:var(--display);font-size:clamp(40px,6vw,64px);font-weight:800;color:var(--gold);line-height:1}
+.dark p{color:#C9D4E3;margin-top:12px}
+.dark h3{color:#fff;margin-top:14px;font-size:21px}
+@media (max-width:760px){.need{grid-template-columns:1fr}}
+
+.own{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:stretch}
+.own .card ul{margin-top:4px}
+@media (max-width:760px){.own{grid-template-columns:1fr}}
+
+.launch{list-style:none;margin:0 0 0 12px;padding:0;border-left:3px solid var(--line)}
+.launch li{position:relative;padding:0 0 26px 30px}
+.launch li::before{content:"";position:absolute;left:-10px;top:4px;width:17px;height:17px;border-radius:50%;background:var(--paper);border:3px solid var(--gold)}
+.launch li:last-child{padding-bottom:0}
+.launch b{font-family:var(--display);font-weight:500;font-size:18px}
+.launch span{display:block;color:var(--muted);font-size:15px;margin-top:2px}
+
+.prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.price{padding:22px 24px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.price .v{font-family:var(--display);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.price .v small{font-size:14px;font-weight:500;color:var(--muted)}
+
+.faq{display:grid;gap:10px}
+details{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--display);color:var(--gold);font-size:20px;line-height:1}
+details[open] summary::after{content:"–"}
+details p{color:var(--muted);margin-top:10px;max-width:60em}
+
+.contact{margin-block:72px 40px;padding:clamp(24px,4vw,44px);display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center}
+.contact>*{min-width:0}
+.rows{display:grid;gap:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--soft);border-radius:12px;padding:12px 14px;flex-wrap:wrap}
+.row .k{font-size:13px;color:var(--muted)} .row .val{font-weight:700;font-size:18px;word-break:break-all}
+.row .val a{text-decoration:none}
+.copy{border:0;background:var(--paper);color:var(--ink);border-radius:8px;padding:8px 12px;font:700 14px var(--body);cursor:pointer;box-shadow:inset 0 0 0 1px var(--line)}
+@media (max-width:760px){.contact{grid-template-columns:1fr}}
+footer{padding-block:10px 40px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="https://akbarak.vercel.app/" aria-label="АкБарак — на главную">
+      <svg viewBox="0 0 240 240" aria-hidden="true"><path d="M58 20H152L192 60V222H58Z" fill="#FFFFFF"/><path d="M152 20V60H192Z" fill="#E2A93B"/><circle cx="124" cy="146" r="52" fill="#14283D"/><g fill="none" stroke="#E2A93B" stroke-width="7" stroke-linecap="round"><circle cx="124" cy="146" r="40"/><path d="M90 136Q124 128 158 136M86 146H162M90 156Q124 164 158 156M114 112Q106 146 114 180M124 108V184M134 112Q142 146 134 180"/></g></svg>
+      <b><span>Ак</span>Барак</b>
+    </a>
+    <nav aria-label="Разделы">
+      <a href="#how">Как работает</a><a href="#gets">Выгода</a><a href="#pilot">Пилот</a><a href="#own">Свой терминал</a><a href="#faq">Вопросы</a>
+    </nav>
+    <a class="btn small" href="#contact">Связаться</a>
+  </header>
+
+  <div class="hero" id="top">
+    <div>
+      <span class="who">Для вузов, колледжей и ЦОНов</span>
+      <h1>Печать без очереди <span class="g">прямо у вас в холле</span></h1>
+      <p class="lead">Терминал самообслуживания «АкБарак»: студент или посетитель печатает, копирует и сканирует с телефона за 1–2 минуты, без кассира и без наличных. Для организации это бесплатно — нужны только место около 1&nbsp;м² и розетка.</p>
+      <div class="actions">
+        <a class="btn" href="#contact">Обсудить установку</a>
+        <a class="btn ghost" href="#how">Как это работает</a>
+      </div>
+    </div>
+    <svg class="kiosk" viewBox="0 0 260 520" role="img" aria-labelledby="kt kd">
+      <title id="kt">Терминал АкБарак</title>
+      <desc id="kd">Белый терминал в виде тетрадного листа с золотым уголком: сверху экран с QR-кодом, ниже щель, из которой выходит распечатка</desc>
+      <rect x="20" y="490" width="220" height="16" rx="8" fill="#14283D" opacity=".18"/>
+      <path d="M24 10H206L236 40V492H24Z" fill="#FFFFFF" stroke="#D9E0E9" stroke-width="2"/>
+      <path d="M206 10V40H236Z" fill="#E2A93B"/>
+      <g fill="none" stroke="#14283D" stroke-width="4" stroke-linecap="round">
+        <path d="M14 70h22M14 100h22M14 130h22M14 160h22M14 190h22M14 220h22M14 250h22M14 280h22M14 310h22M14 340h22M14 370h22M14 400h22M14 430h22M14 460h22"/>
+      </g>
+      <g fill="none" stroke="#14283D" stroke-opacity=".08" stroke-width="5" stroke-linecap="round">
+        <circle cx="140" cy="400" r="62"/><path d="M92 386Q140 374 188 386M88 400H192M92 414Q140 426 188 414M126 352Q114 400 126 448M140 346V454M154 352Q166 400 154 448"/>
+      </g>
+      <rect x="52" y="44" width="160" height="200" rx="10" fill="#14283D"/>
+      <rect x="62" y="54" width="140" height="180" rx="6" fill="#EEF1F5"/>
+      <text x="132" y="82" text-anchor="middle" font-family="Unbounded, Arial Black, sans-serif" font-weight="800" font-size="16" fill="#14283D"><tspan fill="#E2A93B">Ак</tspan>Барак</text>
+      <rect x="92" y="96" width="80" height="80" rx="4" fill="#fff"/>
+      <g fill="#14283D">
+        <rect x="98" y="102" width="20" height="20"/><rect x="102" y="106" width="12" height="12" fill="#fff"/><rect x="105" y="109" width="6" height="6"/>
+        <rect x="146" y="102" width="20" height="20"/><rect x="150" y="106" width="12" height="12" fill="#fff"/><rect x="153" y="109" width="6" height="6"/>
+        <rect x="98" y="150" width="20" height="20"/><rect x="102" y="154" width="12" height="12" fill="#fff"/><rect x="105" y="157" width="6" height="6"/>
+        <rect x="124" y="104" width="6" height="6"/><rect x="132" y="112" width="6" height="6"/><rect x="124" y="126" width="14" height="6"/>
+        <rect x="146" y="130" width="6" height="12"/><rect x="156" y="140" width="10" height="6"/><rect x="128" y="146" width="6" height="14"/>
+        <rect x="140" y="152" width="12" height="6"/><rect x="158" y="156" width="8" height="12"/><rect x="104" y="130" width="12" height="6"/>
+      </g>
+      <text x="132" y="200" text-anchor="middle" font-family="Golos Text, sans-serif" font-weight="700" font-size="12" fill="#14283D">Наведи камеру</text>
+      <rect x="82" y="212" width="100" height="12" rx="6" fill="#E2A93B"/>
+      <rect x="62" y="270" width="140" height="12" rx="6" fill="#0B1A2E"/>
+      <g class="sheet-out"><rect x="86" y="282" width="92" height="50" rx="2" fill="#fff" stroke="#D9E0E9"/>
+        <rect x="96" y="294" width="70" height="4" fill="#C9D2DE"/><rect x="96" y="304" width="56" height="4" fill="#C9D2DE"/><rect x="96" y="314" width="64" height="4" fill="#C9D2DE"/></g>
+    </svg>
+  </div>
+
+  <div class="facts" aria-label="Коротко">
+    <div class="fact"><div class="n">~1 <small>м²</small></div><div class="t">места в холле</div></div>
+    <div class="fact"><div class="n">220 <small>В</small></div><div class="t">одна обычная розетка</div></div>
+    <div class="fact"><div class="n">1–2 <small>мин</small></div><div class="t">от QR-кода до листа</div></div>
+    <div class="fact"><div class="n">0 <small>сом</small></div><div class="t">затрат для организации</div></div>
+  </div>
+
+  <section id="how">
+    <div class="head"><h2>Как это работает</h2><p class="muted">Не нужно ни приложение, ни регистрация: только камера телефона и онлайн-оплата.</p></div>
+    <div class="steps">
+      <div class="step paper"><div class="num">1</div><h3>Сканирует QR</h3><p>Камерой телефона на экране терминала — открывается сайт печати.</p></div>
+      <div class="step paper"><div class="num">2</div><h3>Выбирает файл</h3><p>PDF, Word или фото; страницы, число копий, цвет или ч/б.</p></div>
+      <div class="step paper"><div class="num">3</div><h3>Оплачивает онлайн</h3><p>Через МБанк и другие банки по QR — за несколько секунд.</p></div>
+      <div class="step paper"><div class="num">4</div><h3>Забирает лист</h3><p>Печать начинается сама, как только оплата подтверждена.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Где пригодится</h2></div>
+    <div class="aud">
+      <div class="card paper">
+        <h3>Вузы и колледжи</h3>
+        <ul>
+          <li>Методички, рефераты и лабораторные печатаются рядом с аудиторией, без опозданий на занятия.</li>
+          <li>Готовые бланки — заявления, титульные листы, дневники практики — в одно нажатие.</li>
+          <li>Кафедры могут разместить свои методические пособия, студенты печатают их без пересылки по чатам.</li>
+          <li>Скан документа сразу в телефон, ксерокопия без очереди.</li>
+        </ul>
+      </div>
+      <div class="card paper">
+        <h3>ЦОНы и госучреждения</h3>
+        <ul>
+          <li>Посетитель допечатывает недостающий документ на месте и не теряет очередь.</li>
+          <li>Копии документов для подачи — без поиска копицентра на улице.</li>
+          <li>Готовые бланки заявлений можно разместить в терминале.</li>
+          <li>Сотрудникам не нужно печатать за посетителей и принимать деньги.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="gets">
+    <div class="head"><h2>Что получает организация</h2></div>
+    <div class="gets">
+      <div class="get"><h3>Ноль затрат</h3><p>Терминал, установку, бумагу, краску и ремонт мы берём на себя.</p></div>
+      <div class="get"><h3>Без персонала</h3><p>Терминал работает сам, пока открыто здание. Сотрудники не отвлекаются.</p></div>
+      <div class="get"><h3>Без наличных</h3><p>Все оплаты проходят онлайн и фиксируются в системе. Касса и сдача не нужны.</p></div>
+      <div class="get"><h3>Защита данных</h3><p>Файлы доступны только терминалу и удаляются после печати.</p></div>
+      <div class="get"><h3>Контроль с телефона</h3><p>Мы сразу видим, если кончилась бумага или терминал не на связи.</p></div>
+      <div class="get"><h3>Отчёт о работе</h3><p>Сколько страниц напечатано и сколько людей воспользовались — по запросу.</p></div>
+    </div>
+  </section>
+
+  <section id="pilot">
+    <div class="head"><h2>Что нужно от вас</h2></div>
+    <div class="need">
+      <table>
+        <tbody>
+          <tr><td>Место около 1 м² в холле или коридоре</td><td>организация</td></tr>
+          <tr><td>Розетка 220 В рядом с местом</td><td>организация</td></tr>
+          <tr><td>Интернет: ваш Wi-Fi или наш модем</td><td>по договорённости</td></tr>
+          <tr><td>Терминал, установка, бумага, краска, обслуживание</td><td class="ours">АкБарак</td></tr>
+        </tbody>
+      </table>
+      <div class="dark">
+        <div class="label" style="color:#9FB3CC">Пробный период</div>
+        <div class="big">3 месяца</div>
+        <h3>Без риска для организации</h3>
+        <p>Ставим терминал, работаем три месяца и показываем отчёт. Если он вам не нужен, забираем терминал за свой счёт в любой момент.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="own">
+    <div class="head"><h2>Хотите свой терминал?</h2><p class="muted">Подходит предпринимателям, которые хотят поставить «АкБарак» у себя в городе или в своём здании.</p></div>
+    <div class="own">
+      <div class="card paper">
+        <h3>Что даём мы</h3>
+        <ul>
+          <li>Готовую программу терминала и сайт печати под вашу точку.</li>
+          <li>Онлайн-оплату, панель управления и уведомления о работе.</li>
+          <li>Помощь с выбором корпуса и принтера, настройку и запуск.</li>
+          <li>Обновления и поддержку.</li>
+        </ul>
+      </div>
+      <div class="dark">
+        <div class="label" style="color:#9FB3CC">Франшиза и партнёрство</div>
+        <h3 style="margin-top:12px;font-size:24px">Условия обсуждаем лично</h3>
+        <p>Позвоните или напишите — расскажем, сколько стоит запуск, и подберём формат под ваше место.</p>
+        <p style="margin-top:20px"><a class="btn" href="#contact">Оставить заявку</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Как проходит запуск</h2></div>
+    <ol class="launch">
+      <li><b>Заявка</b><span>Звоните или пишите — расскажем подробности и ответим на вопросы.</span></li>
+      <li><b>Осмотр места</b><span>Вместе выбираем точку с розеткой и проходом для посетителей.</span></li>
+      <li><b>Согласование</b><span>Короткое письмо или договор о размещении, без оплаты со стороны организации.</span></li>
+      <li><b>Установка</b><span>Привозим терминал, подключаем, печатаем первые тестовые листы при вас.</span></li>
+      <li><b>Пилот и отчёт</b><span>Три месяца работы, затем отчёт и решение о продолжении.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="head"><h2>Цены для посетителей</h2><p class="muted">Формат A4.</p></div>
+    <div class="prices">
+      <div class="price paper"><span>Печать ч/б</span><span class="v">5 <small>сом/стр.</small></span></div>
+      <div class="price paper"><span>Печать цвет</span><span class="v">10 <small>сом/стр.</small></span></div>
+      <div class="price paper"><span>Копия</span><span class="v">6 <small>сом/стр.</small></span></div>
+      <div class="price paper"><span>Скан в телефон</span><span class="v">6 <small>сом/стр.</small></span></div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="head"><h2>Частые вопросы</h2></div>
+    <div class="faq">
+      <details><summary>Кто обслуживает терминал?</summary><p>Мы сами: пополняем бумагу и краску, следим за работой. Сотрудникам организации ничего делать не нужно.</p></details>
+      <details><summary>Что будет, если терминал сломается?</summary><p>Система сразу показывает нам, если принтер выдал ошибку или терминал пропал со связи. Если посетитель оплатил, а печать не прошла, мы возвращаем деньги.</p></details>
+      <details><summary>Куда деваются файлы посетителей?</summary><p>Файл доступен только терминалу и удаляется после печати, а неиспользованные файлы — автоматически.</p></details>
+      <details><summary>Терминал принимает наличные?</summary><p>Нет, только онлайн-оплату. Так в терминале не хранятся деньги, и его не нужно инкассировать.</p></details>
+      <details><summary>Нужен ли интернет?</summary><p>Да. Подойдёт Wi-Fi организации, а если подключиться к нему нельзя, ставим свой мобильный модем.</p></details>
+      <details><summary>Сколько это стоит организации?</summary><p>Ничего. Организация предоставляет место и розетку, всё остальное — за наш счёт.</p></details>
+    </div>
+  </section>
+
+  <div class="contact paper" id="contact">
+    <div>
+      <div class="label">Связаться</div>
+      <h2 style="margin-top:10px">Поставим терминал у вас</h2>
+      <p class="muted" style="margin-top:14px;max-width:30em">«АкБарак» создан в Кыргызстане: сайт, онлайн-оплата и программа автоматической печати — наша разработка. Первый терминал — в КГМА им. И.К. Ахунбаева.</p>
+    </div>
+    <div class="rows">
+      <div class="row"><div><div class="k">Телефон, WhatsApp</div><div class="val"><a id="tel" href="tel:+996773731212">0773 731 212</a></div></div><button class="copy" type="button" data-copy="tel">Копировать</button></div>
+      <div class="row"><div><div class="k">E-mail</div><div class="val"><a id="mail" href="mailto:akbarakksma@gmail.com">akbarakksma@gmail.com</a></div></div><button class="copy" type="button" data-copy="mail">Копировать</button></div>
+      <div class="row"><div><div class="k">Instagram</div><div class="val"><a href="https://www.instagram.com/akbarak_kg/">akbarak_kg</a></div></div></div>
+      <div class="row"><div><div class="k">Сайт печати</div><div class="val"><a href="https://akbarak.vercel.app/">akbarak.vercel.app</a></div></div></div>
+    </div>
+  </div>
+
+  <footer><span>© 2026 АкБарак · Бишкек</span><span>бар ак!</span></footer>
+</div>
+
+<script>
+document.querySelectorAll('[data-copy]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var el = document.getElementById(btn.dataset.copy), text = el.textContent.trim();
+    function done(){ btn.textContent = 'Скопировано'; setTimeout(function(){ btn.textContent = 'Копировать'; }, 1600); }
+    function select(){ var r = document.createRange(); r.selectNodeContents(el); var s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Выделено'; }
+    try { navigator.clipboard.writeText(text).then(done, select); } catch(e){ select(); }
+  });
+});
+</script>
+</body>
+</html>
