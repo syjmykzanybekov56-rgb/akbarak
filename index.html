@@ -9,27 +9,47 @@
 <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#0E2340">
+<meta name="theme-color" content="#EEF1F5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700;800;900&family=Unbounded:wght@700;800&display=swap">
+<script>(function(){try{var t=localStorage.getItem('ak-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}})()</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+/* ── ТЕМЫ: светлая «лист» и тёмная «ночной лист» ── */
 :root{
-  --dark:#0D2240;
-  --blue:#1A3A5C;
-  --gold:#F5A623;
-  --light:#E8F4FD;
-  --white:#FFFFFF;
-  --gray:#7A9AB8;
-  --border:rgba(255,255,255,0.08);
+  --dark:#0D2240; --blue:#1A3A5C; --gold:#E2A93B; --gold-t:#B8892A; --light:#E8F4FD;
+  --bg:#EEF1F5; --paper:#FFFFFF; --panel:#FFFFFF; --white:#14283D; --gray:#5D6B7D;
+  --fg:20,40,61; --border:rgba(20,40,61,0.10); --veil:rgba(238,241,245,0.85);
+  --shadow:0 1px 0 #D8DEE6,0 8px 22px rgba(20,40,61,.07); --hole:#C9D2DD;
+  --tun:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%2314283D' stroke-opacity='.09' stroke-linecap='round'%3E%3Ccircle cx='50' cy='50' r='44' stroke-width='3'/%3E%3Cg stroke-width='2.6'%3E%3Cpath d='M14 39Q50 30 86 39M12 50H88M14 61Q50 70 86 61M39 14Q30 50 39 86M50 12V88M61 14Q70 50 61 86'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --spiral:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='28'%3E%3Ccircle cx='17' cy='14' r='4' fill='%23C9D2DD'/%3E%3Cpath d='M17 14C11 12 5 8 0 9' fill='none' stroke='%2314283D' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  color-scheme:light;
 }
-body{background:var(--dark);display:flex;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-height:100vh}
-.app{width:100%;max-width:420px;min-height:100vh;background:var(--dark);position:relative;overflow-x:hidden}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0D2240; --paper:#132C4C; --panel:#0F2641; --white:#FFFFFF; --gray:#7A9AB8; --gold-t:#F5A623; --gold:#F5A623;
+  --fg:255,255,255; --border:rgba(255,255,255,0.08); --veil:rgba(13,34,64,0.85);
+  --shadow:0 1px 0 rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.25); --hole:#2A4468;
+  --tun:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-opacity='.06' stroke-linecap='round'%3E%3Ccircle cx='50' cy='50' r='44' stroke-width='3'/%3E%3Cg stroke-width='2.6'%3E%3Cpath d='M14 39Q50 30 86 39M12 50H88M14 61Q50 70 86 61M39 14Q30 50 39 86M50 12V88M61 14Q70 50 61 86'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --spiral:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='28'%3E%3Ccircle cx='17' cy='14' r='4' fill='%232A4468'/%3E%3Cpath d='M17 14C11 12 5 8 0 9' fill='none' stroke='%23F5A623' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0D2240; --paper:#132C4C; --panel:#0F2641; --white:#FFFFFF; --gray:#7A9AB8; --gold-t:#F5A623; --gold:#F5A623;
+  --fg:255,255,255; --border:rgba(255,255,255,0.08); --veil:rgba(13,34,64,0.85);
+  --shadow:0 1px 0 rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.25); --hole:#2A4468;
+  --tun:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-opacity='.06' stroke-linecap='round'%3E%3Ccircle cx='50' cy='50' r='44' stroke-width='3'/%3E%3Cg stroke-width='2.6'%3E%3Cpath d='M14 39Q50 30 86 39M12 50H88M14 61Q50 70 86 61M39 14Q30 50 39 86M50 12V88M61 14Q70 50 61 86'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  --spiral:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='28'%3E%3Ccircle cx='17' cy='14' r='4' fill='%232A4468'/%3E%3Cpath d='M17 14C11 12 5 8 0 9' fill='none' stroke='%23F5A623' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  color-scheme:dark;
+}
+body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos Text',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;min-height:100vh;color:var(--white)}
+.app{width:100%;max-width:420px;min-height:100vh;background:var(--bg);position:relative;overflow-x:hidden}
 .screen{display:none;animation:fadeIn .25s ease;min-height:100vh}
 .screen.active{display:block;padding-bottom:40px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── STATUS BAR ── */
-.status-bar{display:flex;justify-content:space-between;padding:12px 20px 0;font-size:12px;font-weight:700;color:rgba(255,255,255,0.4)}
+.status-bar{display:flex;justify-content:space-between;padding:12px 20px 0;font-size:12px;font-weight:700;color:rgba(var(--fg),0.4)}
 
 /* ── HEADER ── */
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 20px}
@@ -38,86 +58,86 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .logo-text{display:flex;flex-direction:column}
 .logo-name{font-size:20px;font-weight:900;color:var(--white);letter-spacing:1px;line-height:1}
 .logo-name span{color:var(--gold)}
-.logo-sub{font-size:9px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.logo-sub{font-size:9px;font-weight:700;color:rgba(var(--fg),0.3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
 .hdr-actions{display:flex;gap:8px}
-.icon-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:rgba(255,255,255,0.7);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative}
+.icon-btn{width:38px;height:38px;border-radius:50%;background:rgba(var(--fg),0.06);border:1px solid var(--border);color:rgba(var(--fg),0.7);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative}
 .badge{position:absolute;top:6px;right:6px;width:7px;height:7px;background:var(--gold);border-radius:50%;border:1.5px solid var(--dark);display:none}
 
 /* ── BACK BTN ── */
-.back-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.back-btn{width:38px;height:38px;border-radius:50%;background:rgba(var(--fg),0.06);border:1px solid var(--border);color:rgba(var(--fg),0.7);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
 /* ── HERO ── */
 .hero{margin:0 20px 24px;background:linear-gradient(135deg,var(--blue) 0%,#0a1f3a 100%);border-radius:24px;padding:24px;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(245,166,35,0.06);border-radius:50%}
-.hero::after{content:'A';position:absolute;right:-20px;bottom:-30px;font-size:160px;font-weight:900;color:rgba(255,255,255,0.03);line-height:1}
+.hero::after{content:'A';position:absolute;right:-20px;bottom:-30px;font-size:160px;font-weight:900;color:rgba(var(--fg),0.03);line-height:1}
 .hero-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.2);border-radius:100px;padding:5px 12px;font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;margin-bottom:14px}
 .live-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 1.5s infinite;display:inline-block}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .hero-title{font-size:28px;font-weight:900;color:var(--white);line-height:1.1;margin-bottom:6px;letter-spacing:-0.5px}
 .hero-title span{color:var(--gold)}
-.hero-sub{font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:20px;line-height:1.5}
+.hero-sub{font-size:12px;color:rgba(var(--fg),0.4);margin-bottom:20px;line-height:1.5}
 .price-row{display:flex;gap:8px}
-.price-chip{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 8px;text-align:center}
+.price-chip{flex:1;background:rgba(var(--fg),0.05);border:1px solid rgba(var(--fg),0.08);border-radius:12px;padding:10px 8px;text-align:center}
 .price-amt{font-size:17px;font-weight:900;color:var(--gold)}
-.price-lbl{font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;letter-spacing:0.5px;margin-top:3px;text-transform:uppercase}
+.price-lbl{font-size:9px;color:rgba(var(--fg),0.35);font-weight:700;letter-spacing:0.5px;margin-top:3px;text-transform:uppercase}
 
 /* ── SECTION TITLE ── */
 .ads-row{display:flex;gap:10px;padding:0 20px 20px;overflow-x:auto;scroll-snap-type:x mandatory}
 .ad-card{flex:0 0 82%;scroll-snap-align:start;display:flex;gap:12px;align-items:center;padding:14px;border-radius:20px;
-  background:rgba(255,255,255,0.04);border:1px solid rgba(245,166,35,0.25);color:#fff;text-decoration:none}
+  background:rgba(var(--fg),0.04);border:1px solid rgba(245,166,35,0.25);color:var(--white);text-decoration:none}
 .ad-card:only-child{flex-basis:100%}
 .ad-img{flex:none;width:72px;height:72px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .ad-img img{width:100%;height:100%;object-fit:cover}.ad-img svg{width:58px;height:58px}
 .ad-name{font-size:15px;font-weight:900;margin-bottom:4px}
-.ad-desc{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.4;font-weight:600}
+.ad-desc{font-size:12px;color:rgba(var(--fg),0.5);line-height:1.4;font-weight:600}
 .ad-buy{margin-top:6px;font-size:12px;font-weight:800;color:var(--gold)}
 .ad-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center}
 .ad-modal.show{display:flex}
-.ad-sheet{width:100%;max-width:480px;max-height:92vh;overflow:auto;background:#0B1B33;border-radius:24px 24px 0 0;padding:16px 20px 24px;color:#fff}
+.ad-sheet{width:100%;max-width:480px;max-height:92vh;overflow:auto;background:var(--panel);border-radius:24px 24px 0 0;padding:16px 20px 24px;color:var(--white)}
 .ad-sheet img{width:100%;border-radius:16px;background:#fff;display:block}
 .ad-sheet .ad-ico{width:100%;aspect-ratio:4/3;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center}
 .ad-sheet .ad-ico svg{width:45%}
 .ad-sheet h3{font-size:22px;font-weight:900;margin:16px 0 4px}
 .ad-sheet .ad-p{font-size:24px;font-weight:900;color:var(--gold);margin-bottom:10px}
-.ad-sheet ul{margin:6px 0 16px 18px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.75);font-weight:600}
+.ad-sheet ul{margin:6px 0 16px 18px;font-size:14px;line-height:1.55;color:rgba(var(--fg),.75);font-weight:600}
 .ad-sheet .st-btn{margin-bottom:8px}
-.ad-close{background:rgba(255,255,255,.08)!important;color:#fff!important}
+.ad-close{background:rgba(var(--fg),.08)!important;color:var(--white)!important}
 .install-card{display:flex;align-items:center;gap:12px;margin:0 20px 18px;padding:14px;border-radius:18px;background:rgba(245,166,35,0.10);border:1px solid rgba(245,166,35,0.35)}
 .install-ico{font-size:28px}
-.install-ttl{font-size:14px;font-weight:900;color:#fff;margin-bottom:3px}
-.install-sub{font-size:12px;line-height:1.4;color:rgba(255,255,255,0.6);font-weight:600}
+.install-ttl{font-size:14px;font-weight:900;color:var(--white);margin-bottom:3px}
+.install-sub{font-size:12px;line-height:1.4;color:rgba(var(--fg),0.6);font-weight:600}
 .install-btn{flex:none;border:none;border-radius:12px;padding:10px 12px;background:var(--gold);color:#000;font-weight:900;font-size:13px;cursor:pointer}
-.sec-ttl{padding:0 20px 12px;font-size:11px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:2px;text-transform:uppercase}
+.sec-ttl{padding:0 20px 12px;font-size:11px;font-weight:700;color:rgba(var(--fg),0.25);letter-spacing:2px;text-transform:uppercase}
 
 /* ── SERVICE GRID ── */
 .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 20px}
-.svc-card{border-radius:20px;padding:20px 16px 16px;cursor:pointer;transition:transform .18s,opacity .18s;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.04);position:relative;overflow:hidden}
-.svc-card:hover{transform:translateY(-2px);background:rgba(255,255,255,0.07)}
+.svc-card{border-radius:20px;padding:20px 16px 16px;cursor:pointer;transition:transform .18s,opacity .18s;border:1px solid rgba(var(--fg),0.06);background:rgba(var(--fg),0.04);position:relative;overflow:hidden}
+.svc-card:hover{transform:translateY(-2px);background:rgba(var(--fg),0.07)}
 .svc-card.featured{background:linear-gradient(135deg,rgba(245,166,35,0.15),rgba(245,166,35,0.05));border-color:rgba(245,166,35,0.2)}
 .svc-hot{position:absolute;top:12px;right:12px;background:var(--gold);color:#000;font-size:8px;font-weight:900;padding:3px 7px;border-radius:100px;letter-spacing:0.5px}
 .svc-ico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
 .svc-name{font-size:15px;font-weight:800;color:var(--white);margin-bottom:4px}
-.svc-desc{font-size:11px;color:rgba(255,255,255,0.35);line-height:1.5;font-weight:600}
-.svc-arr{position:absolute;bottom:14px;right:14px;font-size:12px;color:rgba(255,255,255,0.2)}
+.svc-desc{font-size:11px;color:rgba(var(--fg),0.35);line-height:1.5;font-weight:600}
+.svc-arr{position:absolute;bottom:14px;right:14px;font-size:12px;color:rgba(var(--fg),0.2)}
 
 /* ── STATS ── */
 .stats-row{display:flex;gap:10px;padding:0 20px 28px}
-.stat-card{flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px;text-align:center}
+.stat-card{flex:1;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.06);border-radius:14px;padding:12px;text-align:center}
 .stat-n{font-size:17px;font-weight:900;color:var(--white)}
-.stat-l{font-size:10px;color:rgba(255,255,255,0.3);margin-top:3px;font-weight:700;letter-spacing:0.5px}
+.stat-l{font-size:10px;color:rgba(var(--fg),0.3);margin-top:3px;font-weight:700;letter-spacing:0.5px}
 
 /* ── PAGE HEADER ── */
 .page-hdr{display:flex;align-items:center;gap:12px;padding:12px 20px 20px}
 .page-ttl{font-size:20px;font-weight:900;color:var(--white);letter-spacing:-0.3px}
-.page-sub{padding:0 20px 16px;font-size:13px;color:rgba(255,255,255,0.4);line-height:1.6;font-weight:600}
+.page-sub{padding:0 20px 16px;font-size:13px;color:rgba(var(--fg),0.4);line-height:1.6;font-weight:600}
 
 /* ── INSTRUCTION ── */
-.instr{margin:0 20px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:20px;overflow:hidden;position:relative}
+.instr{margin:0 20px 16px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:20px;padding:20px;overflow:hidden;position:relative}
 .instr::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent)}
 .instr-step{display:flex;gap:12px;margin-bottom:14px}
 .instr-step:last-child{margin-bottom:0}
 .step-num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.step-txt{font-size:13px;color:rgba(255,255,255,0.7);font-weight:600;line-height:1.6;padding-top:4px}
+.step-txt{font-size:13px;color:rgba(var(--fg),0.7);font-weight:600;line-height:1.6;padding-top:4px}
 .step-txt b{color:var(--gold)}
 
 /* ── UPLOAD ── */
@@ -126,12 +146,12 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .upload-ico{font-size:36px;margin-bottom:10px}
 .upload-ttl{font-size:15px;font-weight:800;color:var(--white);margin-bottom:4px}
-.upload-sub{font-size:12px;color:rgba(255,255,255,0.3);font-weight:600}
+.upload-sub{font-size:12px;color:rgba(var(--fg),0.3);font-weight:600}
 .fmt-row{display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap}
-.fmt{background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;color:rgba(255,255,255,0.5)}
+.fmt{background:rgba(var(--fg),0.06);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:800;color:rgba(var(--fg),0.5)}
 
 /* ── FILE CHIP ── */
-.file-chip{margin:0 20px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:14px 16px;display:none;align-items:center;gap:12px}
+.file-chip{margin:0 20px 14px;background:rgba(var(--fg),0.05);border:1px solid rgba(var(--fg),0.08);border-radius:16px;padding:14px 16px;display:none;align-items:center;gap:12px}
 .file-chip.show{display:flex}
 .file-chip-ico{width:40px;height:40px;border-radius:10px;background:rgba(245,166,35,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .file-chip-name{font-size:13px;font-weight:800;color:var(--white);word-break:break-all}
@@ -139,38 +159,38 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .file-chip-del{margin-left:auto;width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,0.15);border:none;color:#ef4444;font-size:13px;cursor:pointer}
 
 /* ── PREVIEW ── */
-.preview-wrap{margin:0 20px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;overflow:hidden;display:none}
+.preview-wrap{margin:0 20px 14px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;overflow:hidden;display:none}
 .preview-wrap.show{display:block}
-.preview-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.05)}
-.preview-lbl{font-size:12px;font-weight:800;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase}
+.preview-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(var(--fg),0.05)}
+.preview-lbl{font-size:12px;font-weight:800;color:rgba(var(--fg),0.5);letter-spacing:1px;text-transform:uppercase}
 .preview-ext{background:rgba(245,166,35,0.15);color:var(--gold);font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px}
 .preview-img{width:100%;max-height:280px;object-fit:contain;display:block;background:#111}
 .preview-canvas{width:100%;display:block;background:#111}
 .preview-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,0.2)}
 .nav-btn{width:34px;height:34px;border-radius:50%;background:var(--gold);border:none;color:#000;font-size:16px;cursor:pointer;font-weight:900}
-.nav-info{font-size:12px;font-weight:800;color:rgba(255,255,255,0.5)}
-.preview-footer{padding:8px 14px;font-size:11px;color:rgba(255,255,255,0.25);font-weight:600}
+.nav-info{font-size:12px;font-weight:800;color:rgba(var(--fg),0.5)}
+.preview-footer{padding:8px 14px;font-size:11px;color:rgba(var(--fg),0.25);font-weight:600}
 
 /* ── SETTINGS ── */
-.settings{margin:0 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:20px;overflow:hidden}
-.set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.settings{margin:0 20px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:20px;overflow:hidden}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(var(--fg),0.05)}
 .set-row:last-child{border-bottom:none}
 .set-row.column{flex-direction:column;align-items:flex-start;gap:10px}
-.set-lbl{font-size:13px;font-weight:800;color:rgba(255,255,255,0.7)}
-.pills{display:flex;background:rgba(255,255,255,0.05);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
-.pill{padding:6px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.4);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s}
+.set-lbl{font-size:13px;font-weight:800;color:rgba(var(--fg),0.7)}
+.pills{display:flex;background:rgba(var(--fg),0.05);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.pill{padding:6px 12px;border-radius:8px;border:none;background:transparent;color:rgba(var(--fg),0.4);font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .15s}
 .pill.on{background:var(--gold);color:#000}
 .ctr{display:flex;align-items:center;gap:12px}
-.ctr-btn{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);color:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1}
+.ctr-btn{width:32px;height:32px;border-radius:50%;background:rgba(var(--fg),0.08);border:1px solid rgba(var(--fg),0.1);color:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:800;line-height:1}
 .ctr-val{font-size:17px;font-weight:900;color:var(--white);min-width:26px;text-align:center}
-.range-input{width:100%;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);font-size:13px;font-weight:700;color:var(--white);outline:none;font-family:inherit}
-.range-input::placeholder{color:rgba(255,255,255,0.2)}
+.range-input{width:100%;padding:10px 14px;border-radius:12px;border:1px solid rgba(var(--fg),0.1);background:rgba(var(--fg),0.06);font-size:13px;font-weight:700;color:var(--white);outline:none;font-family:inherit}
+.range-input::placeholder{color:rgba(var(--fg),0.2)}
 .range-input:focus{border-color:var(--gold)}
 .range-info{font-size:11px;color:var(--gray);font-weight:600;padding:0 18px 12px}
 
 /* ── TOTAL ── */
 .total-card{margin:14px 20px;background:linear-gradient(135deg,var(--gold),#e09400);border-radius:20px;padding:20px 22px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden}
-.total-card::after{content:'';position:absolute;right:-20px;top:-20px;width:80px;height:80px;background:rgba(255,255,255,0.1);border-radius:50%}
+.total-card::after{content:'';position:absolute;right:-20px;top:-20px;width:80px;height:80px;background:rgba(var(--fg),0.1);border-radius:50%}
 .total-lbl{font-size:11px;color:rgba(0,0,0,0.5);font-weight:800;letter-spacing:1px;margin-bottom:5px}
 .total-amt{font-size:34px;font-weight:900;color:#000;line-height:1}
 .total-sub{font-size:11px;color:rgba(0,0,0,0.4);margin-top:4px;font-weight:600}
@@ -180,26 +200,26 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 .cta{padding:0 20px 8px}
 .cta-btn{width:100%;padding:18px;border-radius:16px;border:none;background:var(--gold);font-size:16px;font-weight:900;color:#000;cursor:pointer;transition:all .2s;letter-spacing:-0.3px}
 .cta-btn:hover{opacity:0.9;transform:translateY(-2px)}
-.cta-btn.dark{background:rgba(255,255,255,0.08);color:var(--white);border:1px solid rgba(255,255,255,0.1)}
-.cta-btn.dark:hover{background:rgba(255,255,255,0.12)}
+.cta-btn.dark{background:rgba(var(--fg),0.08);color:var(--white);border:1px solid rgba(var(--fg),0.1)}
+.cta-btn.dark:hover{background:rgba(var(--fg),0.12)}
 
 /* ── PAY SCREEN ── */
 .pay-amount-wrap{padding:0 20px 24px;text-align:center}
-.pay-amount-lbl{font-size:11px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:2px;margin-bottom:8px;text-transform:uppercase}
+.pay-amount-lbl{font-size:11px;font-weight:700;color:rgba(var(--fg),0.3);letter-spacing:2px;margin-bottom:8px;text-transform:uppercase}
 .pay-amount{font-size:52px;font-weight:900;color:var(--white)}
-.pay-amount span{font-size:24px;color:rgba(255,255,255,0.4)}
+.pay-amount span{font-size:24px;color:rgba(var(--fg),0.4)}
 
 .pay-methods{display:flex;flex-direction:column;gap:10px;padding:0 20px}
-.pay-method{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:16px 18px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
+.pay-method{display:flex;align-items:center;gap:14px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;padding:16px 18px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
 .pay-method:hover{border-color:rgba(245,166,35,0.3);background:rgba(245,166,35,0.05)}
 .pay-logo{width:48px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0}
 .pay-name{font-size:14px;font-weight:800;color:var(--white)}
 .pay-num{font-size:12px;color:var(--gray);margin-top:2px;font-weight:600}
-.pay-go{margin-left:auto;color:rgba(255,255,255,0.2);font-size:16px}
+.pay-go{margin-left:auto;color:rgba(var(--fg),0.2);font-size:16px}
 
 /* ── PHOTO LIST ── */
 .photo-list{display:flex;flex-direction:column;gap:10px;padding:0 20px}
-.photo-card{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:16px 18px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
+.photo-card{display:flex;align-items:center;gap:14px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;padding:16px 18px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
 .photo-card:hover{border-color:rgba(245,166,35,0.3);background:rgba(245,166,35,0.05)}
 .photo-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .photo-name{font-size:14px;font-weight:800;color:var(--white)}
@@ -208,19 +228,19 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 
 /* ── TG INPUT ── */
 .tg-wrap{padding:0 20px 14px}
-.tg-input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);font-size:14px;font-weight:700;color:var(--white);outline:none;font-family:inherit}
+.tg-input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(var(--fg),0.1);background:rgba(var(--fg),0.05);font-size:14px;font-weight:700;color:var(--white);outline:none;font-family:inherit}
 .tg-input:focus{border-color:var(--gold)}
-.tg-input::placeholder{color:rgba(255,255,255,0.2)}
+.tg-input::placeholder{color:rgba(var(--fg),0.2)}
 
 /* ── SUCCESS ── */
 .success-wrap{padding:60px 20px 40px;text-align:center}
 .st-steps{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto 22px;max-width:320px}
-.st-step{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.35);min-width:56px}
-.st-step i{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2)}
+.st-step{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;font-weight:800;color:rgba(var(--fg),0.35);min-width:56px}
+.st-step i{width:14px;height:14px;border-radius:50%;background:rgba(var(--fg),0.12);border:2px solid rgba(var(--fg),0.2)}
 .st-step.on{color:var(--white)} .st-step.on i{background:var(--gold);border-color:var(--gold)}
 .st-step.now i{animation:stpulse 1.2s infinite}
 @keyframes stpulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.6)}50%{box-shadow:0 0 0 8px rgba(245,166,35,0)}}
-.st-line{flex:1;height:2px;background:rgba(255,255,255,0.12);margin-bottom:18px}
+.st-line{flex:1;height:2px;background:rgba(var(--fg),0.12);margin-bottom:18px}
 .st-warn{background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700;line-height:1.5;margin:0 0 16px;text-align:left}
 .st-btn{display:block;width:100%;padding:16px;border-radius:16px;border:none;background:#22c55e;color:#fff;font-size:15px;font-weight:900;text-align:center;text-decoration:none;cursor:pointer;margin-bottom:10px}
 .st-btn.gold{background:var(--gold);color:#000}
@@ -229,38 +249,93 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
 @keyframes bounce{0%,100%{transform:translateY(0) rotate(-5deg)}50%{transform:translateY(-12px) rotate(5deg)}}
 .success-ring{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--dark));margin:0 auto 24px;display:flex;align-items:center;justify-content:center;font-size:44px;border:2px solid rgba(245,166,35,0.3)}
 .success-ttl{font-size:26px;font-weight:900;color:var(--white);margin-bottom:10px;letter-spacing:-0.3px}
-.success-sub{font-size:14px;color:rgba(255,255,255,0.4);line-height:1.8;margin-bottom:28px;font-weight:600}
+.success-sub{font-size:14px;color:rgba(var(--fg),0.4);line-height:1.8;margin-bottom:28px;font-weight:600}
 .success-sub b{color:var(--white)}
 .order-badge{display:inline-flex;align-items:center;gap:12px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.2);border-radius:100px;padding:12px 24px;margin-bottom:32px}
-.order-lbl{font-size:11px;color:rgba(255,255,255,0.3);font-weight:800;letter-spacing:1px}
+.order-lbl{font-size:11px;color:rgba(var(--fg),0.3);font-weight:800;letter-spacing:1px}
 .order-num{font-size:22px;font-weight:900;color:var(--gold);letter-spacing:3px}
 
 /* ── MENU ── */
 .menu-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;backdrop-filter:blur(4px)}
 .menu-overlay.show{display:block}
-.menu-panel{position:fixed;top:0;right:-320px;width:290px;height:100vh;background:#0f2641;z-index:200;transition:right .3s ease;border-left:1px solid rgba(255,255,255,0.06)}
+.menu-panel{position:fixed;top:0;right:-320px;width:290px;height:100vh;background:var(--panel);z-index:200;transition:right .3s ease;border-left:1px solid rgba(var(--fg),0.06)}
 .menu-panel.show{right:0}
-.menu-hdr{display:flex;align-items:center;justify-content:space-between;padding:24px 20px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.menu-hdr{display:flex;align-items:center;justify-content:space-between;padding:24px 20px;border-bottom:1px solid rgba(var(--fg),0.06)}
 .menu-logo{font-size:20px;font-weight:900;color:var(--white);letter-spacing:1px}
 .menu-logo span{color:var(--gold)}
-.menu-close{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:none;color:rgba(255,255,255,0.5);font-size:18px;cursor:pointer}
+.menu-close{width:34px;height:34px;border-radius:50%;background:rgba(var(--fg),0.06);border:none;color:rgba(var(--fg),0.5);font-size:18px;cursor:pointer}
 .menu-body{padding:12px}
-.menu-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;font-size:14px;font-weight:700;color:rgba(255,255,255,0.7);cursor:pointer;transition:all .15s;margin-bottom:4px}
-.menu-item:hover{background:rgba(255,255,255,0.06);color:var(--white)}
+.menu-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;font-size:14px;font-weight:700;color:rgba(var(--fg),0.7);cursor:pointer;transition:all .15s;margin-bottom:4px}
+.menu-item:hover{background:rgba(var(--fg),0.06);color:var(--white)}
 .menu-item-ico{font-size:18px;width:24px;text-align:center}
-.menu-divider{height:1px;background:rgba(255,255,255,0.06);margin:12px 0}
-.menu-contact{padding:8px 16px;font-size:12px;color:rgba(255,255,255,0.25);font-weight:600}
+.menu-divider{height:1px;background:rgba(var(--fg),0.06);margin:12px 0}
+.menu-contact{padding:8px 16px;font-size:12px;color:rgba(var(--fg),0.25);font-weight:600}
 
 /* ── LOADING ── */
-.loading{display:none;position:fixed;inset:0;background:rgba(13,34,64,0.85);align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(4px)}
+.loading{display:none;position:fixed;inset:0;background:var(--veil);align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(4px)}
 .loading.show{display:flex}
-.loading-box{background:#0f2641;border-radius:24px;padding:32px;text-align:center;border:1px solid rgba(255,255,255,0.08)}
+.loading-box{background:var(--panel);border-radius:24px;padding:32px;text-align:center;border:1px solid rgba(var(--fg),0.08)}
 .loading-spin{font-size:48px;display:block;margin-bottom:16px;animation:spin 1s linear infinite}
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .loading-txt{font-size:15px;font-weight:800;color:var(--white)}
 
 /* ── DIVIDER ── */
 .spacer{height:16px}
+
+/* ══ СТИЛЬ «ЛИСТ + ТЮНДЮК» ══ */
+.logo-name,.hero-title,.page-ttl,.svc-name,.total-amt,.pay-amount,.success-ttl,.menu-logo,.ad-name,.order-num,.stat-n,.price-amt{font-family:'Unbounded','Golos Text',sans-serif;letter-spacing:-.02em}
+.logo-name,.menu-logo{font-size:21px;font-weight:800;letter-spacing:-.03em;color:var(--white)}
+.logo-name span,.menu-logo span{color:var(--gold-t)}
+.logo-sub{color:var(--gray);letter-spacing:.5px;text-transform:none;font-size:10px;font-weight:600}
+.logo-mark{width:38px;height:38px;filter:drop-shadow(0 0 .6px rgba(20,40,61,.6))}
+.icon-btn,.back-btn{background:var(--paper);border:none;box-shadow:var(--shadow);color:var(--white)}
+.status-bar{color:var(--gray)}
+/* листы с загнутым золотым углом */
+.hero,.svc-card,.instr,.upload-zone,.settings,.file-chip,.preview-wrap,.pay-method,.photo-card,.stat-card,.ad-card,.install-card{
+  background:linear-gradient(225deg,var(--bg) 0 50%,transparent 50%) top right/24px 24px no-repeat,
+             linear-gradient(225deg,transparent 0 50%,var(--gold) 50%) top right/24px 24px no-repeat,
+             var(--paper);
+  border:none;border-radius:6px;box-shadow:var(--shadow)}
+.settings,.file-chip,.stat-card,.preview-wrap{background:var(--paper)}
+.svc-card:hover,.pay-method:hover,.photo-card:hover{transform:translateY(-2px);box-shadow:0 1px 0 #D8DEE6,0 12px 28px rgba(20,40,61,.12)}
+.svc-card.featured{border-top:3px solid var(--gold);background:linear-gradient(225deg,var(--bg) 0 50%,transparent 50%) top right/24px 24px no-repeat,linear-gradient(225deg,transparent 0 50%,var(--gold) 50%) top right/24px 24px no-repeat,var(--paper)}
+.svc-hot{right:auto;left:14px;top:-1px;border-radius:0 0 6px 6px;color:#14283D}
+.svc-ico{background:transparent!important;width:auto;justify-content:flex-start;color:var(--white)}
+.svc-ico svg{width:30px;height:30px}
+.svc-name{font-size:16px;font-weight:700}
+.svc-arr{color:var(--gold-t)}
+/* главный лист: переплёт слева + тюндюк */
+.hero{padding:22px 20px 20px 44px;
+  background:var(--spiral) left 4px top 10px/26px 28px repeat-y,
+             var(--tun) right -70px bottom -80px/240px 240px no-repeat,
+             linear-gradient(225deg,var(--bg) 0 50%,transparent 50%) top right/30px 30px no-repeat,
+             linear-gradient(225deg,transparent 0 50%,var(--gold) 50%) top right/30px 30px no-repeat,
+             var(--paper)}
+.hero::before,.hero::after{display:none}
+.hero-tag{background:transparent;border:none;padding:0;color:var(--gray);letter-spacing:0;font-weight:600;font-size:12px}
+.hero-title{font-size:30px;font-weight:800;line-height:1.05}
+.hero-title span{color:var(--gold-t)}
+.hero-sub{color:var(--gray);font-size:13px}
+.price-chip{background:transparent;border:none;border-top:2px solid var(--white);border-radius:0;text-align:left;padding:6px 0 0}
+.price-amt{color:var(--white);font-weight:700;font-size:16px}
+.price-lbl{color:var(--gray);text-transform:none;letter-spacing:0}
+.upload-zone{padding:26px 20px 22px 44px;text-align:left;
+  background:var(--spiral) left 4px top 10px/26px 28px repeat-y,
+             var(--tun) right -50px top -50px/170px 170px no-repeat,
+             linear-gradient(225deg,var(--bg) 0 50%,transparent 50%) top right/26px 26px no-repeat,
+             linear-gradient(225deg,transparent 0 50%,var(--gold) 50%) top right/26px 26px no-repeat,
+             var(--paper)}
+.upload-zone .fmt-row{justify-content:flex-start}
+.upload-zone:hover,.upload-zone.drag{outline:2px dashed var(--gold);outline-offset:-6px}
+.instr::before{display:none}
+.step-num{color:#14283D}
+.pills{background:rgba(var(--fg),0.06)}
+.pill.on{background:var(--white);color:var(--paper)}
+.cta-btn{background:var(--white);color:var(--paper);font-family:'Unbounded','Golos Text',sans-serif;font-weight:700;font-size:15px}
+.total-card{border-radius:6px}
+.menu-panel{border-left:none;box-shadow:-10px 0 30px rgba(0,0,0,.15)}
+.sec-ttl{color:var(--gray);letter-spacing:.5px;text-transform:none;font-size:13px;font-weight:600}
+.theme-val{margin-left:auto;font-size:12px;color:var(--gray);font-weight:700}
 </style>
 </head>
 <body>
@@ -278,7 +353,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <div class="menu-overlay" id="menu-overlay" onclick="toggleMenu()"></div>
   <div class="menu-panel" id="menu-panel">
     <div class="menu-hdr">
-      <div class="menu-logo">AK<span>BARAK</span></div>
+      <div class="menu-logo"><span>Ак</span>Барак</div>
       <button class="menu-close" onclick="toggleMenu()">✕</button>
     </div>
     <div class="menu-body">
@@ -288,6 +363,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       <div class="menu-item" onclick="toggleMenu();go('s-about')"><span class="menu-item-ico">ℹ️</span>О нас</div>
       <div class="menu-item" onclick="location.href='/oferta.html'"><span class="menu-item-ico">📜</span>Публичная оферта</div>
       <div class="menu-item" onclick="location.href='/privacy.html'"><span class="menu-item-ico">🔒</span>Конфиденциальность</div>
+      <div class="menu-item" onclick="cycleTheme()"><span class="menu-item-ico">🌓</span>Тема<span class="theme-val" id="theme-val">Авто</span></div>
       <div class="menu-divider"></div>
       <div class="menu-contact">📞 0773 731 212</div>
       <div class="menu-contact">📍 КГМА, Бишкек</div>
@@ -299,15 +375,10 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="status-bar" style="align-items:center"><span id="clock">9:41</span><div data-ak-lang="small"></div></div>
     <div class="hdr">
       <div class="logo">
-        <svg class="logo-mark" viewBox="0 0 36 40" fill="none">
-          <path d="M18 3L3 37H10L18 17L26 37H33L18 3Z" fill="white"/>
-          <path d="M18 3L26 37H33L18 3Z" fill="#F5A623"/>
-          <rect x="8" y="27" width="20" height="4" rx="2" fill="white"/>
-          <rect x="18" y="27" width="10" height="4" rx="2" fill="#F5A623"/>
-        </svg>
+        <svg class="logo-mark" viewBox="0 0 240 240" aria-hidden="true"><path d="M58 20H152L192 60V222H58Z" fill="#FFFFFF"/><path d="M152 20V60H192Z" fill="#E2A93B"/><circle cx="124" cy="146" r="52" fill="#14283D"/><g fill="none" stroke="#E2A93B" stroke-width="7" stroke-linecap="round"><circle cx="124" cy="146" r="40"/><path d="M90 136Q124 128 158 136M86 146H162M90 156Q124 164 158 156M114 112Q106 146 114 180M124 108V184M134 112Q142 146 134 180"/></g></svg>
         <div class="logo-text">
-          <div class="logo-name">AK<span>BARAK</span></div>
-          <div class="logo-sub">Smart Print Network</div>
+          <div class="logo-name"><span>Ак</span>Барак</div>
+          <div class="logo-sub">печать 24/7 · КГМА</div>
         </div>
       </div>
       <div class="hdr-actions">
@@ -317,8 +388,8 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     </div>
 
     <div class="hero">
-      <div class="hero-tag"><span class="live-dot"></span> ОНЛАЙН · 24/7</div>
-      <div class="hero-title">Печать<br><span>без очередей</span></div>
+      <div class="hero-tag"><span class="live-dot"></span> Терминал КГМА · работает 24/7</div>
+      <div class="hero-title">Печать<br><span>с телефона</span></div>
       <div class="hero-sub">Загрузи файл — получай за 2 минуты</div>
       <div class="price-row">
         <div class="price-chip"><div class="price-amt">5 с</div><div class="price-lbl">Ч/Б</div></div>
@@ -341,31 +412,31 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="svc-grid">
       <div class="svc-card featured" onclick="go('s-print')">
         <div class="svc-hot">ХИТ</div>
-        <div class="svc-ico" style="background:rgba(245,166,35,0.1)">📄</div>
+        <div class="svc-ico"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M18 24V8h22l6 6v10"/><rect x="8" y="24" width="48" height="22" rx="4"/><path d="M18 38h28v18H18z"/></svg></div>
         <div class="svc-name">Печать</div>
         <div class="svc-desc">PDF, Word, Фото</div>
         <div class="svc-arr">→</div>
       </div>
       <div class="svc-card" onclick="go('s-copy')">
-        <div class="svc-ico" style="background:rgba(99,102,241,0.1)">📋</div>
+        <div class="svc-ico"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"><path d="M12 16h26l8 8v32H12z"/><path d="M20 8h26l8 8v32" opacity=".5"/></svg></div>
         <div class="svc-name">Копия</div>
-        <div class="svc-desc">Ксерокс документов</div>
+        <div class="svc-desc">и ID-карта на 1 листе</div>
         <div class="svc-arr">→</div>
       </div>
       <div class="svc-card" onclick="go('s-photo')">
-        <div class="svc-ico" style="background:rgba(239,68,68,0.1)">🪪</div>
+        <div class="svc-ico"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"><rect x="12" y="8" width="40" height="48" rx="3"/><circle cx="32" cy="27" r="8"/><path d="M20 48c2-8 22-8 24 0"/></svg></div>
         <div class="svc-name">Фото</div>
         <div class="svc-desc">Паспорт, 10×15</div>
         <div class="svc-arr">→</div>
       </div>
       <div class="svc-card" onclick="go('s-scan')">
-        <div class="svc-ico" style="background:rgba(34,197,94,0.1)">🔍</div>
+        <div class="svc-ico"><svg viewBox="0 0 64 64" fill="none" stroke-width="3.6" stroke-linecap="round"><path d="M8 18V10h8M48 10h8v8M56 46v8h-8M16 54H8v-8" stroke="currentColor"/><path d="M6 33h52" stroke="#E2A93B" stroke-width="4"/></svg></div>
         <div class="svc-name">Скан</div>
-        <div class="svc-desc">В PDF или JPG</div>
+        <div class="svc-desc">сразу в телефон</div>
         <div class="svc-arr">→</div>
       </div>
       <div class="svc-card" onclick="location.href='templates.html'+location.search">
-        <div class="svc-ico" style="background:rgba(224,180,76,0.12)">📝</div>
+        <div class="svc-ico"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"><path d="M16 6h22l10 10v42H16z"/><path d="M24 30h16M24 38h16M24 46h10"/></svg></div>
         <div class="svc-name">Шаблоны</div>
         <div class="svc-desc">Заявления, титульный</div>
         <div class="svc-arr">→</div>
@@ -388,7 +459,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ПЕЧАТЬ ═══════════════════ -->
   <div id="s-print" class="screen">
     <div class="status-bar"><span id="c2">9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">📄 Печать</div></div>
     <div class="page-sub">Загрузи файл для печати</div>
 
@@ -458,7 +529,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       </div>
 
     <!-- ПРЕДПРОСМОТР ПОЛЕЙ -->
-    <div id="margin-preview" style="margin:0 20px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:16px;display:flex;gap:16px;align-items:center">
+    <div id="margin-preview" style="margin:0 20px 14px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;padding:16px;display:flex;gap:16px;align-items:center">
       <div style="position:relative;width:80px;height:110px;background:#fff;border-radius:4px;flex-shrink:0;overflow:hidden">
         <div id="margin-top" style="position:absolute;top:0;left:0;right:0;height:10px;background:rgba(26,58,92,0.15)"></div>
         <div id="margin-bottom" style="position:absolute;bottom:0;left:0;right:0;height:10px;background:rgba(26,58,92,0.15)"></div>
@@ -474,7 +545,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       </div>
       <div>
         <div id="margin-title" style="font-size:14px;font-weight:800;color:var(--white);margin-bottom:4px">Стандартные поля</div>
-        <div id="margin-desc" style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;font-weight:600">Верх/Низ: 20мм<br>Лево/Право: 20мм</div>
+        <div id="margin-desc" style="font-size:12px;color:rgba(var(--fg),0.4);line-height:1.6;font-weight:600">Верх/Низ: 20мм<br>Лево/Право: 20мм</div>
       </div>
     </div>
       <div class="set-row">
@@ -502,7 +573,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ОПЛАТА ПЕЧАТЬ ═══════════════════ -->
   <div id="s-pay-print" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-print')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-print')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="pay-amount-wrap">
       <div class="pay-amount-lbl">К ОПЛАТЕ</div>
       <div class="pay-amount" id="v-pay-print">5 <span>сом</span></div>
@@ -515,13 +586,13 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
         <div class="pay-go">→</div>
       </button>
     </div>
-    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
+    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(var(--fg),.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
   </div>
 
   <!-- ═══════════════════ КОПИЯ ═══════════════════ -->
   <div id="s-copy" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">📋 Копия</div></div>
     <div class="instr">
       <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Подними крышку сканера принтера</div></div>
@@ -562,7 +633,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       </div>
 
     <!-- ПРЕДПРОСМОТР ПОЛЕЙ -->
-    <div id="margin-preview" style="margin:0 20px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:16px;display:flex;gap:16px;align-items:center">
+    <div id="margin-preview" style="margin:0 20px 14px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;padding:16px;display:flex;gap:16px;align-items:center">
       <div style="position:relative;width:80px;height:110px;background:#fff;border-radius:4px;flex-shrink:0;overflow:hidden">
         <div id="margin-top" style="position:absolute;top:0;left:0;right:0;height:10px;background:rgba(26,58,92,0.15)"></div>
         <div id="margin-bottom" style="position:absolute;bottom:0;left:0;right:0;height:10px;background:rgba(26,58,92,0.15)"></div>
@@ -578,7 +649,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
       </div>
       <div>
         <div id="margin-title" style="font-size:14px;font-weight:800;color:var(--white);margin-bottom:4px">Стандартные поля</div>
-        <div id="margin-desc" style="font-size:12px;color:rgba(255,255,255,0.4);line-height:1.6;font-weight:600">Верх/Низ: 20мм<br>Лево/Право: 20мм</div>
+        <div id="margin-desc" style="font-size:12px;color:rgba(var(--fg),0.4);line-height:1.6;font-weight:600">Верх/Низ: 20мм<br>Лево/Право: 20мм</div>
       </div>
     </div>
       <div class="set-row">
@@ -604,7 +675,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ОПЛАТА КОПИЯ ═══════════════════ -->
   <div id="s-pay-copy" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-copy')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-copy')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="pay-amount-wrap">
       <div class="pay-amount-lbl">К ОПЛАТЕ</div>
       <div class="pay-amount" id="v-pay-copy">6 <span>сом</span></div>
@@ -613,13 +684,13 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="pay-methods">
       <button class="pay-method" onclick="submitCopy('gopay')"><div class="pay-logo" style="background:rgba(245,166,35,0.15);color:#F5A623">💳</div><div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div><div class="pay-go">→</div></button>
     </div>
-    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
+    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(var(--fg),.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
   </div>
 
   <!-- ═══════════════════ СКАН ═══════════════════ -->
   <div id="s-scan" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">🔍 Сканирование</div></div>
     <div class="instr">
       <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Подними крышку сканера</div></div>
@@ -673,7 +744,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ОПЛАТА СКАН ═══════════════════ -->
   <div id="s-pay-scan" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-scan')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-scan')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="pay-amount-wrap">
       <div class="pay-amount-lbl">К ОПЛАТЕ</div>
       <div class="pay-amount" id="v-pay-scan">6 <span>сом</span></div>
@@ -682,13 +753,13 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="pay-methods">
       <button class="pay-method" onclick="submitScan('gopay')"><div class="pay-logo" style="background:rgba(245,166,35,0.15);color:#F5A623">💳</div><div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div><div class="pay-go">→</div></button>
     </div>
-    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
+    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(var(--fg),.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
   </div>
 
   <!-- ═══════════════════ ФОТО ═══════════════════ -->
   <div id="s-photo" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">🪪 Фото</div></div>
     <div class="page-sub">Выбери формат — затем загрузи фото</div>
     <div class="photo-list">
@@ -713,7 +784,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ФОТО ЗАГРУЗКА ═══════════════════ -->
   <div id="s-photo-upload" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-photo')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-photo')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl" id="photo-ttl">Паспортное фото</div></div>
     <div class="instr">
       <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Фото должно быть чётким, при хорошем освещении</div></div>
@@ -748,7 +819,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ОПЛАТА ФОТО ═══════════════════ -->
   <div id="s-pay-photo" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-photo-upload')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-photo-upload')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="pay-amount-wrap">
       <div class="pay-amount-lbl">К ОПЛАТЕ</div>
       <div class="pay-amount" id="v-pay-photo">50 <span>сом</span></div>
@@ -757,7 +828,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     <div class="pay-methods">
       <button class="pay-method" onclick="submitPhoto('gopay')"><div class="pay-logo" style="background:rgba(245,166,35,0.15);color:#F5A623">💳</div><div><div class="pay-name">Оплатить онлайн</div><div class="pay-num">МБанк, О!Деньги и другие</div></div><div class="pay-go">→</div></button>
     </div>
-    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(255,255,255,.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
+    <div style="margin:14px 20px 0;font-size:12px;line-height:1.6;color:rgba(var(--fg),.45);font-weight:600">Оплачивая, вы принимаете условия <a href="/oferta.html" style="color:#E0B44C">публичной оферты</a> и <a href="/privacy.html" style="color:#E0B44C">политики конфиденциальности</a>.</div>
   </div>
 
   <!-- ═══════════════════ SUCCESS ═══════════════════ -->
@@ -786,7 +857,7 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
   <!-- ═══════════════════ ИНСТРУКЦИЯ ═══════════════════ -->
   <div id="s-how" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">📖 Инструкция</div></div>
     <div class="instr">
       <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Выбери услугу: печать, копия, скан или шаблон</div></div>
@@ -797,44 +868,44 @@ body{background:var(--dark);display:flex;justify-content:center;font-family:-app
     </div>
     <div style="margin:0 20px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.15);border-radius:16px;padding:16px 20px">
       <div style="font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px">💡 Есть вопросы?</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;font-weight:600">Позвони нам: <span style="color:var(--white);font-weight:800">0773 731 212</span></div>
+      <div style="font-size:13px;color:rgba(var(--fg),0.5);line-height:1.6;font-weight:600">Позвони нам: <span style="color:var(--white);font-weight:800">0773 731 212</span></div>
     </div>
   </div>
 
   <!-- ═══════════════════ СОТРУДНИЧЕСТВО ═══════════════════ -->
   <div id="s-partner" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">🤝 Сотрудничество</div></div>
     <div class="instr">
-      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.8;font-weight:600">Хочешь открыть терминал AKBARAK в своём заведении?<br><br>Мы предлагаем:<br>• Установку и настройку терминала<br>• Техническую поддержку 24/7<br>• Выгодные условия партнёрства<br>• Обучение персонала</div>
+      <div style="font-size:14px;color:rgba(var(--fg),0.6);line-height:1.8;font-weight:600">Хочешь открыть терминал AKBARAK в своём заведении?<br><br>Мы предлагаем:<br>• Установку и настройку терминала<br>• Техническую поддержку 24/7<br>• Выгодные условия партнёрства<br>• Обучение персонала</div>
     </div>
-    <div style="margin:0 20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:20px">
+    <div style="margin:0 20px;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:18px;padding:20px">
       <div style="font-size:14px;font-weight:800;color:var(--white);margin-bottom:14px">Свяжитесь с нами</div>
-      <div style="font-size:14px;color:rgba(255,255,255,0.5);font-weight:600;line-height:2.2">📞 <span style="color:var(--white)">0773 731 212</span><br>✉️ <span style="color:var(--white)">akbarak@gmail.com</span><br>📍 <span style="color:var(--white)">Бишкек, КГМА</span></div>
+      <div style="font-size:14px;color:rgba(var(--fg),0.5);font-weight:600;line-height:2.2">📞 <span style="color:var(--white)">0773 731 212</span><br>✉️ <span style="color:var(--white)">akbarak@gmail.com</span><br>📍 <span style="color:var(--white)">Бишкек, КГМА</span></div>
     </div>
   </div>
 
   <!-- ═══════════════════ О НАС ═══════════════════ -->
   <div id="s-about" class="screen">
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
-    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px;color:white;font-weight:900">AK<span style="color:#F5A623">BARAK</span></div><div style="width:38px"></div></div>
+    <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">ℹ️ О нас</div></div>
     <div class="instr">
-      <div style="font-size:14px;color:rgba(255,255,255,0.6);line-height:1.8;font-weight:600">AKBARAK — первый автономный терминал печати в Кыргызстане.<br><br>Мы создали сервис, чтобы студенты могли печатать документы быстро, дёшево и без очередей — 24 часа в сутки, 7 дней в неделю.</div>
+      <div style="font-size:14px;color:rgba(var(--fg),0.6);line-height:1.8;font-weight:600">AKBARAK — первый автономный терминал печати в Кыргызстане.<br><br>Мы создали сервис, чтобы студенты могли печатать документы быстро, дёшево и без очередей — 24 часа в сутки, 7 дней в неделю.</div>
     </div>
     <div style="display:flex;gap:10px;padding:0 20px;margin-bottom:16px">
-      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;text-align:center">
+      <div style="flex:1;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:14px;padding:16px;text-align:center">
         <div style="font-size:24px;font-weight:900;color:var(--white)">24/7</div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.3);font-weight:700;margin-top:4px;letter-spacing:0.5px">РАБОТАЕМ</div>
+        <div style="font-size:10px;color:rgba(var(--fg),0.3);font-weight:700;margin-top:4px;letter-spacing:0.5px">РАБОТАЕМ</div>
       </div>
-      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;text-align:center">
+      <div style="flex:1;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:14px;padding:16px;text-align:center">
         <div style="font-size:24px;font-weight:900;color:var(--gold)">5 с</div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.3);font-weight:700;margin-top:4px;letter-spacing:0.5px">ОТ 5 СОМ</div>
+        <div style="font-size:10px;color:rgba(var(--fg),0.3);font-weight:700;margin-top:4px;letter-spacing:0.5px">ОТ 5 СОМ</div>
       </div>
-      <div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;text-align:center">
+      <div style="flex:1;background:rgba(var(--fg),0.04);border:1px solid rgba(var(--fg),0.07);border-radius:14px;padding:16px;text-align:center">
         <div style="font-size:24px;font-weight:900;color:var(--white)">2 мин</div>
-        <div style="font-size:10px;color:rgba(255,255,255,0.3);font-weight:700;margin-top:4px;letter-spacing:0.5px">ОЖИДАНИЕ</div>
+        <div style="font-size:10px;color:rgba(var(--fg),0.3);font-weight:700;margin-top:4px;letter-spacing:0.5px">ОЖИДАНИЕ</div>
       </div>
     </div>
   </div>
@@ -1378,7 +1449,7 @@ function calcRange(val){
     if(pages.size>0){
       state.pages=pages.size;
       info.textContent='Будет напечатано: '+pages.size+' стр. ('+[...pages].sort((a,b)=>a-b).join(', ')+')';
-      info.style.color='rgba(255,255,255,0.4)';
+      info.style.color='rgba(var(--fg),0.4)';
     } else {
       info.textContent='❌ Неверный формат. Пример: 1-5 или 1,3,5';
       info.style.color='#ef4444';
@@ -1523,6 +1594,26 @@ async function submitPhoto(payment){
   if(!data){ document.getElementById('loading').classList.remove('show'); return; }
   await finishOrder(data, 'photo');
 }
+</script>
+
+<script>
+// Тема: Авто (как в телефоне) → Светлая → Тёмная
+function themeName(t){return t==='light'?'Светлая':t==='dark'?'Тёмная':'Авто'}
+function applyTheme(t){
+  var r=document.documentElement;
+  if(t==='light'||t==='dark') r.setAttribute('data-theme',t); else r.removeAttribute('data-theme');
+  var dark = t==='dark' || (t!=='light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  var m=document.querySelector('meta[name="theme-color"]'); if(m) m.content = dark ? '#0D2240' : '#EEF1F5';
+  var v=document.getElementById('theme-val'); if(v) v.textContent=themeName(t);
+}
+function cycleTheme(){
+  var t; try{t=localStorage.getItem('ak-theme')||'auto'}catch(e){t='auto'}
+  t = t==='auto'?'light':t==='light'?'dark':'auto';
+  try{localStorage.setItem('ak-theme',t)}catch(e){}
+  applyTheme(t);
+}
+(function(){var t='auto';try{t=localStorage.getItem('ak-theme')||'auto'}catch(e){}applyTheme(t);
+  if(window.matchMedia) try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){var t2='auto';try{t2=localStorage.getItem('ak-theme')||'auto'}catch(e){}applyTheme(t2)})}catch(e){}})();
 </script>
 </body>
 </html>
