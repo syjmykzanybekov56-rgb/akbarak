@@ -16,21 +16,22 @@
   :root{
     --night:#081830; --ink:#0E2340; --navy:#0F2747; --navy2:#163562;
     --gold:#E0B44C; --gold-d:#B8892A; --paper:#FFFFFF; --paper-shade:#E6ECF4;
-    --text-dim:#9FB2CE; --line:#D5DDE8;
+    --text-dim:#51627C; --line:#D5DDE8;
+    --desk:#EEF1F5; --txt:#14283D; --fg:20,40,61;
     --ok:#3DDC84; --warn:#F5B841; --bad:#F2545B;
     --disp:"Unbounded", "Manrope", system-ui, sans-serif;
     --body:"Manrope", system-ui, sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;overflow:hidden;background:var(--night);color:#fff;font-family:var(--body);
+  html,body{height:100%;overflow:hidden;background:var(--desk);color:var(--txt);font-family:var(--body);
     user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   .view{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease}
   .view.on{opacity:1;pointer-events:auto}
   .room{background:
-      radial-gradient(70vw 60vh at 78% 30%, rgba(224,180,76,.10), transparent 60%),
-      radial-gradient(90vw 80vh at 10% 0%, var(--navy2), transparent 60%),
-      linear-gradient(180deg, var(--ink), var(--night))}
+      radial-gradient(70vw 60vh at 78% 30%, rgba(226,169,59,.10), transparent 60%),
+      radial-gradient(90vw 80vh at 10% 0%, #FFFFFF, transparent 60%),
+      var(--desk)}
 
   /* ── шапка ── */
   .bar{position:absolute;left:3.2vw;right:3.2vw;top:3.4vh;display:flex;align-items:center;justify-content:space-between;z-index:4}
@@ -48,7 +49,7 @@
   /* ── принтерная щель и лист ── */
   .feeder{position:absolute;display:flex;flex-direction:column;align-items:center}
   .slot{width:100%;height:2.4vh;border-radius:1.2vh;background:linear-gradient(180deg,#02070F,#0B1A31);
-    box-shadow:inset 0 .4vh .8vh rgba(0,0,0,.7), 0 .15vh 0 rgba(255,255,255,.08);position:relative;z-index:2}
+    box-shadow:inset 0 .4vh .8vh rgba(0,0,0,.7), 0 .15vh 0 rgba(var(--fg),.08);position:relative;z-index:2}
   .slot::after{content:"";position:absolute;left:6%;right:6%;bottom:-.2vh;height:.25vh;border-radius:1vh;
     background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.75}
   .tray{width:88%;margin-top:-1.2vh;overflow:hidden;padding:0 2vw 4vh;flex:1;display:flex;justify-content:center}
@@ -56,7 +57,7 @@
     border-radius:.3vw;box-shadow:0 2.4vh 5vh rgba(0,0,0,.45),0 .3vh .6vh rgba(0,0,0,.25);
     transform:translateY(-104%);overflow:hidden}
   .sheet::before{content:"";position:absolute;right:0;top:0;width:12%;aspect-ratio:1;
-    background:linear-gradient(225deg,var(--night) 50%,var(--gold) 50%);}
+    background:linear-gradient(225deg,var(--desk) 50%,var(--gold) 50%);}
   .sheet.in{animation:feed 2.6s cubic-bezier(.45,.05,.3,1) forwards}
   .sheet.shown{transform:none}
   .sheet.out{animation:eject 1s cubic-bezier(.6,0,.8,.4) forwards}
@@ -81,7 +82,7 @@
   .tile{position:relative;background:var(--paper);color:var(--navy);border-radius:.6vw;padding:3.2vh 1.3vw 2.6vh;text-align:left;
     min-height:37vh;display:flex;flex-direction:column;justify-content:space-between;
     box-shadow:0 1.6vh 3.2vh rgba(0,0,0,.35);transition:transform .12s ease, box-shadow .12s ease;overflow:hidden}
-  .tile::before{content:"";position:absolute;right:0;top:0;width:3.2vw;aspect-ratio:1;background:linear-gradient(225deg,var(--ink) 50%,var(--gold) 50%)}
+  .tile::before{content:"";position:absolute;right:0;top:0;width:3.2vw;aspect-ratio:1;background:linear-gradient(225deg,var(--desk) 50%,var(--gold) 50%)}
   .tile:active{transform:translateY(.5vh) scale(.985);box-shadow:0 .6vh 1.4vh rgba(0,0,0,.35)}
   .tile svg{width:5.4vw;height:5.4vw}
   .tile h2{font-family:var(--disp);font-weight:800;font-size:1.65vw;letter-spacing:-.02em;margin-top:1.4vh}
@@ -112,29 +113,29 @@
   /* ── экран услуги ── */
   #svc .stage{position:absolute;left:3.2vw;right:3.2vw;top:13vh;bottom:9vh;display:grid;grid-template-columns:1.45fr 1fr;gap:4vw}
   .back{display:inline-flex;align-items:center;gap:1vw;font-weight:800;font-size:1.25vw;padding:1.4vh 1.6vw 1.4vh 1.2vw;border-radius:999px;
-    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+    background:rgba(var(--fg),.08);border:1px solid rgba(var(--fg),.14)}
   .back{align-self:flex-start}
   .back svg{width:1.5vw;height:1.5vw}
-  .back:active{background:rgba(255,255,255,.16)}
+  .back:active{background:rgba(var(--fg),.16)}
   .svchead{display:flex;align-items:baseline;gap:1.6vw;margin:3.6vh 0 4vh}
   .svchead h1{font-family:var(--disp);font-weight:800;font-size:4.6vw;letter-spacing:-.03em;line-height:1}
   .svchead .pr{font-weight:800;font-size:1.5vw;color:var(--gold)}
   .flow{display:grid;grid-template-columns:15vw 1fr;gap:2.6vw;align-items:center}
   .pic{width:15vw;height:15vw;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--navy2),var(--ink));
-    display:grid;place-items:center;border:1px solid rgba(255,255,255,.1);position:relative}
+    display:grid;place-items:center;border:1px solid rgba(var(--fg),.1);position:relative}
   .pic svg{width:8.4vw;height:8.4vw;transition:opacity .3s, transform .3s}
   .pic svg.swap{opacity:0;transform:scale(.85)}
   .steps{list-style:none;display:flex;flex-direction:column;gap:1.4vh}
   .steps li{display:grid;grid-template-columns:3.4vw 1fr;align-items:center;gap:1.2vw;padding:1.8vh 1.4vw;border-radius:.8vw;
     font-weight:700;font-size:1.4vw;line-height:1.35;color:var(--text-dim);transition:all .35s ease;border:1px solid transparent}
   .steps li b{width:3.4vw;height:3.4vw;border-radius:50%;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:1.35vw;
-    background:rgba(255,255,255,.08);color:#fff;transition:all .35s ease}
-  .steps li.now{background:rgba(255,255,255,.07);border-color:rgba(224,180,76,.45);color:#fff}
+    background:rgba(var(--fg),.08);color:var(--txt);transition:all .35s ease}
+  .steps li.now{background:rgba(var(--fg),.07);border-color:rgba(224,180,76,.45);color:var(--txt)}
   .steps li.now b{background:var(--gold);color:var(--night)}
   .steps li.done b{background:rgba(61,220,132,.2);color:var(--ok)}
   #svc .feeder{right:3.2vw;top:13vh;bottom:6vh;width:30vw}
   .timer{position:absolute;left:3.2vw;right:3.2vw;bottom:3vh;display:flex;align-items:center;gap:1.4vw;font-weight:700;font-size:1.05vw;color:var(--text-dim)}
-  .timer .track{flex:none;width:18vw;height:.5vh;border-radius:1vh;background:rgba(255,255,255,.12);overflow:hidden}
+  .timer .track{flex:none;width:18vw;height:.5vh;border-radius:1vh;background:rgba(var(--fg),.12);overflow:hidden}
   .timer .fill{height:100%;background:var(--gold);transform-origin:left;width:100%}
 
 
@@ -142,21 +143,21 @@
   .pane{display:flex;flex-direction:column;height:100%}
   .pane .lead2{font-size:1.4vw;line-height:1.45;color:var(--text-dim);font-weight:600;max-width:40ch;margin-top:-1.6vh}
   .files{list-style:none;display:flex;flex-direction:column;gap:1vh;margin:1vh 0 3vh;max-height:24vh;overflow:hidden}
-  .files li{display:flex;align-items:center;gap:1vw;padding:1.6vh 1.4vw;border-radius:.8vw;background:rgba(255,255,255,.07);font-weight:700;font-size:1.3vw}
-  .files li svg{width:2vw;height:2vw;flex:none;color:#fff}
+  .files li{display:flex;align-items:center;gap:1vw;padding:1.6vh 1.4vw;border-radius:.8vw;background:rgba(var(--fg),.07);font-weight:700;font-size:1.3vw}
+  .files li svg{width:2vw;height:2vw;flex:none;color:var(--txt)}
   .files li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .files li small{color:var(--text-dim);font-weight:700;font-size:1.1vw}
   .opts{display:flex;align-items:center;gap:3vw;margin:1vh 0 4vh}
   .opt-l{font-weight:700;font-size:1.25vw;color:var(--text-dim);margin-bottom:1.2vh}
   .stepper{display:flex;align-items:center;gap:1.2vw}
-  .stepper button{width:5.6vw;height:5.6vw;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+  .stepper button{width:5.6vw;height:5.6vw;border-radius:50%;background:rgba(var(--fg),.1);border:1px solid rgba(var(--fg),.18);
     font-family:var(--disp);font-weight:700;font-size:2.4vw;line-height:1;display:grid;place-items:center}
-  .stepper button:active{background:rgba(255,255,255,.22)}
+  .stepper button:active{background:rgba(var(--fg),.22)}
   .stepper button:disabled{opacity:.3}
   .stepper output{font-family:var(--disp);font-weight:800;font-size:3.6vw;min-width:5vw;text-align:center;font-variant-numeric:tabular-nums}
   .sum{font-family:var(--disp);font-weight:800;font-size:4.4vw;letter-spacing:-.03em;color:var(--gold);line-height:1}
   .sides{display:flex;gap:.6vw}
-  .sides button{height:5.6vw;padding:0 1.5vw;border-radius:2.8vw;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+  .sides button{height:5.6vw;padding:0 1.5vw;border-radius:2.8vw;background:rgba(var(--fg),.1);border:1px solid rgba(var(--fg),.18);
     font-weight:800;font-size:1.3vw;white-space:nowrap}
   .sides button.on{background:var(--gold);border-color:var(--gold);color:var(--night)}
   .sides button:disabled{opacity:.45}
@@ -165,11 +166,11 @@
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:1vw;padding:2.6vh 3vw;border-radius:999px;font-weight:800;font-size:1.5vw}
   .btn.main{background:var(--gold);color:var(--night);min-width:26vw}
   .btn.main:active{transform:scale(.98)}
-  .btn.ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff}
+  .btn.ghost{background:rgba(var(--fg),.08);border:1px solid rgba(var(--fg),.16);color:var(--txt)}
   .btn:disabled{opacity:.45}
   .switch{margin-top:2.6vh;font-weight:800;font-size:1.2vw;color:var(--gold);border-bottom:2px solid rgba(224,180,76,.4);padding-bottom:.3vh;align-self:flex-start}
   .wait{display:flex;align-items:center;gap:1.2vw;margin-top:3vh;font-weight:700;font-size:1.3vw;color:var(--text-dim)}
-  .spin{width:2.2vw;height:2.2vw;border-radius:50%;border:.35vw solid rgba(255,255,255,.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
+  .spin{width:2.2vw;height:2.2vw;border-radius:50%;border:.35vw solid rgba(var(--fg),.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .big-state{font-family:var(--disp);font-weight:800;font-size:5vw;letter-spacing:-.035em;line-height:1.04;margin:4vh 0 2.4vh;max-width:12ch}
   .receipt .row{display:flex;justify-content:space-between;gap:1vw;padding:1.4vh 0;border-bottom:2px dashed var(--line);font-weight:700;font-size:1.1vw}
@@ -208,10 +209,10 @@
 
   /* подвал главного экрана */
   .foot .help{font-weight:700;white-space:nowrap}
-  .foot .help b{color:#fff}
-  .franchise{display:flex;align-items:center;gap:.8vw;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:.6vw;padding:.6vh .6vw .6vh .8vw}
+  .foot .help b{color:var(--txt)}
+  .franchise{display:flex;align-items:center;gap:.8vw;background:rgba(var(--fg),.06);border:1px solid rgba(var(--fg),.1);border-radius:.6vw;padding:.6vh .6vw .6vh .8vw}
   .franchise span{font-size:.85vw;line-height:1.3;color:var(--text-dim);font-weight:700;text-align:right}
-  .franchise span b{color:#fff;display:block}
+  .franchise span b{color:var(--txt);display:block}
   .franchise .q{background:#fff;padding:.4vh;border-radius:.3vw}
   .franchise .q img,.franchise .q canvas{width:4.6vw !important;height:4.6vw !important}
 
@@ -257,6 +258,34 @@
     .sheet.in{animation:none;transform:none} .sheet.out{animation:none;opacity:0}
     .sheet.in .ink > *{animation:none;opacity:1} .news span,.scanbox .beam,.call span{animation:none}
   }
+
+  /* ══ стиль «лист + тюндюк» (светлый) ══ */
+  .chip{color:#1F7A4A} .chip.warn{color:#9A6A00} .chip.bad{color:#B3262E}
+  .wm{font-family:var(--disp)}
+  .wm .a{color:var(--gold-d)}
+  .tile{box-shadow:0 .2vh 0 #D3DAE3,0 1.4vh 3vh rgba(20,40,61,.10)}
+  .tile:active{box-shadow:0 .1vh 0 #D3DAE3,0 .6vh 1.4vh rgba(20,40,61,.12)}
+  .sheet{box-shadow:0 2vh 4vh rgba(20,40,61,.16),0 .3vh .6vh rgba(20,40,61,.10)}
+  .herosheet{position:relative;background:var(--paper);border-radius:.4vw;padding:4vh 3vw 4vh 5.2vw;margin-bottom:3vh;overflow:hidden;
+    box-shadow:0 .2vh 0 #D3DAE3,0 1.4vh 3vh rgba(20,40,61,.08);
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='26' cy='20' r='6' fill='%23C9D2DD'/%3E%3Cpath d='M26 20C17 17 8 12 0 13' fill='none' stroke='%2314283D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E") left .4vw top 2vh/2.6vw 4.2vh repeat-y,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%2314283D' stroke-opacity='.08' stroke-linecap='round'%3E%3Ccircle cx='50' cy='50' r='44' stroke-width='3'/%3E%3Cg stroke-width='2.6'%3E%3Cpath d='M14 39Q50 30 86 39M12 50H88M14 61Q50 70 86 61M39 14Q30 50 39 86M50 12V88M61 14Q70 50 61 86'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") right -6vw bottom -14vh/30vw 30vw no-repeat,
+      var(--paper)}
+  .herosheet::before{content:"";position:absolute;right:0;top:0;width:3.4vw;aspect-ratio:1;background:linear-gradient(225deg,var(--desk) 50%,var(--gold) 50%)}
+  .herosheet h1 .g{color:var(--gold-d)}
+  .herosheet p{margin:2vh 0 0!important}
+  .back{background:var(--paper);border:none;box-shadow:0 .2vh 0 #D3DAE3,0 .8vh 2vh rgba(20,40,61,.08)}
+  .steps li.now{background:var(--paper);box-shadow:0 .8vh 2vh rgba(20,40,61,.08)}
+  .franchise{background:var(--paper);border:none}
+  .foot .help b,.franchise span b{color:var(--txt)}
+  .count b,.news span b{color:var(--gold-d)}
+  .svchead .pr,.switch,.call span{color:var(--gold-d)}
+  .sum{color:var(--txt)}
+  /* вечером экран приглушается, чтобы не слепил в пустом коридоре */
+  body.dim{filter:brightness(.78)}
+  .pic{color:#fff}
+  .logo svg{filter:drop-shadow(0 0 .08vw rgba(20,40,61,.7))}
 </style>
 </head>
 <body>
@@ -322,8 +351,10 @@
 
   <div class="stage">
     <div class="hello">
-      <h1>Распечатай<br>с&nbsp;телефона</h1>
-      <p>Наведи камеру на код справа или выбери услугу — покажем, что делать.</p>
+      <div class="herosheet">
+        <h1>Распечатай<br><span class="g">с&nbsp;телефона</span></h1>
+        <p>Наведи камеру на код справа или выбери услугу — покажем, что делать.</p>
+      </div>
       <div class="tiles">
         <button class="tile" onclick="openSvc('print')">
           <div><svg><use href="#i-print"/></svg><h2>Печать</h2><div class="price"><b>5</b> сом за стр.</div></div>
@@ -1055,6 +1086,10 @@ document.addEventListener('keydown', e => { if(e.ctrlKey && ['+','-','=','0'].in
 setInterval(() => { if(view === 'attract') location.reload(); }, 6 * 60 * 60 * 1000);
 
 goHome();
+</script>
+<script>
+// Приглушение экрана с 20:00 до 7:00
+(function dimTick(){ var h=new Date().getHours(); document.body.classList.toggle('dim', h>=20 || h<7); setTimeout(dimTick, 60000); })();
 </script>
 </body>
 </html>
