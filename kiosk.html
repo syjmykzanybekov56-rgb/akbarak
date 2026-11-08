@@ -283,7 +283,6 @@
   .svchead .pr,.switch,.call span{color:var(--gold-d)}
   .sum{color:var(--txt)}
   /* вечером экран приглушается, чтобы не слепил в пустом коридоре */
-  body.dim{filter:brightness(.78)}
   .pic{color:#fff}
   .logo svg{filter:drop-shadow(0 0 .08vw rgba(20,40,61,.7))}
 </style>
@@ -1089,7 +1088,6 @@ goHome();
 </script>
 <script>
 // Приглушение экрана с 20:00 до 7:00
-(function dimTick(){ var h=new Date().getHours(); document.body.classList.toggle('dim', h>=20 || h<7); setTimeout(dimTick, 60000); })();
 </script>
 </body>
 </html>
