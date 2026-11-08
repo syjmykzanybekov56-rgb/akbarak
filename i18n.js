@@ -614,8 +614,8 @@
 
   const css = document.createElement('style');
   css.textContent = `
-    .ak-lang{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
-    .ak-lang button{border:0;background:none;color:rgba(255,255,255,.65);font:inherit;font-weight:800;cursor:pointer;border-radius:999px}
+    .ak-lang{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:rgba(var(--fg,255,255,255),.08);border:1px solid rgba(var(--fg,255,255,255),.22)}
+    .ak-lang button{border:0;background:none;color:rgba(var(--fg,255,255,255),.72);font:inherit;font-weight:800;cursor:pointer;border-radius:999px}
     .ak-lang button.on{background:#E0B44C;color:#081830}
     .ak-lang-small button{font-size:12px;padding:5px 9px}
     .ak-lang-big button{font-size:1.05vw;padding:1vh 1.1vw}
