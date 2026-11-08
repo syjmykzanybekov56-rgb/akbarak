@@ -39,11 +39,24 @@ def _default_printer():
         return "Pantum M6500W series"
 
 PRINTER_NAME = _default_printer()
-SUMATRA = r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"
+def _find_sumatra():
+    """SumatraPDF ищем рядом с программой и в обычных местах установки — путь не зависит от имени пользователя."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for p in (os.path.join(here, "SumatraPDF.exe"),
+              os.path.join(here, "SumatraPDF", "SumatraPDF.exe"),
+              os.path.join(os.getenv("LOCALAPPDATA", ""), "SumatraPDF", "SumatraPDF.exe"),
+              os.path.join(os.getenv("ProgramFiles", r"C:\Program Files"), "SumatraPDF", "SumatraPDF.exe"),
+              os.path.join(os.getenv("ProgramFiles(x86)", r"C:\Program Files (x86)"), "SumatraPDF", "SumatraPDF.exe"),
+              r"C:\Users\user\AppData\Local\SumatraPDF\SumatraPDF.exe"):
+        if p and os.path.exists(p):
+            return p
+    return os.path.join(os.getenv("LOCALAPPDATA", ""), "SumatraPDF", "SumatraPDF.exe")
+
+SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-08 v7 сканер по умолчанию"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-09 v8 любой ноут"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
