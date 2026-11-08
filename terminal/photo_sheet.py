@@ -28,35 +28,43 @@ BRAND_NAVY, BRAND_GOLD = (13, 34, 64), (245, 166, 35)   # как на сайте
 
 
 def draw_logo(width, with_sub=True):
-    """Логотип АкБарак как на сайте: знак «А» + AK/BARAK + Smart Print Network, на тёмно-синей плашке."""
+    """Логотип АкБарак: лист с тюндюком + «АкБарак», на тёмно-синей плашке."""
     s = 4                                            # рисуем крупно и уменьшаем — края ровнее
     h = round(width * (0.42 if with_sub else 0.32)) * s
     w = width * s
     img = Image.new("RGB", (w, h), BRAND_NAVY)
     d = ImageDraw.Draw(img)
-    mh = h * (0.62 if with_sub else 0.72)            # высота знака
-    k = mh / 40
-    ox, oy = h * 0.16, (h - mh) / 2
+    mh = h * (0.70 if with_sub else 0.78)            # высота знака: лист с тюндюком
+    k = mh / 202
+    ox, oy = h * 0.14 - 58 * k, (h - mh) / 2 - 20 * k
     P = lambda pts: [(ox + x * k, oy + y * k) for x, y in pts]
-    d.polygon(P([(18, 3), (3, 37), (10, 37), (18, 17), (26, 37), (33, 37)]), fill=WHITE)
-    d.polygon(P([(18, 3), (26, 37), (33, 37)]), fill=BRAND_GOLD)
-    d.rounded_rectangle([*P([(8, 27)])[0], *P([(28, 31)])[0]], radius=2 * k, fill=WHITE)
-    d.rounded_rectangle([*P([(18, 27)])[0], *P([(28, 31)])[0]], radius=2 * k, fill=BRAND_GOLD)
-    tx = ox + 36 * k + h * 0.08
+    d.polygon(P([(58, 20), (152, 20), (192, 60), (192, 222), (58, 222)]), fill=WHITE)
+    d.polygon(P([(152, 20), (152, 60), (192, 60)]), fill=BRAND_GOLD)
+    cx, cy = P([(124, 146)])[0]
+    d.ellipse([cx - 52 * k, cy - 52 * k, cx + 52 * k, cy + 52 * k], fill=BRAND_NAVY)
+    lw = max(1, round(7 * k))
+    d.ellipse([cx - 40 * k, cy - 40 * k, cx + 40 * k, cy + 40 * k], outline=BRAND_GOLD, width=lw)
+    for y in (-10, 0, 10):                             # перекладины тюндюка
+        d.line([(cx - 36 * k, cy + y * k), (cx + 36 * k, cy + y * k)], fill=BRAND_GOLD, width=lw)
+    for x in (-10, 0, 10):
+        d.line([(cx + x * k, cy - 36 * k), (cx + x * k, cy + 36 * k)], fill=BRAND_GOLD, width=lw)
+    ox, mh_mark = ox + 58 * k, mh
+    k = mh / 40                                        # дальше — разметка текста как раньше
+    tx = ox + 134 * (mh_mark / 202) + h * 0.10
     tw = w - tx - h * 0.12
     name_px = int(mh * 0.62)
-    while name_px > 8 and d.textlength("AKBARAK", font=_font(name_px, True)) > tw:
+    while name_px > 8 and d.textlength("АкБарак", font=_font(name_px, True)) > tw:
         name_px -= 2
     fb = _font(name_px, True)
     ty = oy + (mh * 0.08 if with_sub else (mh - name_px) / 2)
-    d.text((tx, ty), "AK", font=fb, fill=WHITE)
-    d.text((tx + d.textlength("AK", font=fb), ty), "BARAK", font=fb, fill=BRAND_GOLD)
+    d.text((tx, ty), "Ак", font=fb, fill=BRAND_GOLD)
+    d.text((tx + d.textlength("Ак", font=fb), ty), "Барак", font=fb, fill=WHITE)
     if with_sub:
         sub_px = int(name_px * 0.42)
         fs = _font(sub_px)
-        while sub_px > 6 and d.textlength("Smart Print Network", font=fs) > tw:
+        while sub_px > 6 and d.textlength("печать 24/7", font=fs) > tw:
             sub_px -= 1; fs = _font(sub_px)
-        d.text((tx + 2, ty + name_px * 1.12), "Smart Print Network", font=fs, fill=(190, 200, 215))
+        d.text((tx + 2, ty + name_px * 1.12), "печать 24/7", font=fs, fill=(190, 200, 215))
     return img.resize((width, h // s), Image.LANCZOS)
 
 
