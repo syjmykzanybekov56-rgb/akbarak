@@ -405,9 +405,10 @@ async function loadTg(){
     c.innerHTML = `<div class="top"><i class="dot${d.webhook?' on':''}"></i><div class="nm">@${H(d.bot||'—')}</div><div style="flex:1"></div>
         <span class="st ${d.webhook?'printed':'failed'}">${d.webhook?'работает':'не подключён'}</span></div>
       ${d.last_error?`<div class="ln"><span>Последняя ошибка</span><b style="color:var(--bad)">${H(d.last_error)}</b></div>`:''}
+      ${d.token_error?`<div class="err" style="background:#FDE7E7;color:#A12222;border-radius:10px;padding:8px 10px;font-weight:700;margin-top:8px">Токен: ${H(d.token_error)}</div>`:''}
       <div class="acts"><button class="btn gold" id="tgSetup">${d.webhook?'↻ Переподключить':'Подключить'}</button>
       ${d.bot?`<a class="btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="https://t.me/${encodeURIComponent(d.bot)}">Открыть бота ↗</a>`:''}</div>`;
-    $('tgSetup').onclick = async()=>{ try{ const r = await api('/tg/setup',{method:'POST'}); toast(r.success?'Бот подключён':'Не получилось', !r.success); loadTg(); }catch(e){ toast(e.message,true); } };
+    $('tgSetup').onclick = async()=>{ try{ const r = await api('/tg/setup',{method:'POST'}); toast('Бот подключён: @'+(r.bot||'')); loadTg(); }catch(e){ toast(e.message,true); alert('Не получилось подключить бота:\n\n'+e.message); loadTg(); } };
   }catch(e){ c.innerHTML = `<div class="empty">${H(e.message)}</div>`; }
 }
 async function loadSummary(){
