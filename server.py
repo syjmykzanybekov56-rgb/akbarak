@@ -839,10 +839,12 @@ def gopay_webhook():
                 conn.executemany("UPDATE orders SET status='new', paid_at=? WHERE id=?",
                                  [(now(), i) for i in to_queue])
                 conn.commit()
+                tgbot.order_event(to_queue, "paid")
         elif status in ("failed", "cancelled", "expired"):
             conn.executemany("UPDATE orders SET status='rejected' WHERE id=? AND status='pending_payment'",
                              [(i,) for i in ids])
             conn.commit()
+            tgbot.order_event(ids, "rejected")
         conn.close()
         return jsonify({"success": True})
     except Exception as e:
@@ -905,6 +907,7 @@ def get_file(order_id):
 @require_worker
 def printing(order_id):
     _set_status(order_id, "printing", only_from=("new",))
+    tgbot.order_event(order_id, "printing")
     return jsonify({"success": True})
 
 
@@ -918,6 +921,7 @@ def done(order_id):
                      (now(), order_id))
         conn.commit()
         _remove(row["file_path"])
+        tgbot.order_event(order_id, "printed")
     conn.close()
     return jsonify({"success": True})
 
@@ -934,6 +938,7 @@ def failed(order_id):
         conn.execute("UPDATE orders SET status='failed', error=?, refund=? WHERE id=?",
                      (reason, refund, order_id))
         conn.commit()
+        tgbot.order_event(order_id, "failed")
         notify(f"❌ Ошибка печати, заказ #{order_id} ({row['file_name']}, {row['total']} сом).\n"
                f"Причина: {reason or 'не указана'}\n"
                "Откройте админку: перепечатать или вернуть деньги.")
@@ -1191,6 +1196,7 @@ def admin_free(order_id):
     conn.close()
     if not cur.rowcount:
         return jsonify({"error": "Этот заказ уже оплачен или закрыт"}), 409
+    tgbot.order_event(order_id, "paid")
     return jsonify({"success": True})
 
 
@@ -1437,6 +1443,7 @@ def maintenance():
                    "Проверьте свет, интернет и ноутбук.")
             conn.execute("UPDATE terminals SET offline_alerted=1 WHERE id=?", (t["id"],))
         conn.commit()
+        tgbot.cleanup()
     finally:
         conn.close()
 
@@ -1448,6 +1455,17 @@ def _maintenance_loop():
         except Exception:
             log.exception("maintenance")
         time.sleep(60)
+
+
+# Telegram-бот для студентов (tgbot.py)
+import tgbot  # noqa: E402
+tgbot.register(app, {
+    "db": db, "FILES_DIR": FILES_DIR, "now": now, "ago": ago, "remove": _remove,
+    "order_total": order_total, "pdf_page_count": pdf_page_count, "docx_page_count": docx_page_count,
+    "txt_page_count": txt_page_count, "gopay": gopay, "PRICES": PRICES, "SIDES": SIDES,
+    "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
+    "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok,
+})
 
 
 if os.getenv("DISABLE_BACKGROUND") != "1":
