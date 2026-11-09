@@ -22,13 +22,14 @@ from flask import jsonify, request
 
 log = logging.getLogger("akbarak.tg")
 
-TOKEN = os.getenv("TG_CLIENT_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")
+TOKEN = "".join((os.getenv("TG_CLIENT_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")).split())   # без пробелов/переносов
 API = f"https://api.telegram.org/bot{TOKEN}"
 SECRET = hashlib.sha256(("akbarak-tg:" + TOKEN).encode()).hexdigest()[:40]
 MAX_TG_MB = 20                      # Telegram отдаёт ботам файлы до 20 МБ
 DRAFT_HOURS = 6
 
 H = {}   # заполняется в register(): помощники из server.py
+LAST_ERROR = {"text": ""}
 
 
 # ─────────────────────── Telegram API ───────────────────────
@@ -41,9 +42,11 @@ def tg(method, **data):
         j = r.json()
         if not j.get("ok"):
             log.warning("TG %s: %s", method, j.get("description"))
+            LAST_ERROR["text"] = f"{method}: {j.get('description')}"
         return j.get("result")
     except Exception as e:
         log.error("TG %s: %s", method, e)
+        LAST_ERROR["text"] = f"{method}: {e}"
         return None
 
 
@@ -435,6 +438,13 @@ def register(app, helpers):
         if not TOKEN:
             return jsonify({"error": "На сервере нет токена бота: добавьте TG_CLIENT_BOT_TOKEN на Railway"}), 400
         base = os.getenv("SERVER_URL") or ("https://" + request.host)
+        LAST_ERROR["text"] = ""
+        me = tg("getMe")
+        if not me:
+            hint = LAST_ERROR["text"]
+            if "Unauthorized" in hint or "Not Found" in hint:
+                hint = "Telegram не принял токен. Проверьте TG_CLIENT_BOT_TOKEN на Railway: без пробелов и переносов строк, целиком."
+            return jsonify({"success": False, "error": hint or "Telegram не отвечает"}), 400
         ok = tg("setWebhook", url=base.rstrip("/") + "/tg/webhook", secret_token=SECRET,
                 allowed_updates=["message", "callback_query"], drop_pending_updates=True)
         tg("setMyCommands", commands=[{"command": "start", "description": "Как печатать"},
@@ -443,8 +453,9 @@ def register(app, helpers):
         tg("setMyDescription", description="Печать с телефона на терминалах АкБарак. "
                                            "Отправь файл — посчитаю цену, оплатишь, и лист выйдет из терминала.")
         tg("setMyShortDescription", short_description="Печать с телефона 24/7 · терминалы АкБарак")
-        me = tg("getMe") or {}
-        return jsonify({"success": bool(ok), "bot": me.get("username")})
+        if not ok:
+            return jsonify({"success": False, "bot": me.get("username"), "error": LAST_ERROR["text"] or "setWebhook не прошёл"}), 400
+        return jsonify({"success": True, "bot": me.get("username"), "webhook": base.rstrip("/") + "/tg/webhook"})
 
     @app.route("/tg/status", methods=["GET"])
     def tg_status():
@@ -452,7 +463,8 @@ def register(app, helpers):
             return jsonify({"error": "Нет доступа"}), 403
         if not TOKEN:
             return jsonify({"configured": False})
+        LAST_ERROR["text"] = ""
         me = tg("getMe") or {}
         info = tg("getWebhookInfo") or {}
-        return jsonify({"configured": True, "bot": me.get("username"), "webhook": bool(info.get("url")),
+        return jsonify({"configured": True, "bot": me.get("username"), "token_error": "" if me else LAST_ERROR["text"], "webhook": bool(info.get("url")),
                         "pending": info.get("pending_update_count", 0), "last_error": info.get("last_error_message")})
