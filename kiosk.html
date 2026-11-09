@@ -474,7 +474,7 @@ const NOTICES = [
 
 // Что сейчас умеет терминал (сервер /config): цветная копия — только с цветным принтером
 let CFG = {color: false, prices: {copy_bw: 6, copy_color: 12, scan_bw: 6, scan_color: 12}};
-fetch(SERVER + '/config', {cache: 'no-store'}).then(r => r.json()).then(c => { CFG = c; }).catch(() => {});
+fetch(SERVER + '/config?t=' + encodeURIComponent(TERMINAL), {cache: 'no-store'}).then(r => r.json()).then(c => { CFG = c; }).catch(() => {});
 const MAX_SHEETS = 30;
 // Реклама: ads.json рядом с сайтом (меняется без кода). Обновляем раз в 10 минут.
 let ADS = {enabled: false, items: []};
