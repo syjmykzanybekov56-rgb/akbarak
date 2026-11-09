@@ -197,7 +197,8 @@
   .pv-box canvas,.pv-box img{max-width:100%;max-height:100%;box-shadow:0 .4vh 1.4vh rgba(14,35,64,.25);background:#fff}
   .pv-box img,.pv-box canvas,#pvDoc{display:none}
   #pvDoc{position:absolute;inset:0;overflow:hidden}
-  #pvDoc section.docx{position:absolute;left:50%;top:0;transform-origin:top left;background:#fff;box-shadow:0 .4vh 1.4vh rgba(14,35,64,.25);margin:0}
+  #pvDoc section.docx{position:absolute;left:50%;top:0;transform-origin:top left;background:transparent;box-shadow:none;margin:0}
+  #pvDoc .pvPaper{position:absolute;background:#fff;box-shadow:0 .4vh 1.4vh rgba(14,35,64,.25)}
   #pvDoc pre{white-space:pre-wrap;font:600 .95vw/1.45 var(--body);color:var(--navy);padding:1.4vw;background:#fff;min-height:100%}
   .pv-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
     padding:2vw;font-weight:700;font-size:1.1vw;color:var(--navy)}
@@ -758,7 +759,8 @@ async function loadPreview(i){
       pvShow('pvDoc');                            // разметке нужны реальные размеры
       await docx.renderAsync(blob, $('pvDoc'), null, {inWrapper: false, breakPages: true, ignoreLastRenderedPageBreak: false});
       if(ticket !== pv.load) return;
-      pv.total = Math.max(1, $('pvDoc').querySelectorAll('section.docx').length);
+      pv.docxPages = docxPages($('pvDoc'), cur.files[i] && cur.files[i].pages);
+      pv.total = Math.max(1, pv.docxPages.length);
     } else if(ext === 'txt'){
       pv.kind = 'txt';
       $('pvDoc').innerHTML = '<pre></pre>';
@@ -776,6 +778,62 @@ async function loadPreview(i){
     if(ticket === pv.load) pvMessage('Не удалось показать файл. Он всё равно напечатается.');
   }
   pvDraw();
+}
+
+// Word-документ: docx-preview рисует раздел одной длинной «простынёй» — режем его на листы А4
+// по границам абзацев и таблиц, чтобы студент листал страницы как в PDF.
+function docxPages(root, want){
+  // want — сколько страниц насчитал сервер (по нему считается цена). Если шрифт в браузере
+  // уже, чем в Word, страниц выходит меньше — тогда чуть уменьшаем «высоту листа», чтобы совпало.
+  const secs = [...root.querySelectorAll('section.docx')].map(s => {
+    s.style.display = 'block'; s.style.transform = 'none'; s.style.clipPath = 'none';
+    const cs = getComputedStyle(s), w = s.offsetWidth, H = s.offsetHeight;
+    const art = s.querySelector('article') || s;
+    return {s, w, H, pageH: parseFloat(cs.minHeight) || w * 297 / 210,
+      padT: parseFloat(cs.paddingTop) || 0, padB: parseFloat(cs.paddingBottom) || 0,
+      blocks: [...art.children].filter(b => b.offsetHeight > 0).map(b => ({top: b.offsetTop, bot: b.offsetTop + b.offsetHeight,
+        lh: parseFloat(getComputedStyle(b).lineHeight) || 0, p: b.tagName === 'P'}))};
+  });
+  const run = f => {
+    const out = [];
+    secs.forEach(({s, w, H, pageH, padT, padB, blocks}) => {
+      const body = (pageH - padT - padB) * f;
+      let start = 0, clipTop = 0, limit = padT + body, first = true;
+      const cut = y => { out.push({s, w, H, pageH, start, clipTop, clipBot: y}); start = y - padT; clipTop = y; limit = y + body; };
+      blocks.forEach(({top, bot, lh, p}) => {
+        const splittable = p && lh > 0 && bot - top > lh * 2.5;
+        if(bot > limit && !first && !(splittable && limit - top >= lh * 2)) cut(top);
+        let guard = 0;   // длинный абзац переносится на следующий лист построчно, как в Word
+        while(bot > limit && splittable && limit - Math.max(top, clipTop) >= lh && guard++ < 60){
+          const from = Math.max(top, clipTop);
+          cut(from + Math.floor((limit - from) / lh) * lh);
+        }
+        first = false;
+      });
+      out.push({s, w, H, pageH, start, clipTop, clipBot: Math.min(H, start + pageH)});
+    });
+    return out;
+  };
+  let pages = run(1);
+  if(want && pages.length < want){
+    let lo = 0.45, hi = 1;
+    for(let i = 0; i < 10; i++){ const m = (lo + hi) / 2, r = run(m); if(r.length >= want){ lo = m; pages = r; } else hi = m; }
+    if(pages.length < want) pages = run(lo);
+  }
+  return pages;
+}
+function docxShowPage(root, box, pages, n){
+  let paper = root.querySelector('.pvPaper');
+  if(!paper){ paper = document.createElement('div'); paper.className = 'pvPaper'; root.prepend(paper); }
+  root.querySelectorAll('section.docx').forEach(x => x.style.display = 'none');
+  const p = pages[n]; if(!p) return;
+  const k = Math.min(box.clientWidth / p.w, box.clientHeight / p.pageH) * 0.98;
+  const top = (box.clientHeight - p.pageH * k) / 2;
+  Object.assign(paper.style, {width: p.w * k + 'px', height: p.pageH * k + 'px', left: (box.clientWidth - p.w * k) / 2 + 'px', top: top + 'px'});
+  const s = p.s;
+  s.style.display = 'block'; s.style.top = top + 'px';
+  s.style.clipPath = 'inset(' + p.clipTop + 'px 0 ' + Math.max(0, p.H - p.clipBot) + 'px 0)';
+  s.style.transform = 'translateX(' + (-p.w * k / 2) + 'px) scale(' + k + ') translateY(' + (-p.start) + 'px)';
 }
 async function pvRender(){
   const box = $('pvBox');
@@ -798,15 +856,7 @@ async function pvRender(){
     pvShow('pvImg');
   } else if(pv.kind === 'docx'){
     pvShow('pvDoc');                                  // размеры видны только у показанного блока
-    const pages = $('pvDoc').querySelectorAll('section.docx');
-    pages.forEach((s, n) => {
-      s.style.display = n === pv.page - 1 ? 'block' : 'none';
-      if(n === pv.page - 1){
-        const k = Math.min(box.clientWidth / s.offsetWidth, box.clientHeight / s.offsetHeight);
-        s.style.transform = 'translateX(' + (-s.offsetWidth * k / 2) + 'px) scale(' + k + ')';
-      }
-    });
-    pvShow('pvDoc');
+    docxShowPage($('pvDoc'), box, pv.docxPages || [], pv.page - 1);
   } else if(pv.kind === 'txt'){
     $('pvDoc').scrollTop = (pv.page - 1) * $('pvDoc').clientHeight;
     pvShow('pvDoc');
