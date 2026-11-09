@@ -364,7 +364,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
     <div class="menu-body">
       <div class="menu-item" onclick="toggleMenu();go('s-home')"><span class="menu-item-ico">🏠</span>Главная</div>
       <div class="menu-item" onclick="toggleMenu();go('s-how')"><span class="menu-item-ico">📖</span>Инструкция</div>
-      <div class="menu-item" onclick="location.href='https://t.me/PrintKGMA_bot'"><span class="menu-item-ico">✈️</span>Telegram-бот</div>
+      <div class="menu-item" onclick="location.href=tgLink()"><span class="menu-item-ico">✈️</span>Telegram-бот</div>
       <div class="menu-item" onclick="location.href='/partner.html'"><span class="menu-item-ico">🤝</span>Сотрудничество</div>
       <div class="menu-item" onclick="toggleMenu();go('s-about')"><span class="menu-item-ico">ℹ️</span>О нас</div>
       <div class="menu-item" onclick="location.href='/oferta.html'"><span class="menu-item-ico">📜</span>Публичная оферта</div>
@@ -406,7 +406,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
       </div>
     </div>
 
-    <a class="install-card tg-card" href="https://t.me/PrintKGMA_bot" target="_blank" rel="noopener">
+    <a class="install-card tg-card" id="tg-card" href="https://t.me/PrintKGMA_bot" target="_blank" rel="noopener">
       <div class="install-ico"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#2AABEE"/><path d="M5.4 11.8l11.3-4.4c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-2.9 5.3-4.8c.2-.2 0-.3-.3-.1l-6.6 4.1-2.8-.9c-.6-.2-.6-.6.1-.9z" fill="#fff"/></svg></div>
       <div style="flex:1">
         <div class="install-ttl">Печать через Telegram</div>
@@ -1783,6 +1783,12 @@ function cycleTheme(){
 }
 (function(){var t='auto';try{t=localStorage.getItem('ak-theme')||'auto'}catch(e){}applyTheme(t);
   if(window.matchMedia) try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){var t2='auto';try{t2=localStorage.getItem('ak-theme')||'auto'}catch(e){}applyTheme(t2)})}catch(e){}})();
+</script>
+<script>
+// Ссылка на Telegram-бота с языком сайта: бот сразу ответит на нём
+function tgLink(){ const l = (window.I18N && I18N.lang) || 'ru'; return 'https://t.me/PrintKGMA_bot?start=lang_' + l; }
+(function(){ const set = () => { const a = document.getElementById('tg-card'); if(a) a.href = tgLink(); };
+  set(); if(window.I18N && I18N.onChange) I18N.onChange(set); })();
 </script>
 </body>
 </html>
