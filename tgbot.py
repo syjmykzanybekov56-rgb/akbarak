@@ -77,64 +77,208 @@ def btn(text, data=None, url=None):
     return b
 
 
+# ─────────────────────── Языки ───────────────────────
+# Язык студента: выбранный (/lang или ссылка с сайта t.me/PrintKGMA_bot?start=lang_en),
+# иначе — язык его Telegram. Тексты: TX[ключ] = (русский, кыргызский, английский).
+
+LANGS = ("ru", "ky", "en")
+
+TX = {
+    "hello": (
+        "👋 <b>АкБарак</b> — печать с телефона 24/7.\n\n"
+        "Отправь сюда файл — <b>PDF, Word (.docx), TXT или фото</b>. "
+        "Я посчитаю страницы и цену, ты оплатишь по ссылке, и лист выйдет из терминала.\n\n"
+        "💰 Цены: {prices}.\n📍 Терминал: КГМА.\n\n"
+        "/orders — мои заказы · /help — помощь · /lang — язык",
+        "👋 <b>АкБарак</b> — телефондон басып чыгаруу 24/7.\n\n"
+        "Бул жакка файл жибер — <b>PDF, Word (.docx), TXT же сүрөт</b>. "
+        "Мен барактарды жана баасын эсептейм, сен шилтеме аркылуу төлөйсүң, барак терминалдан чыгат.\n\n"
+        "💰 Баалар: {prices}.\n📍 Терминал: КММА.\n\n"
+        "/orders — буйрутмаларым · /help — жардам · /lang — тил",
+        "👋 <b>AkBarak</b> — print from your phone 24/7.\n\n"
+        "Send me a file — <b>PDF, Word (.docx), TXT or a photo</b>. "
+        "I'll count the pages and the price, you pay by link, and the sheet comes out of the terminal.\n\n"
+        "💰 Prices: {prices}.\n📍 Terminal: KSMA.\n\n"
+        "/orders — my orders · /help — help · /lang — language"),
+    "help": (
+        "<b>Как напечатать</b>\n1. Отправь файл сюда (скрепка 📎 → Файл). Можно несколько по очереди.\n"
+        "2. Выбери ч/б или цвет и число копий.\n3. Нажми «Оплатить» и оплати в банке.\n"
+        "4. Подойди к терминалу — лист выйдет сам. Я напишу, когда будет готово.\n\n"
+        "Word старого формата (.doc) пересохрани в .docx или PDF.\nВопросы: 0773 731 212 (WhatsApp).",
+        "<b>Кантип басып чыгаруу керек</b>\n1. Файлды бул жакка жибер (📎 → Файл). Бир нечесин кезек менен жиберсе болот.\n"
+        "2. Ак-кара же түстүү жана нуска санын танда.\n3. «Төлөө» баскычын басып, банк аркылуу төлө.\n"
+        "4. Терминалга бар — барак өзү чыгат. Даяр болгондо жазам.\n\n"
+        "Эски Word (.doc) файлын .docx же PDF кылып кайра сакта.\nСуроолор: 0773 731 212 (WhatsApp).",
+        "<b>How to print</b>\n1. Send the file here (📎 → File). You can send several, one by one.\n"
+        "2. Choose B/W or colour and the number of copies.\n3. Tap “Pay” and pay in your bank app.\n"
+        "4. Go to the terminal — the sheet comes out by itself. I'll message you when it's ready.\n\n"
+        "Old Word files (.doc): save as .docx or PDF first.\nQuestions: +996 773 731 212 (WhatsApp)."),
+    "prices": ("ч/б {bw} сом/стр", "ак-кара {bw} сом/бет", "B/W {bw} som/page"),
+    "prices_c": (", цвет {c} сом/стр", ", түстүү {c} сом/бет", ", colour {c} som/page"),
+    "lang_pick": ("Выбери язык:", "Тилди танда:", "Choose a language:"),
+    "lang_set": ("Готово! Буду писать по-русски.", "Даяр! Кыргызча жазам.", "Done! I'll write in English."),
+    "doc_old": ("Это старый формат Word (.doc) — я не могу точно посчитать страницы.\n"
+                "Открой файл и сохрани как <b>.docx</b> или <b>PDF</b>, потом пришли снова.",
+                "Бул эски Word (.doc) форматы — барактарды так эсептей албайм.\n"
+                "Файлды ачып, <b>.docx</b> же <b>PDF</b> кылып сакта да, кайра жибер.",
+                "This is an old Word format (.doc) — I can't count its pages exactly.\n"
+                "Open it and save as <b>.docx</b> or <b>PDF</b>, then send it again."),
+    "bad_ext": ("Формат {ext} не печатаю. Подойдут PDF, Word (.docx), TXT и фото.",
+                "{ext} форматын басып чыгарбайм. PDF, Word (.docx), TXT жана сүрөт болот.",
+                "I can't print {ext}. PDF, Word (.docx), TXT and photos are fine."),
+    "too_big": ("Файл больше {mb} МБ — Telegram не даёт мне его скачать.\nЗагрузи его на сайте: akbarak.vercel.app",
+                "Файл {mb} МБдан чоң — Telegram аны жүктөп алууга бербейт.\nСайтка жүктө: akbarak.vercel.app",
+                "The file is over {mb} MB — Telegram won't let me download it.\nUpload it on the website: akbarak.vercel.app"),
+    "counting": ("⏳ Получил файл, считаю страницы…", "⏳ Файл келди, барактарды эсептеп жатам…", "⏳ Got it, counting pages…"),
+    "dl_fail": ("Не получилось скачать файл. Попробуй ещё раз.", "Файлды жүктөй албадым. Дагы бир жолу аракет кыл.",
+                "Couldn't download the file. Please try again."),
+    "broken": ("Файл не открывается — возможно, он повреждён или защищён паролем.",
+               "Файл ачылбай жатат — бузулган же сырсөз менен корголгон болушу мүмкүн.",
+               "The file won't open — it may be damaged or password-protected."),
+    "pages": ("Страниц", "Барактар", "Pages"),
+    "print": ("Печать", "Басып чыгаруу", "Print"),
+    "bw": ("ч/б", "ак-кара", "B/W"), "color": ("цвет", "түстүү", "colour"),
+    "BW": ("Ч/Б", "Ак-кара", "B/W"), "COLOR": ("Цвет", "Түстүү", "Colour"),
+    "single": ("с одной стороны", "бир жагына", "one-sided"),
+    "duplex": ("с двух сторон", "эки жагына", "two-sided"),
+    "booklet": ("брошюра", "брошюра", "booklet"),
+    "s_single": ("1 сторона", "1 жагы", "1 side"), "s_duplex": ("2 стороны", "2 жагы", "2 sides"),
+    "s_booklet": ("Брошюра", "Брошюра", "Booklet"),
+    "copies": ("Копий", "Нуска", "Copies"),
+    "terminal": ("Терминал", "Терминал", "Terminal"),
+    "change": ("сменить", "алмаштыруу", "change"),
+    "total": ("Итого", "Жалпы", "Total"),
+    "som": ("сом", "сом", "som"),
+    "pay": ("Оплатить", "Төлөө", "Pay"),
+    "cancel": ("✖ Отменить", "✖ Жокко чыгаруу", "✖ Cancel"),
+    "cancelled": ("✖ Отменено", "✖ Жокко чыгарылды", "✖ Cancelled"),
+    "only_bw": ("На этом терминале только ч/б", "Бул терминалда ак-кара гана", "This terminal prints B/W only"),
+    "only_bw_pay": ("На этом терминале сейчас только ч/б. Цену пересчитал — нажми «Оплатить» ещё раз.",
+                    "Бул терминалда азыр ак-кара гана. Бааны кайра эсептедим — «Төлөө» баскычын дагы бас.",
+                    "This terminal prints B/W only right now. I've updated the price — tap “Pay” again."),
+    "stale": ("Этот заказ уже оформлен или устарел", "Бул буйрутма мурун түзүлгөн же эскирген",
+              "This order is already placed or expired"),
+    "pay_fail": ("Не удалось создать оплату. Попробуй через минуту.", "Төлөм түзүлгөн жок. Бир мүнөттөн кийин аракет кыл.",
+                 "Couldn't create the payment. Try again in a minute."),
+    "pay_go": ("🧾 Заказ <b>#{id}</b>. Нажми «Оплатить» — откроется оплата.\nПосле оплаты я сразу отправлю файл на терминал.",
+               "🧾 Буйрутма <b>#{id}</b>. «Төлөө» баскычын бас — төлөм ачылат.\nТөлөгөндөн кийин файлды дароо терминалга жиберем.",
+               "🧾 Order <b>#{id}</b>. Tap “Pay” to open the payment page.\nAs soon as you pay, I'll send the file to the terminal."),
+    "check": ("🔄 Я оплатил — проверить", "🔄 Төлөдүм — текшерүү", "🔄 I've paid — check"),
+    "not_found": ("Заказ не найден", "Буйрутма табылган жок", "Order not found"),
+    "not_paid": ("Оплата ещё не пришла. Если оплатил — подожди минуту.", "Төлөм али келе элек. Төлөсөң — бир мүнөт күт.",
+                 "Payment hasn't arrived yet. If you've paid, wait a minute."),
+    "rejected_now": ("Оплата не прошла. Отправь файл заново.", "Төлөм өткөн жок. Файлды кайра жибер.",
+                     "Payment failed. Please send the file again."),
+    "paid_now": ("✅ Оплачено! ", "✅ Төлөндү! ", "✅ Paid! "),
+    "no_orders": ("Заказов пока нет. Отправь файл — и начнём 🙂", "Азырынча буйрутма жок. Файл жибер — баштайбыз 🙂",
+                  "No orders yet. Send a file to get started 🙂"),
+    "my_orders": ("Мои заказы", "Буйрутмаларым", "My orders"),
+    "ev_paid": ("✅ Оплата получена! Заказ <b>#{id}</b> отправлен на терминал <b>{term}</b>.",
+                "✅ Төлөм келди! <b>#{id}</b> буйрутма <b>{term}</b> терминалына жиберилди.",
+                "✅ Payment received! Order <b>#{id}</b> has been sent to terminal <b>{term}</b>."),
+    "ev_printing": ("🖨 Печатаю заказ <b>#{id}</b>…", "🖨 <b>#{id}</b> буйрутманы басып жатам…", "🖨 Printing order <b>#{id}</b>…"),
+    "ev_printed": ("📄 Готово! Заказ <b>#{id}</b> напечатан — забери лист на терминале <b>{term}</b>. Спасибо! 🙌",
+                   "📄 Даяр! <b>#{id}</b> буйрутма басылды — баракты <b>{term}</b> терминалынан ал. Рахмат! 🙌",
+                   "📄 Done! Order <b>#{id}</b> is printed — pick it up at terminal <b>{term}</b>. Thank you! 🙌"),
+    "ev_failed": ("⚠️ Не получилось напечатать заказ <b>#{id}</b>. Мы уже знаем: перепечатаем или вернём деньги.\nВопросы: 0773 731 212.",
+                  "⚠️ <b>#{id}</b> буйрутманы басып чыгаруу мүмкүн болгон жок. Билебиз: кайра басабыз же акчаңды кайтарабыз.\nСуроолор: 0773 731 212.",
+                  "⚠️ Order <b>#{id}</b> couldn't be printed. We already know: we'll reprint it or refund you.\nQuestions: +996 773 731 212."),
+    "ev_rejected": ("Оплата заказа <b>#{id}</b> не прошла. Отправь файл заново, если хочешь напечатать.",
+                    "<b>#{id}</b> буйрутманын төлөмү өткөн жок. Басып чыгаргың келсе, файлды кайра жибер.",
+                    "Payment for order <b>#{id}</b> failed. Send the file again if you'd like to print it."),
+}
+STATUS_TX = {
+    "pending_payment": ("Ждём оплату", "Төлөм күтүлүүдө", "Awaiting payment"),
+    "new": ("В очереди", "Кезекте", "In queue"), "printing": ("Печатается", "Басылып жатат", "Printing"),
+    "printed": ("Готово", "Даяр", "Done"), "scan_ready": ("Скан готов", "Скан даяр", "Scan ready"),
+    "failed": ("Ошибка печати", "Басып чыгаруу катасы", "Print error"),
+    "cancelled": ("Отменён", "Жокко чыгарылды", "Cancelled"), "rejected": ("Не оплачен", "Төлөнгөн жок", "Not paid"),
+}
+
+
+def T(key, lang, **kw):
+    v = TX[key][LANGS.index(lang) if lang in LANGS else 0]
+    return v.format(**kw) if kw else v
+
+
+def status_name(st, lang):
+    return STATUS_TX.get(st, (st, st, st))[LANGS.index(lang) if lang in LANGS else 0]
+
+
+def lang_from_tg(code):
+    code = (code or "").lower()[:2]
+    if code == "ky":
+        return "ky"
+    if code in ("ru", "uk", "be", "kk", "uz", "tg"):
+        return "ru"
+    return "en" if code else "ru"
+
+
+def get_lang(chat_id, tg_code=None):
+    conn = H["db"]()
+    row = conn.execute("SELECT lang FROM tg_users WHERE chat_id=?", (str(chat_id),)).fetchone()
+    conn.close()
+    if row and row["lang"] in LANGS:
+        return row["lang"]
+    lang = lang_from_tg(tg_code)
+    set_lang(chat_id, lang)
+    return lang
+
+
+def set_lang(chat_id, lang):
+    conn = H["db"]()
+    conn.execute("INSERT INTO tg_users (chat_id, lang) VALUES (?,?) ON CONFLICT(chat_id) DO UPDATE SET lang=excluded.lang",
+                 (str(chat_id), lang))
+    conn.commit()
+    conn.close()
+
+
+def lang_kb():
+    return [[btn("🇷🇺 Русский", "l:0:ru"), btn("🇰🇬 Кыргызча", "l:0:ky"), btn("🇬🇧 English", "l:0:en")]]
+
+
 # ─────────────────────── Тексты ───────────────────────
 
-def price_line():
+def price_line(lang):
     P = H["PRICES"]
-    s = f"ч/б {P['print_bw']} сом/стр"
-    if H["COLOR_ENABLED"]:
-        s += f", цвет {P['print_color']} сом/стр"
+    s = T("prices", lang, bw=P["print_bw"])
+    if H["color_ok"](H["DEFAULT_TERMINAL"]):
+        s += T("prices_c", lang, c=P["print_color"])
     return s
 
 
-def hello():
-    return ("👋 <b>АкБарак</b> — печать с телефона 24/7.\n\n"
-            "Отправь сюда файл — <b>PDF, Word (.docx), TXT или фото</b>. "
-            "Я посчитаю страницы и цену, ты оплатишь по ссылке, и лист выйдет из терминала.\n\n"
-            f"💰 Цены: {price_line()}.\n"
-            "📍 Терминал: КГМА.\n\n"
-            "Команды: /orders — мои заказы, /help — помощь.")
+def hello(lang):
+    return T("hello", lang, prices=price_line(lang))
 
 
-HELP = ("<b>Как напечатать</b>\n"
-        "1. Отправь файл сюда (скрепка 📎 → Файл). Можно несколько по очереди.\n"
-        "2. Выбери ч/б или цвет и число копий.\n"
-        "3. Нажми «Оплатить» и оплати в банке.\n"
-        "4. Подойди к терминалу — лист выйдет сам. Я напишу, когда будет готово.\n\n"
-        "Word старого формата (.doc) пересохрани в .docx или PDF.\n"
-        "Вопросы: 0773 731 212 (WhatsApp).")
-
-
-def draft_text(d):
-    color = "цвет" if d["color"] else "ч/б"
-    sides = {"single": "с одной стороны", "duplex": "с двух сторон", "booklet": "брошюра"}[d["sides"]]
+def draft_text(d, lang):
     return (f"📄 <b>{esc(d['file_name'])}</b>\n"
-            f"Страниц: <b>{d['pages']}</b>\n\n"
-            f"Печать: {color}, {sides}\n"
-            f"Копий: {d['copies']}\n"
-            f"Терминал: {esc(d['terminal'])}\n\n"
-            f"💰 Итого: <b>{draft_total(d)} сом</b>")
+            f"{T('pages', lang)}: <b>{d['pages']}</b>\n\n"
+            f"{T('print', lang)}: {T('color' if d['color'] else 'bw', lang)}, {T(d['sides'], lang)}\n"
+            f"{T('copies', lang)}: {d['copies']}\n"
+            f"{T('terminal', lang)}: {esc(d['terminal'])}\n\n"
+            f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>")
 
 
 def draft_total(d):
     return H["order_total"]("print", "color" if d["color"] else "bw", d["sides"], d["pages"], d["copies"])
 
 
-def draft_kb(d):
+def draft_kb(d, lang):
     i = d["id"]
     kb = []
     if H["color_ok"](d["terminal"]):
-        kb.append([btn(("✅ " if not d["color"] else "") + "Ч/Б", f"d:{i}:bw"),
-                   btn(("✅ " if d["color"] else "") + "Цвет", f"d:{i}:color")])
-    kb.append([btn("➖", f"d:{i}:minus"), btn(f"Копий: {d['copies']}", f"d:{i}:noop"), btn("➕", f"d:{i}:plus")])
+        kb.append([btn(("✅ " if not d["color"] else "") + T("BW", lang), f"d:{i}:bw"),
+                   btn(("✅ " if d["color"] else "") + T("COLOR", lang), f"d:{i}:color")])
+    kb.append([btn("➖", f"d:{i}:minus"), btn(f"{T('copies', lang)}: {d['copies']}", f"d:{i}:noop"), btn("➕", f"d:{i}:plus")])
     if H["DUPLEX_ENABLED"] and d["pages"] > 1:
-        kb.append([btn(("✅ " if d["sides"] == k else "") + t, f"d:{i}:s_{k}")
-                   for k, t in (("single", "1 сторона"), ("duplex", "2 стороны"), ("booklet", "Брошюра"))])
+        kb.append([btn(("✅ " if d["sides"] == k else "") + T("s_" + k, lang), f"d:{i}:s_{k}")
+                   for k in ("single", "duplex", "booklet")])
     terms = terminal_ids()
     if len(terms) > 1:
-        kb.append([btn(f"📍 Терминал: {d['terminal']} (сменить)", f"d:{i}:term")])
-    kb.append([btn(f"💳 Оплатить {draft_total(d)} сом", f"d:{i}:pay")])
-    kb.append([btn("✖ Отменить", f"d:{i}:cancel")])
+        kb.append([btn(f"📍 {T('terminal', lang)}: {d['terminal']} ({T('change', lang)})", f"d:{i}:term")])
+    kb.append([btn(f"💳 {T('pay', lang)} {draft_total(d)} {T('som', lang)}", f"d:{i}:pay")])
+    kb.append([btn(T("cancel", lang), f"d:{i}:cancel")])
     return kb
 
 
@@ -165,20 +309,18 @@ def save_draft(d):
 
 # ─────────────────────── Приём файла ───────────────────────
 
-def on_file(chat_id, file_id, file_name, size, is_photo=False):
+def on_file(chat_id, file_id, file_name, size, is_photo=False, lang="ru"):
     ext = os.path.splitext(file_name)[1].lower()
     if ext == ".doc":
-        return send(chat_id, "Это старый формат Word (.doc) — я не могу точно посчитать страницы.\n"
-                             "Открой файл и сохрани как <b>.docx</b> или <b>PDF</b>, потом пришли снова.")
+        return send(chat_id, T("doc_old", lang))
     if ext not in (".pdf", ".docx", ".txt", ".jpg", ".jpeg", ".png"):
-        return send(chat_id, f"Формат {esc(ext or 'без расширения')} не печатаю. Подойдут PDF, Word (.docx), TXT и фото.")
+        return send(chat_id, T("bad_ext", lang, ext=esc(ext or "?")))
     if size and size > MAX_TG_MB * 1024 * 1024:
-        return send(chat_id, f"Файл больше {MAX_TG_MB} МБ — Telegram не даёт мне его скачать.\n"
-                             "Загрузи его на сайте: akbarak.vercel.app")
-    wait = send(chat_id, "⏳ Получил файл, считаю страницы…")
+        return send(chat_id, T("too_big", lang, mb=MAX_TG_MB))
+    wait = send(chat_id, T("counting", lang))
     info = tg("getFile", file_id=file_id)
     if not info or not info.get("file_path"):
-        return send(chat_id, "Не получилось скачать файл. Попробуй ещё раз.")
+        return send(chat_id, T("dl_fail", lang))
     path = os.path.join(H["FILES_DIR"], f"{uuid.uuid4().hex}{ext}")
     try:
         r = requests.get(f"https://api.telegram.org/file/bot{TOKEN}/{info['file_path']}", timeout=60)
@@ -187,7 +329,7 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False):
             f.write(r.content)
     except Exception as e:
         log.error("download: %s", e)
-        return send(chat_id, "Не получилось скачать файл. Попробуй ещё раз.")
+        return send(chat_id, T("dl_fail", lang))
     if ext == ".pdf":
         pages = H["pdf_page_count"](path)
     elif ext == ".docx":
@@ -198,7 +340,7 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False):
         pages = 1
     if not pages:
         H["remove"](path)
-        return send(chat_id, "Файл не открывается — возможно, он повреждён или защищён паролем.")
+        return send(chat_id, T("broken", lang))
     pages = max(1, min(H["MAX_PAGES"], pages))
     color = 1 if (is_photo or ext in (".jpg", ".jpeg", ".png")) and H["color_ok"](H["DEFAULT_TERMINAL"]) else 0
     conn = H["db"]()
@@ -211,7 +353,7 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False):
     conn.close()
     if wait:
         tg("deleteMessage", chat_id=chat_id, message_id=wait["message_id"])
-    m = send(chat_id, draft_text(d), draft_kb(d))
+    m = send(chat_id, draft_text(d, lang), draft_kb(d, lang))
     if m:
         d["msg_id"] = m["message_id"]
         save_draft(d)
@@ -229,6 +371,13 @@ def on_callback(cq):
         oid = int(sid)
     except ValueError:
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
+    lang = get_lang(chat_id, (cq.get("from") or {}).get("language_code"))
+
+    if kind == "l" and action in LANGS:                # выбор языка
+        set_lang(chat_id, action)
+        edit(chat_id, msg_id, T("lang_set", action))
+        tg("answerCallbackQuery", callback_query_id=cq["id"])
+        return send(chat_id, hello(action))
 
     if kind == "o":                                    # проверка оплаты
         conn = H["db"]()
@@ -236,18 +385,18 @@ def on_callback(cq):
                            (oid, str(chat_id))).fetchone()
         conn.close()
         if not row:
-            answer = "Заказ не найден"
+            answer = T("not_found", lang)
         elif row["status"] == "pending_payment":
-            answer = "Оплата ещё не пришла. Если оплатил — подожди минуту."
+            answer = T("not_paid", lang)
         elif row["status"] == "rejected":
-            answer = "Оплата не прошла. Отправь файл заново."
+            answer = T("rejected_now", lang)
         else:
-            answer = "✅ Оплачено! " + H["STATUS_RU"].get(row["status"], row["status"])
+            answer = T("paid_now", lang) + status_name(row["status"], lang)
         return tg("answerCallbackQuery", callback_query_id=cq["id"], text=answer, show_alert=True)
 
     d = get_draft(oid, chat_id)
     if not d or d.get("order_id"):
-        return tg("answerCallbackQuery", callback_query_id=cq["id"], text="Этот заказ уже оформлен или устарел")
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], text=T("stale", lang))
 
     if action == "bw":
         d["color"] = 0
@@ -265,32 +414,31 @@ def on_callback(cq):
         d["terminal"] = terms[(i + 1) % len(terms)]
         if d["color"] and not H["color_ok"](d["terminal"]):
             d["color"] = 0
-            answer = "На этом терминале только ч/б"
+            answer = T("only_bw", lang)
     elif action == "cancel":
         H["remove"](d["file_path"])
         conn = H["db"]()
         conn.execute("DELETE FROM tg_drafts WHERE id=?", (d["id"],))
         conn.commit()
         conn.close()
-        edit(chat_id, msg_id, f"✖ Отменено: {esc(d['file_name'])}")
+        edit(chat_id, msg_id, f"{T('cancelled', lang)}: {esc(d['file_name'])}")
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action == "pay":
-        return pay(cq, d, chat_id, msg_id)
+        return pay(cq, d, chat_id, msg_id, lang)
     elif action == "noop":
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
 
     save_draft(d)
-    edit(chat_id, msg_id, draft_text(d), draft_kb(d))
+    edit(chat_id, msg_id, draft_text(d, lang), draft_kb(d, lang))
     tg("answerCallbackQuery", callback_query_id=cq["id"], text=answer)
 
 
-def pay(cq, d, chat_id, msg_id):
+def pay(cq, d, chat_id, msg_id, lang="ru"):
     if d["color"] and not H["color_ok"](d["terminal"]):
         d["color"] = 0
         save_draft(d)
-        edit(chat_id, msg_id, draft_text(d), draft_kb(d))
-        return tg("answerCallbackQuery", callback_query_id=cq["id"], show_alert=True,
-                  text="На этом терминале сейчас только ч/б. Цену пересчитал — нажми «Оплатить» ещё раз.")
+        edit(chat_id, msg_id, draft_text(d, lang), draft_kb(d, lang))
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], show_alert=True, text=T("only_bw_pay", lang))
     total = draft_total(d)
     token = secrets.token_urlsafe(16)
     conn = H["db"]()
@@ -317,31 +465,30 @@ def pay(cq, d, chat_id, msg_id):
         conn.commit()
         conn.close()
         return tg("answerCallbackQuery", callback_query_id=cq["id"],
-                  text="Не удалось создать оплату. Попробуй через минуту.", show_alert=True)
+                  text=T("pay_fail", lang), show_alert=True)
     conn = H["db"]()
     conn.execute("UPDATE orders SET gopay_payment_id=? WHERE id=?", (payment.get("payment_id"), order_id))
     conn.commit()
     conn.close()
     edit(chat_id, msg_id,
-         draft_text(d) + f"\n\n🧾 Заказ <b>#{order_id}</b>. Нажми «Оплатить» — откроется оплата.\n"
-                         "После оплаты я сразу отправлю файл на терминал.",
-         [[btn(f"💳 Оплатить {total} сом", url=payment["checkout_url"])],
-          [btn("🔄 Я оплатил — проверить", f"o:{order_id}:check")]])
+         draft_text(d, lang) + "\n\n" + T("pay_go", lang, id=order_id),
+         [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"])],
+          [btn(T("check", lang), f"o:{order_id}:check")]])
     tg("answerCallbackQuery", callback_query_id=cq["id"])
 
 
 # ─────────────────────── Команды ───────────────────────
 
-def my_orders(chat_id):
+def my_orders(chat_id, lang="ru"):
     conn = H["db"]()
     rows = conn.execute("SELECT id, file_name, total, status, terminal_id FROM orders WHERE tg_chat_id=? "
                         "ORDER BY id DESC LIMIT 8", (str(chat_id),)).fetchall()
     conn.close()
     if not rows:
-        return send(chat_id, "Заказов пока нет. Отправь файл — и начнём 🙂")
-    lines = [f"#{r['id']} · {esc(r['file_name'])} · {r['total']} сом · <b>{H['STATUS_RU'].get(r['status'], r['status'])}</b>"
+        return send(chat_id, T("no_orders", lang))
+    lines = [f"#{r['id']} · {esc(r['file_name'])} · {r['total']} {T('som', lang)} · <b>{status_name(r['status'], lang)}</b>"
              for r in rows]
-    send(chat_id, "<b>Мои заказы</b>\n" + "\n".join(lines))
+    send(chat_id, f"<b>{T('my_orders', lang)}</b>\n" + "\n".join(lines))
 
 
 def on_update(u):
@@ -351,35 +498,34 @@ def on_update(u):
     chat_id = (m.get("chat") or {}).get("id")
     if not chat_id or (m.get("chat") or {}).get("type") != "private":
         return
+    text = (m.get("text") or "").strip()
+    # ссылка с сайта: t.me/PrintKGMA_bot?start=lang_en → /start lang_en
+    if text.startswith("/start lang_") and text[12:14] in LANGS:
+        set_lang(chat_id, text[12:14])
+    lang = get_lang(chat_id, (m.get("from") or {}).get("language_code"))
     if "document" in m:
         doc = m["document"]
-        return on_file(chat_id, doc["file_id"], doc.get("file_name") or "файл", doc.get("file_size"))
+        return on_file(chat_id, doc["file_id"], doc.get("file_name") or "file", doc.get("file_size"), lang=lang)
     if "photo" in m:
         ph = m["photo"][-1]                             # самое большое
-        return on_file(chat_id, ph["file_id"], f"фото_{m.get('message_id')}.jpg", ph.get("file_size"), True)
-    text = (m.get("text") or "").strip()
+        return on_file(chat_id, ph["file_id"], f"photo_{m.get('message_id')}.jpg", ph.get("file_size"), True, lang=lang)
     if text.startswith("/orders"):
-        return my_orders(chat_id)
+        return my_orders(chat_id, lang)
     if text.startswith("/help"):
-        return send(chat_id, HELP)
-    send(chat_id, hello())
+        return send(chat_id, T("help", lang))
+    if text.startswith("/lang"):
+        return send(chat_id, T("lang_pick", lang), lang_kb())
+    send(chat_id, hello(lang), lang_kb() if text == "/start" else None)
 
 
 # ─────────────────────── События заказа → сообщение студенту ───────────────────────
 
-EVENT_TEXT = {
-    "paid": "✅ Оплата получена! Заказ <b>#{id}</b> отправлен на терминал <b>{term}</b>.",
-    "printing": "🖨 Печатаю заказ <b>#{id}</b>…",
-    "printed": "📄 Готово! Заказ <b>#{id}</b> напечатан — забери лист на терминале <b>{term}</b>. Спасибо! 🙌",
-    "failed": "⚠️ Не получилось напечатать заказ <b>#{id}</b>. Мы уже знаем: перепечатаем или вернём деньги.\n"
-              "Вопросы: 0773 731 212.",
-    "rejected": "Оплата заказа <b>#{id}</b> не прошла. Отправь файл заново, если хочешь напечатать.",
-}
+EVENTS = ("paid", "printing", "printed", "failed", "rejected")
 
 
 def order_event(order_ids, event):
     """Вызывается из server.py, когда заказ оплачен / печатается / напечатан / ошибка."""
-    if not TOKEN or event not in EVENT_TEXT:
+    if not TOKEN or event not in EVENTS:
         return
     ids = list(order_ids) if isinstance(order_ids, (list, tuple, set)) else [order_ids]
 
@@ -391,7 +537,8 @@ def order_event(order_ids, event):
                                 "AND tg_chat_id IS NOT NULL", ids).fetchall()
             conn.close()
             for r in rows:
-                send(r["tg_chat_id"], EVENT_TEXT[event].format(id=r["id"], term=esc(r["terminal_id"])))
+                lang = get_lang(r["tg_chat_id"])
+                send(r["tg_chat_id"], T("ev_" + event, lang, id=r["id"], term=esc(r["terminal_id"])))
         except Exception as e:
             log.error("order_event: %s", e)
 
@@ -419,6 +566,7 @@ def register(app, helpers):
         id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT, msg_id INTEGER, file_path TEXT, file_name TEXT,
         pages INTEGER, copies INTEGER DEFAULT 1, color INTEGER DEFAULT 0, sides TEXT DEFAULT 'single',
         terminal TEXT, created_at TEXT, order_id INTEGER)""")
+    conn.execute("CREATE TABLE IF NOT EXISTS tg_users (chat_id TEXT PRIMARY KEY, lang TEXT)")
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN tg_chat_id TEXT")
     except Exception:
@@ -456,12 +604,21 @@ def register(app, helpers):
             return jsonify({"success": False, "error": hint or "Telegram не отвечает"}), 400
         ok = tg("setWebhook", url=base.rstrip("/") + "/tg/webhook", secret_token=SECRET,
                 allowed_updates=["message", "callback_query"], drop_pending_updates=True)
-        tg("setMyCommands", commands=[{"command": "start", "description": "Как печатать"},
-                                      {"command": "orders", "description": "Мои заказы"},
-                                      {"command": "help", "description": "Помощь"}])
-        tg("setMyDescription", description="Печать с телефона на терминалах АкБарак. "
-                                           "Отправь файл — посчитаю цену, оплатишь, и лист выйдет из терминала.")
-        tg("setMyShortDescription", short_description="Печать с телефона 24/7 · терминалы АкБарак")
+        CMDS = {"ru": ("Как печатать", "Мои заказы", "Помощь", "Язык"),
+                "ky": ("Кантип басуу", "Буйрутмаларым", "Жардам", "Тил"),
+                "en": ("How to print", "My orders", "Help", "Language")}
+        DESC = {"ru": ("Печать с телефона на терминалах АкБарак. Отправь файл — посчитаю цену, оплатишь, и лист выйдет из терминала.",
+                       "Печать с телефона 24/7 · терминалы АкБарак"),
+                "ky": ("АкБарак терминалдарында телефондон басып чыгаруу. Файл жибер — баасын эсептейм, төлөйсүң, барак терминалдан чыгат.",
+                       "Телефондон басып чыгаруу 24/7 · АкБарак"),
+                "en": ("Print from your phone at AkBarak terminals. Send a file — I'll count the price, you pay, and the sheet comes out.",
+                       "Print from your phone 24/7 · AkBarak terminals")}
+        for lc, (c1, c2, c3, c4) in CMDS.items():
+            extra = {} if lc == "ru" else {"language_code": lc}
+            tg("setMyCommands", commands=[{"command": "start", "description": c1}, {"command": "orders", "description": c2},
+                                          {"command": "help", "description": c3}, {"command": "lang", "description": c4}], **extra)
+            tg("setMyDescription", description=DESC[lc][0], **extra)
+            tg("setMyShortDescription", short_description=DESC[lc][1], **extra)
         if not ok:
             return jsonify({"success": False, "bot": me.get("username"), "error": LAST_ERROR["text"] or "setWebhook не прошёл"}), 400
         return jsonify({"success": True, "bot": me.get("username"), "webhook": base.rstrip("/") + "/tg/webhook"})
