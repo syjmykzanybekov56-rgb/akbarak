@@ -39,6 +39,16 @@ def _default_printer():
         return "Pantum M6500W series"
 
 PRINTER_NAME = _default_printer()
+
+
+def refresh_printer():
+    """Перед каждым заказом перечитываем принтер «по умолчанию»: если его поменяли
+    в Windows, программу не нужно перезапускать."""
+    global PRINTER_NAME
+    name = _default_printer()
+    if name and name != PRINTER_NAME:
+        log.info("Принтер по умолчанию сменился: %s → %s", PRINTER_NAME, name)
+        PRINTER_NAME = name
 def _find_sumatra():
     """SumatraPDF ищем рядом с программой и в обычных местах установки — путь не зависит от имени пользователя."""
     here = os.path.dirname(os.path.abspath(__file__))
@@ -56,7 +66,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-09 v9 брошюра pypdf7"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-09 v9 понятные ошибки принтера"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -150,7 +160,7 @@ PRINTER_FLAGS = [  # флаги Windows PRINTER_STATUS_*
     (0x00000010, "закончилась бумага"),
     (0x00000040, "нужна бумага (ручная подача)"),
     (0x00000080, "принтер не на связи"),
-    (0x00000400, "принтер выключен или не на связи"),
+    (0x00001000, "принтер недоступен"),          # 0x400 — это «печатает», не ошибка
     (0x00000800, "переполнен выходной лоток"),
     (0x00040000, "закончился тонер"),
     (0x00400000, "открыта крышка"),
@@ -410,12 +420,20 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single"):
     if page_range:
         settings += f",{page_range}"
     cmd = [SUMATRA, "-print-to", PRINTER_NAME, "-print-settings", settings, "-silent", path]
-    log.info("Печать: %s", " ".join(cmd))
-    try:
-        result = subprocess.run(cmd, timeout=180)
-    except subprocess.TimeoutExpired:
-        return "SumatraPDF не ответил за 3 минуты"
-    return None if result.returncode == 0 else f"SumatraPDF вернул код {result.returncode}"
+    for attempt in (1, 2):
+        log.info("Печать (попытка %s): %s", attempt, " ".join(cmd))
+        try:
+            result = subprocess.run(cmd, timeout=180)
+        except subprocess.TimeoutExpired:
+            return "SumatraPDF не ответил за 3 минуты"
+        if result.returncode == 0:
+            return None
+        log.warning("SumatraPDF вернул код %s", result.returncode)
+        time.sleep(3)
+    st = printer_status()
+    why = f" Windows сообщает: {st}." if st != "ok" else ""
+    return (f"Windows не принял задание на принтер «{PRINTER_NAME}» (SumatraPDF, код {result.returncode}).{why} "
+            "Проверьте: принтер включён, в Windows «Готов», пробная страница печатается.")
 
 
 def _remove(*paths):
@@ -748,6 +766,7 @@ def handle_print(oid, order):
 
 def process(order):
     oid = order["id"]
+    refresh_printer()
     if oid in finished:  # уже напечатан, просто сообщаем серверу ещё раз
         if report(oid, "done"):
             finished.discard(oid)
