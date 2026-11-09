@@ -166,6 +166,10 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
 .preview-ext{background:rgba(245,166,35,0.15);color:var(--gold);font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px}
 .preview-img{width:100%;max-height:280px;object-fit:contain;display:block;background:#111}
 .preview-canvas{width:100%;display:block;background:#111}
+#docx-box{position:relative;width:100%;aspect-ratio:210/297;max-height:70vh;background:#E6EBF2;overflow:hidden}
+#docx-root{position:absolute;inset:0;overflow:hidden}
+#docx-root section.docx{position:absolute;left:50%;top:0;transform-origin:top left;background:transparent;box-shadow:none;margin:0}
+#docx-root .pvPaper{position:absolute;background:#fff;box-shadow:0 2px 10px rgba(14,35,64,.25)}
 .preview-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,0.2)}
 .nav-btn{width:34px;height:34px;border-radius:50%;background:var(--gold);border:none;color:#000;font-size:16px;cursor:pointer;font-weight:900}
 .nav-info{font-size:12px;font-weight:800;color:rgba(var(--fg),0.5)}
@@ -490,6 +494,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
       <img id="preview-img" class="preview-img" style="display:none">
       <div id="preview-pdf" style="display:none">
         <canvas id="pdf-canvas" class="preview-canvas"></canvas>
+        <div id="docx-box" style="display:none"><div id="docx-root"></div></div>
         <div class="preview-nav">
           <button class="nav-btn" onclick="prevPage()">‹</button>
           <span class="nav-info" id="pdf-info">1 / 1</span>
@@ -1299,13 +1304,16 @@ function handleFiles(input){
     reader.onload = e => {
       img.src = e.target.result;
       img.style.display = 'block';
-      pdf.style.display = 'none';
+      pdf.style.display = 'none'; docxView = null;
       wrap.classList.add('show');
     };
     reader.readAsDataURL(file);
   } else if(ext === 'pdf'){
     img.style.display = 'none';
     pdf.style.display = 'block';
+    docxView = null;
+    document.getElementById('docx-box').style.display = 'none';
+    document.getElementById('pdf-canvas').style.display = 'block';
     wrap.classList.add('show');
     document.getElementById('preview-footer').textContent = 'Листай страницы кнопками ‹ ›';
     const reader = new FileReader();
@@ -1325,6 +1333,7 @@ function handleFiles(input){
       recalcPrint();
       foot.innerHTML = (ext==='docx'?'Word-документ':'Текстовый файл') + ': <b>' + n + ' стр.</b> — цена посчитана по ним';
     });
+    if(ext === 'docx') renderDocxPreview(file);
   } else {
     wrap.classList.remove('show');
   }
@@ -1407,8 +1416,94 @@ async function renderPage(n){
   document.getElementById('pdf-info').textContent = n+' / '+pdfTotal;
 }
 
-function prevPage(){ if(pdfPage>1){ pdfPage--; renderPage(pdfPage); } }
-function nextPage(){ if(pdfPage<pdfTotal){ pdfPage++; renderPage(pdfPage); } }
+function prevPage(){ if(docxView) return docxGo(-1); if(pdfPage>1){ pdfPage--; renderPage(pdfPage); } }
+function nextPage(){ if(docxView) return docxGo(1); if(pdfPage<pdfTotal){ pdfPage++; renderPage(pdfPage); } }
+
+// Word-документ: docx-preview рисует раздел одной длинной «простынёй» — режем его на листы А4
+// по границам абзацев и таблиц, чтобы студент листал страницы как в PDF.
+function docxPages(root, want){
+  // want — сколько страниц насчитал сервер (по нему считается цена). Если шрифт в браузере
+  // уже, чем в Word, страниц выходит меньше — тогда чуть уменьшаем «высоту листа», чтобы совпало.
+  const secs = [...root.querySelectorAll('section.docx')].map(s => {
+    s.style.display = 'block'; s.style.transform = 'none'; s.style.clipPath = 'none';
+    const cs = getComputedStyle(s), w = s.offsetWidth, H = s.offsetHeight;
+    const art = s.querySelector('article') || s;
+    return {s, w, H, pageH: parseFloat(cs.minHeight) || w * 297 / 210,
+      padT: parseFloat(cs.paddingTop) || 0, padB: parseFloat(cs.paddingBottom) || 0,
+      blocks: [...art.children].filter(b => b.offsetHeight > 0).map(b => ({top: b.offsetTop, bot: b.offsetTop + b.offsetHeight,
+        lh: parseFloat(getComputedStyle(b).lineHeight) || 0, p: b.tagName === 'P'}))};
+  });
+  const run = f => {
+    const out = [];
+    secs.forEach(({s, w, H, pageH, padT, padB, blocks}) => {
+      const body = (pageH - padT - padB) * f;
+      let start = 0, clipTop = 0, limit = padT + body, first = true;
+      const cut = y => { out.push({s, w, H, pageH, start, clipTop, clipBot: y}); start = y - padT; clipTop = y; limit = y + body; };
+      blocks.forEach(({top, bot, lh, p}) => {
+        const splittable = p && lh > 0 && bot - top > lh * 2.5;
+        if(bot > limit && !first && !(splittable && limit - top >= lh * 2)) cut(top);
+        let guard = 0;   // длинный абзац переносится на следующий лист построчно, как в Word
+        while(bot > limit && splittable && limit - Math.max(top, clipTop) >= lh && guard++ < 60){
+          const from = Math.max(top, clipTop);
+          cut(from + Math.floor((limit - from) / lh) * lh);
+        }
+        first = false;
+      });
+      out.push({s, w, H, pageH, start, clipTop, clipBot: Math.min(H, start + pageH)});
+    });
+    return out;
+  };
+  let pages = run(1);
+  if(want && pages.length < want){
+    let lo = 0.45, hi = 1;
+    for(let i = 0; i < 10; i++){ const m = (lo + hi) / 2, r = run(m); if(r.length >= want){ lo = m; pages = r; } else hi = m; }
+    if(pages.length < want) pages = run(lo);
+  }
+  return pages;
+}
+function docxShowPage(root, box, pages, n){
+  let paper = root.querySelector('.pvPaper');
+  if(!paper){ paper = document.createElement('div'); paper.className = 'pvPaper'; root.prepend(paper); }
+  root.querySelectorAll('section.docx').forEach(x => x.style.display = 'none');
+  const p = pages[n]; if(!p) return;
+  const k = Math.min(box.clientWidth / p.w, box.clientHeight / p.pageH) * 0.98;
+  const top = (box.clientHeight - p.pageH * k) / 2;
+  Object.assign(paper.style, {width: p.w * k + 'px', height: p.pageH * k + 'px', left: (box.clientWidth - p.w * k) / 2 + 'px', top: top + 'px'});
+  const s = p.s;
+  s.style.display = 'block'; s.style.top = top + 'px';
+  s.style.clipPath = 'inset(' + p.clipTop + 'px 0 ' + Math.max(0, p.H - p.clipBot) + 'px 0)';
+  s.style.transform = 'translateX(' + (-p.w * k / 2) + 'px) scale(' + k + ') translateY(' + (-p.start) + 'px)';
+}
+
+// Предпросмотр Word на телефоне: те же листы А4, что и на экране терминала
+let docxView = null;
+function loadScriptOnce(src){
+  return new Promise((ok, no) => { if(document.querySelector('script[src="'+src+'"]')) return ok();
+    const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = no; document.head.appendChild(sc); });
+}
+async function renderDocxPreview(file){
+  const box = document.getElementById('docx-box'), root = document.getElementById('docx-root');
+  try{
+    await loadJSZip();
+    await loadScriptOnce('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js');
+    document.getElementById('preview-pdf').style.display = 'block';
+    document.getElementById('pdf-canvas').style.display = 'none';
+    box.style.display = 'block'; root.innerHTML = '';
+    await docx.renderAsync(file, root, null, {inWrapper:false, breakPages:true, ignoreLastRenderedPageBreak:false});
+    const want = await countDocPages(file, 'docx');
+    docxView = {pages: docxPages(root, want), page: 0};
+    docxGo(0);
+  }catch(e){
+    console.error(e); box.style.display = 'none'; document.getElementById('preview-pdf').style.display = 'none'; docxView = null;
+  }
+}
+function docxGo(d){
+  if(!docxView) return;
+  const n = docxView.pages.length;
+  docxView.page = Math.max(0, Math.min(n-1, docxView.page + d));
+  docxShowPage(document.getElementById('docx-root'), document.getElementById('docx-box'), docxView.pages, docxView.page);
+  document.getElementById('pdf-info').textContent = (docxView.page+1) + ' / ' + n;
+}
 
 function handlePhoto(input){
   const file = input.files[0];
