@@ -1130,103 +1130,193 @@ def _esc(s):
             .replace(">", "&gt;").replace('"', "&quot;"))
 
 
+TZ_OFF = timedelta(hours=int(os.getenv("TZ_OFFSET_HOURS", "6")))   # Бишкек UTC+6
+PAID_STATUSES = ("new", "printing", "printed", "scan_ready", "failed")
+SERVICE_RU = {"print": "Печать", "copy": "Копия", "scan": "Скан", "photo": "Фото", "template": "Шаблон"}
+HERE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _local(ts):
+    """Время из базы (UTC сервера) → местное время Бишкека."""
+    try:
+        return datetime.strptime(ts, TIME_FMT) + TZ_OFF
+    except (TypeError, ValueError):
+        return None
+
+
+def _admin_key_ok():
+    return bool(ADMIN_KEY) and secrets.compare_digest(_given_key() or "", ADMIN_KEY)
+
+
 @app.route("/admin", methods=["GET"])
 def admin():
-    if not ADMIN_KEY or request.args.get("key", "") != ADMIN_KEY:
+    if not _admin_key_ok():
         return "<h2>Нет доступа.</h2>", 403
+    resp = send_file(os.path.join(HERE_DIR, "server_assets", "admin.html"), mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
 
+
+def _order_out(o):
+    d = dict(o)
+    lc, lp = _local(d.get("created_at")), _local(d.get("printed_at"))
+    d["created_local"] = lc.strftime("%d.%m %H:%M") if lc else ""
+    d["printed_local"] = lp.strftime("%H:%M") if lp else ""
+    d["status_ru"] = STATUS_RU.get(d["status"], d["status"])
+    d["service_ru"] = SERVICE_RU.get(d.get("order_type") or "print", d.get("order_type") or "")
+    return d
+
+
+@app.route("/admin/api/summary", methods=["GET"])
+@require_admin
+def admin_summary():
+    local_now = datetime.now() + TZ_OFF
+    today = local_now.date()
     conn = db()
-    orders = [dict(o) for o in conn.execute(f"SELECT {PUBLIC_COLS} FROM orders ORDER BY id DESC LIMIT 100")]
-    terminals = [dict(t) for t in conn.execute("SELECT * FROM terminals ORDER BY id")]
+    rows = conn.execute(
+        "SELECT id, total, pages, copies, status, refund, payment, order_type, print_type, terminal_id, created_at "
+        "FROM orders WHERE created_at >= ?", (ago(hours=24 * 31),)).fetchall()
+    terms = [dict(t) for t in conn.execute("SELECT * FROM terminals ORDER BY id")]
+    queue = conn.execute("SELECT status, COUNT(*) c FROM orders WHERE status IN "
+                         "('pending_payment','new','printing','failed') GROUP BY status").fetchall()
+    refunds = conn.execute("SELECT COUNT(*) c FROM orders WHERE refund='needed'").fetchone()["c"]
+    total_all = conn.execute("SELECT COALESCE(SUM(total),0) s, COUNT(*) c FROM orders WHERE status IN "
+                             "('new','printing','printed','scan_ready','failed') AND COALESCE(refund,'')!='done'").fetchone()
     conn.close()
 
-    earned = [o for o in orders if o["status"] in ("printed", "scan_ready")]
-    today = datetime.now().strftime("%Y-%m-%d")
-    today_orders = [o for o in orders if str(o["created_at"]).startswith(today)]
-    stats = [
-        (len(today_orders), "Сегодня", "#F5A623"),
-        (sum(o["total"] for o in earned if str(o["created_at"]).startswith(today)), "Выручка сегодня, с", "#F5A623"),
-        (sum(o["total"] for o in earned), "Выручка (100 посл.), с", "#F5A623"),
-        (sum(1 for o in orders if o["status"] == "new"), "В очереди", "#F5A623"),
-        (sum(1 for o in orders if o["status"] == "failed"), "Ошибки печати", "#ef4444"),
-        (sum(1 for o in orders if o["refund"] == "needed"), "Нужен возврат", "#ef4444"),
-    ]
-    colors = {"new": "#F5A623", "printing": "#F5A623", "printed": "#22c55e", "scan_ready": "#22c55e",
-              "pending_payment": "#7A9AB8", "rejected": "#7A9AB8", "cancelled": "#7A9AB8", "failed": "#ef4444"}
+    def bucket():
+        return {"revenue": 0, "orders": 0, "sheets": 0, "free": 0}
+    periods = {"today": bucket(), "yesterday": bucket(), "week": bucket(), "month": bucket()}
+    days = {(today - timedelta(days=i)).isoformat(): 0 for i in range(13, -1, -1)}
+    hours = [0] * 24
+    services, terminals_rev = {}, {}
+    for r in rows:
+        lc = _local(r["created_at"])
+        if not lc:
+            continue
+        paid = r["status"] in PAID_STATUSES and (r["refund"] or "") != "done"
+        if not paid:
+            continue
+        money = r["total"] or 0
+        sheets = (r["pages"] or 0) * (r["copies"] or 1) if r["status"] in ("printed", "scan_ready") else 0
+        age = (today - lc.date()).days
+        for name, ok in (("today", age == 0), ("yesterday", age == 1), ("week", age < 7), ("month", age < 30)):
+            if ok:
+                b = periods[name]
+                b["revenue"] += money; b["orders"] += 1; b["sheets"] += sheets
+                b["free"] += 1 if r["payment"] == "free" else 0
+        if lc.date().isoformat() in days:
+            days[lc.date().isoformat()] += money
+        if age == 0:
+            hours[lc.hour] += 1
+        if age < 30:
+            key = SERVICE_RU.get(r["order_type"] or "print", r["order_type"] or "—")
+            if (r["order_type"] or "print") in ("print", "copy"):
+                key += " цвет" if r["print_type"] == "color" else " ч/б"
+            sv = services.setdefault(key, {"orders": 0, "revenue": 0})
+            sv["orders"] += 1; sv["revenue"] += money
+            tv = terminals_rev.setdefault(r["terminal_id"] or "—", {"orders": 0, "revenue": 0, "today": 0})
+            tv["orders"] += 1; tv["revenue"] += money; tv["today"] += 1 if age == 0 else 0
 
-    def btn(action, oid, label, color):
-        return (f'<button onclick="act(\'{action}\',{oid})" style="background:{color};color:#fff;border:none;'
-                f'padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer;margin:2px">{label}</button>')
+    term_out = []
+    for t in terms:
+        online = bool(t["last_seen"] and t["last_seen"] >= ago(minutes=2))
+        ls = _local(t["last_seen"])
+        st = terminals_rev.get(t["id"], {"orders": 0, "revenue": 0, "today": 0})
+        term_out.append({"id": t["id"], "online": online, "printer": t["printer_status"] or "ok",
+                         "last_seen": ls.strftime("%d.%m %H:%M:%S") if ls else "—", **st})
+    q = {r["status"]: r["c"] for r in queue}
+    return jsonify({
+        "now": local_now.strftime("%d.%m.%Y %H:%M"),
+        "periods": periods,
+        "days": [{"date": d[8:10] + "." + d[5:7], "revenue": v} for d, v in days.items()],
+        "hours": hours,
+        "services": sorted(({"name": k, **v} for k, v in services.items()), key=lambda x: -x["orders"]),
+        "terminals": term_out,
+        "queue": {"pending": q.get("pending_payment", 0), "new": q.get("new", 0),
+                  "printing": q.get("printing", 0), "failed": q.get("failed", 0), "refunds": refunds},
+        "all_time": {"revenue": total_all["s"], "orders": total_all["c"]},
+        "color_enabled": COLOR_ENABLED,
+    })
 
-    rows = ""
-    for o in orders:
-        acts = ""
-        if o["status"] in ("failed", "printing", "printed"):
-            acts += btn("reprint", o["id"], "Перепечатать", "#2a4f7c")
-        if o["status"] in ("pending_payment", "rejected"):
-            acts += btn("free", o["id"], "Печать бесплатно", "#22c55e")
-        if o["status"] in ("pending_payment", "new", "printing", "failed"):
-            acts += btn("cancel", o["id"], "Отменить", "#ef4444")
-        if o["refund"] == "needed":
-            acts += btn("refunded", o["id"], "Деньги вернул", "#22c55e")
-        st = STATUS_RU.get(o["status"], o["status"])
-        if o["refund"] == "needed":
-            st += " · нужен возврат"
-        elif o["refund"] == "done":
-            st += " · возвращено"
-        if o["error"]:
-            st += f"<br><small>{_esc(o['error'])}</small>"
-        rows += (f"<tr><td>#{o['id']}</td><td>{_esc(o['created_at'])}</td><td>{_esc(o['file_name'])}</td>"
-                 f"<td>{_esc(o['order_type'])} {_esc(o['print_type'])}</td><td>{o['pages']}×{o['copies']}</td>"
-                 f"<td><b>{o['total']} с</b></td><td>{_esc(o['terminal_id'])}</td>"
-                 f"<td style='color:{colors.get(o['status'], '#aaa')}'>{st}</td><td>{acts or '-'}</td></tr>")
 
-    term_html = ""
-    for t in terminals:
-        online = t["last_seen"] and t["last_seen"] >= ago(minutes=OFFLINE_ALERT_MIN)
-        term_html += (f"<div class='sc'><div class='sn' style='color:{'#22c55e' if online else '#ef4444'};font-size:18px'>"
-                      f"{_esc(t['id'])} · {'на связи' if online else 'НЕ НА СВЯЗИ'}</div>"
-                      f"<div class='sl'>был: {_esc(t['last_seen'])} · принтер: {_esc(t['printer_status'] or '—')}</div></div>")
+@app.route("/admin/api/orders", methods=["GET"])
+@require_admin
+def admin_orders():
+    status = request.args.get("status", "")
+    term = request.args.get("terminal", "")
+    q = (request.args.get("q") or "").strip()
+    limit = clamp(request.args.get("limit"), 1, 500, 150)
+    where, args = [], []
+    groups = {"queue": ("new", "printing"), "pending": ("pending_payment",), "failed": ("failed",),
+              "done": ("printed", "scan_ready"), "closed": ("cancelled", "rejected")}
+    if status in groups:
+        where.append("status IN (%s)" % ",".join("?" * len(groups[status]))); args += groups[status]
+    elif status == "refund":
+        where.append("refund='needed'")
+    if term:
+        where.append("terminal_id=?"); args.append(term)
+    if q:
+        if q.lstrip("#").isdigit():
+            where.append("id=?"); args.append(int(q.lstrip("#")))
+        else:
+            where.append("file_name LIKE ?"); args.append(f"%{q}%")
+    sql = f"SELECT {PUBLIC_COLS}, printed_at FROM orders"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY id DESC LIMIT ?"
+    conn = db()
+    rows = conn.execute(sql, (*args, limit)).fetchall()
+    conn.close()
+    return jsonify({"orders": [_order_out(r) for r in rows]})
 
-    stat_html = "".join(f"<div class='sc'><div class='sn' style='color:{c}'>{v}</div><div class='sl'>{l}</div></div>"
-                        for v, l, c in stats)
 
-    return f"""<!DOCTYPE html>
-<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AkBarak Admin</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:-apple-system,sans-serif;background:#0D2240;color:#fff}}
-.hdr{{background:#1a3a5c;padding:20px 24px;display:flex;align-items:center;justify-content:space-between}}
-.brand{{font-size:20px;font-weight:900}}.brand span{{color:#F5A623}}
-.btn{{background:#F5A623;color:#000;border:none;padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer}}
-.stats{{display:flex;gap:12px;padding:20px 20px 0;flex-wrap:wrap}}
-.sc{{background:#1a3a5c;border-radius:16px;padding:18px 20px;flex:1;min-width:150px}}
-.sn{{font-size:28px;font-weight:900}}
-.sl{{font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;text-transform:uppercase;letter-spacing:1px}}
-.tw{{padding:20px;overflow-x:auto}}
-table{{width:100%;border-collapse:collapse;background:#1a3a5c;border-radius:14px;overflow:hidden}}
-th{{padding:12px;text-align:left;font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase}}
-td{{padding:10px 12px;font-size:13px;border-top:1px solid rgba(255,255,255,0.05);color:rgba(255,255,255,0.85)}}
-</style></head><body>
-<div class="hdr"><div class="brand">AK<span>BARAK</span> &mdash; Админ</div><button class="btn" onclick="location.reload()">Обновить</button></div>
-<div class="stats">{term_html or "<div class='sc'><div class='sl'>Терминалы ещё не выходили на связь</div></div>"}</div>
-<div class="stats">{stat_html}</div>
-<div class="tw"><table>
-<thead><tr><th>#</th><th>Время</th><th>Файл</th><th>Тип</th><th>Объём</th><th>Сумма</th><th>Терминал</th><th>Статус</th><th>Действия</th></tr></thead>
-<tbody>{rows}</tbody></table></div>
-<script>
-const KEY = new URLSearchParams(location.search).get("key");
-const ASK = {{cancel:"Отменить заказ?", reprint:"Отправить на печать ещё раз?", refunded:"Отметить, что деньги вернули?", free:"Напечатать этот заказ бесплатно (для себя)?"}};
-async function act(a, id){{
-  if(!window.confirm(ASK[a])) return;
-  const r = await fetch("/admin/"+a+"/"+id, {{method:"POST", headers:{{"X-Admin-Key":KEY}}}});
-  if(!r.ok){{ const d = await r.json().catch(()=>({{}})); alert(d.error || "Ошибка"); }}
-  location.reload();
-}}
-setTimeout(function(){{location.reload();}}, 30000);
-</script>
-</body></html>"""
+@app.route("/admin/api/export.csv", methods=["GET"])
+@require_admin
+def admin_export():
+    days = clamp(request.args.get("days"), 1, 3650, 30)
+    conn = db()
+    rows = conn.execute(f"SELECT {PUBLIC_COLS}, printed_at FROM orders WHERE created_at >= ? ORDER BY id",
+                        (ago(hours=24 * days),)).fetchall()
+    conn.close()
+    out = io.StringIO()
+    out.write("\ufeff№;Дата;Время;Услуга;Цвет;Страниц;Копий;Сумма, сом;Оплата;Статус;Терминал;Файл\n")
+    for r in rows:
+        lc = _local(r["created_at"])
+        cells = [r["id"], lc.strftime("%d.%m.%Y") if lc else "", lc.strftime("%H:%M") if lc else "",
+                 SERVICE_RU.get(r["order_type"] or "print", r["order_type"]), "цвет" if r["print_type"] == "color" else "ч/б",
+                 r["pages"], r["copies"], r["total"], r["payment"] or "", STATUS_RU.get(r["status"], r["status"]),
+                 r["terminal_id"] or "", (r["file_name"] or "").replace(";", ",")]
+        out.write(";".join(str(c) for c in cells) + "\n")
+    name = f"akbarak_orders_{(datetime.now() + TZ_OFF).strftime('%Y-%m-%d')}.csv"
+    return app.response_class(out.getvalue().encode("utf-8"), mimetype="text/csv",
+                              headers={"Content-Disposition": f"attachment; filename={name}"})
+
+
+@app.route("/admin/test/<terminal_id>", methods=["POST"])
+@require_admin
+def admin_test(terminal_id):
+    """Тестовая страница на терминал — бесплатно, сразу в очередь."""
+    src = os.path.join(HERE_DIR, "server_assets", "test_page.pdf")
+    if not os.path.exists(src):
+        return jsonify({"error": "Нет тестовой страницы на сервере"}), 500
+    color = request.args.get("color") == "1"
+    if color and not COLOR_ENABLED:
+        return jsonify({"error": NO_COLOR_MSG}), 400
+    dst = os.path.join(FILES_DIR, f"{uuid.uuid4().hex}.pdf")
+    with open(src, "rb") as a, open(dst, "wb") as b:
+        b.write(a.read())
+    conn = db()
+    cur = conn.execute(
+        "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
+        "paid_at, group_id, terminal_id, order_type, access_token, sides) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        ("Тестовая страница.pdf", dst, "color" if color else "bw", 1, 1, 0, "free", "new", now(), now(),
+         uuid.uuid4().hex, terminal_id[:40], "print", secrets.token_urlsafe(16), "single"))
+    conn.commit()
+    oid = cur.lastrowid
+    conn.close()
+    return jsonify({"success": True, "order_id": oid})
 
 
 # ─────────────────────── Фоновые проверки ───────────────────────

@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#14283D">
+<title>АкБарак — админка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Golos+Text:wght@500;600;700;800&display=swap">
+<style>
+:root{
+  --bg:#EEF1F5; --card:#FFFFFF; --ink:#14283D; --muted:#5A6B84; --line:#DCE2EA; --soft:#E6EBF2;
+  --navy:#14283D; --gold:#E2A93B; --gold-t:#B8892A; --ok:#1F9D57; --warn:#D98A00; --bad:#D93B3B; --info:#3A6EA5;
+  --shadow:0 1px 2px rgba(20,40,61,.06),0 4px 14px rgba(20,40,61,.06);
+  --disp:"Unbounded","Arial Black",system-ui,sans-serif; --body:"Golos Text","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1A2E; --card:#12243B; --ink:#EEF2F7; --muted:#9FB0C6; --line:#22385A; --soft:#172C47; --gold-t:#E2A93B;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0B1A2E; --card:#12243B; --ink:#EEF2F7; --muted:#9FB0C6; --line:#22385A; --soft:#172C47; --gold-t:#E2A93B; --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:0 max(14px,env(safe-area-inset-left)) 90px}
+
+/* шапка */
+header{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding:10px max(14px,env(safe-area-inset-left));
+  padding-top:max(10px,env(safe-area-inset-top));display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:8px;font:800 18px var(--disp);letter-spacing:-.02em}
+.logo span{color:var(--gold)} .logo small{font:600 12px var(--body);color:#9FB3CC;letter-spacing:0;margin-left:2px}
+header .sp{flex:1}
+.hb{background:rgba(255,255,255,.1);border:0;border-radius:10px;padding:8px 11px;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px}
+.hb.on{background:var(--gold);color:var(--navy)}
+.live{width:8px;height:8px;border-radius:50%;background:#5BD38D;box-shadow:0 0 0 0 rgba(91,211,141,.6);animation:pulse 2s infinite}
+.live.off{background:var(--bad);animation:none}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(91,211,141,0)}100%{box-shadow:0 0 0 0 rgba(91,211,141,0)}}
+
+/* вкладки */
+nav{display:flex;gap:6px;padding:12px 0 6px;overflow-x:auto;scrollbar-width:none}
+nav button{border:0;background:var(--card);box-shadow:var(--shadow);border-radius:12px;padding:10px 16px;font-weight:800;white-space:nowrap;display:flex;gap:8px;align-items:center}
+nav button.on{background:var(--navy);color:#fff}
+.badge{background:var(--bad);color:#fff;border-radius:999px;padding:0 7px;font-size:12px;line-height:20px;min-width:20px;text-align:center}
+.badge.g{background:var(--gold);color:var(--navy)}
+
+/* тревоги */
+.alerts{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+.alert{border:0;border-radius:12px;padding:9px 14px;font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px}
+.alert.bad{background:#FDE7E7;color:#A12222} .alert.warn{background:#FFF1D6;color:#8A5A00} .alert.info{background:#E3EDF8;color:#24507F}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .alert.bad{background:#4A1D24;color:#FFB3B3}:root:not([data-theme="light"]) .alert.warn{background:#4A3712;color:#FFD68A}:root:not([data-theme="light"]) .alert.info{background:#1C3554;color:#A9CBF2}}
+
+.card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+h2{font:800 15px var(--disp);margin:22px 0 10px;letter-spacing:-.01em}
+.seg{display:inline-flex;background:var(--soft);border-radius:12px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;border-radius:9px;padding:7px 12px;font-weight:700;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+
+/* показатели */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px}
+.kpi{padding:14px 16px}
+.kpi .v{font:800 26px var(--disp);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .v small{font:700 13px var(--body);color:var(--muted)}
+.kpi .l{color:var(--muted);font-size:13px;font-weight:700;margin-top:4px}
+.kpi .d{font-size:12px;font-weight:800;margin-top:2px}
+.kpi.main{background:var(--navy);color:#fff}.kpi.main .v{color:var(--gold)}.kpi.main .l{color:#B9C6D8}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi.main{grid-column:1/-1}}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.chart svg{width:100%;height:auto;max-height:260px;display:block}
+.svc{width:100%;border-collapse:collapse;font-size:14px}
+.svc td{padding:9px 4px;border-top:1px solid var(--line)} .svc tr:first-child td{border-top:0}
+.svc td:nth-child(2),.svc td:nth-child(3){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.svc .bar{height:6px;border-radius:3px;background:var(--gold);margin-top:5px}
+
+/* заказы */
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;flex:1 1 100%}
+.chip{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 13px;font-weight:700;font-size:14px;white-space:nowrap;display:flex;gap:6px;align-items:center}
+.chip.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.inp{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:9px 12px;font:600 15px var(--body);min-width:0}
+.inp:focus{outline:2px solid var(--gold);outline-offset:1px}
+#q{flex:1 1 180px}
+.btn{border:0;border-radius:11px;padding:9px 14px;font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.gold{background:var(--gold);color:#14283D}.btn.navy{background:var(--navy);color:#fff}
+.btn.ok{background:var(--ok);color:#fff}.btn.bad{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1.5px var(--bad)}
+.btn.ghost{background:var(--soft);color:var(--ink)}
+.btn:disabled{opacity:.5}
+.list{display:grid;gap:10px}
+.o{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;padding:14px 16px;border-left:5px solid var(--line)}
+.o.s-pending_payment{border-left-color:var(--info)} .o.s-new,.o.s-printing{border-left-color:var(--gold)}
+.o.s-printed,.o.s-scan_ready{border-left-color:var(--ok)} .o.s-failed{border-left-color:var(--bad)}
+.o.s-cancelled,.o.s-rejected{opacity:.6}
+.o.fresh{animation:fresh 2.4s ease-out}
+@keyframes fresh{0%{background:#FFF1D6}100%{background:var(--card)}}
+.o .id{font:800 18px var(--disp);font-variant-numeric:tabular-nums}
+.o .meta{color:var(--muted);font-size:13px;font-weight:700}
+.o .fn{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.o .sum{font:800 20px var(--disp);text-align:right;white-space:nowrap}
+.o .sum small{font:700 12px var(--body);color:var(--muted)}
+.o .row2{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.o .acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.o .err{grid-column:1/-1;background:#FDE7E7;color:#A12222;border-radius:10px;padding:8px 10px;font-size:13px;font-weight:700}
+.tag{border-radius:7px;padding:2px 8px;font-size:12.5px;font-weight:800;background:var(--soft);color:var(--ink)}
+.st{border-radius:7px;padding:3px 9px;font-size:12.5px;font-weight:800;color:#fff}
+.st.pending_payment{background:var(--info)}.st.new,.st.printing{background:var(--gold);color:#14283D}
+.st.printed,.st.scan_ready{background:var(--ok)}.st.failed{background:var(--bad)}.st.cancelled,.st.rejected{background:#8A97A8}
+.tag.color{background:linear-gradient(90deg,#00A3E0,#E4007C,#FFE600);color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.35)}
+.tag.free{background:#E3F5EA;color:#176B3E}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;font-weight:700}
+
+/* терминалы */
+.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.t .top{display:flex;align-items:center;gap:10px}
+.t .dot{width:12px;height:12px;border-radius:50%;background:var(--bad)}
+.t .dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(31,157,87,.18)}
+.t .nm{font:800 18px var(--disp)}
+.t .ln{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding:8px 0;font-size:14px}
+.t .ln b{font-weight:800}
+.t .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%) translateY(120%);background:var(--navy);color:#fff;
+  padding:12px 18px;border-radius:14px;font-weight:800;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:transform .25s,opacity .25s;z-index:50;max-width:92vw;opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1} .toast.bad{background:var(--bad)}
+.foot{color:var(--muted);font-size:12.5px;text-align:center;margin-top:30px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 240 240" aria-hidden="true"><path d="M58 20H152L192 60V222H58Z" fill="#fff"/><path d="M152 20V60H192Z" fill="#E2A93B"/><circle cx="124" cy="146" r="52" fill="#14283D"/><g fill="none" stroke="#E2A93B" stroke-width="8" stroke-linecap="round"><circle cx="124" cy="146" r="40"/><path d="M90 136Q124 128 158 136M86 146H162M90 156Q124 164 158 156M114 112Q106 146 114 180M124 108V184M134 112Q142 146 134 180"/></g></svg>
+    <div><span>Ак</span>Барак<small>админ</small></div>
+  </div>
+  <div class="sp"></div>
+  <button class="hb" id="soundBtn" title="Звук при новом заказе">🔔 <span id="soundLbl">Звук</span></button>
+  <button class="hb" id="refreshBtn" title="Обновить"><i class="live" id="live"></i><span id="nowLbl">…</span></button>
+</header>
+
+<div class="wrap">
+  <nav>
+    <button data-tab="orders" class="on">Заказы <span class="badge g" id="bQueue" hidden></span></button>
+    <button data-tab="overview">Обзор</button>
+    <button data-tab="terms">Терминалы <span class="badge" id="bTerms" hidden></span></button>
+  </nav>
+  <div class="alerts" id="alerts"></div>
+
+  <!-- ЗАКАЗЫ -->
+  <section id="tab-orders">
+    <div class="tools">
+      <div class="chips" id="chips"></div>
+      <input id="q" class="inp" type="search" placeholder="Поиск: номер или имя файла" autocomplete="off">
+      <select id="termSel" class="inp"><option value="">Все терминалы</option></select>
+      <button class="btn ghost" id="csvBtn">⬇ Excel</button>
+    </div>
+    <div class="list" id="list"><div class="empty">Загружаю…</div></div>
+  </section>
+
+  <!-- ОБЗОР -->
+  <section id="tab-overview" hidden>
+    <div class="seg" id="periodSeg">
+      <button data-p="today" class="on">Сегодня</button><button data-p="yesterday">Вчера</button>
+      <button data-p="week">7 дней</button><button data-p="month">30 дней</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div><h2>Выручка за 14 дней</h2><div class="card chart" id="daysChart"></div></div>
+      <div><h2>Услуги за 30 дней</h2><div class="card"><table class="svc" id="svc"></table></div></div>
+    </div>
+    <h2>Заказы сегодня по часам</h2>
+    <div class="card chart" id="hoursChart"></div>
+    <div class="foot" id="allTime"></div>
+  </section>
+
+  <!-- ТЕРМИНАЛЫ -->
+  <section id="tab-terms" hidden>
+    <div class="terms" id="terms"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+const KEY = new URLSearchParams(location.search).get('key') || '';
+const $ = id => document.getElementById(id);
+const H = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (Math.round(n||0)).toLocaleString('ru-RU').replace(/,/g,' ');
+let S = null, ORD = [], tab = 'orders', filter = 'all', period = 'today', seen = null, sound = false, busy = false;
+try { sound = localStorage.getItem('ak-admin-sound') === '1'; } catch(e){}
+
+async function api(path, opt){
+  const r = await fetch(path, Object.assign({headers:{'X-Admin-Key':KEY}}, opt||{}));
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error || ('Ошибка ' + r.status));
+  return d;
+}
+function toast(msg, bad){ const t=$('toast'); t.textContent=msg; t.className='toast show'+(bad?' bad':''); clearTimeout(t._h); t._h=setTimeout(()=>t.className='toast',2600); }
+
+/* ── звук ── */
+let actx=null;
+function beep(){
+  if(!sound) return;
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    [0,0.18].forEach((d,i)=>{ const o=actx.createOscillator(), g=actx.createGain();
+      o.frequency.value = i? 1320 : 880; o.type='sine'; g.gain.setValueAtTime(.0001, actx.currentTime+d);
+      g.gain.exponentialRampToValueAtTime(.35, actx.currentTime+d+.02); g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime+d+.16);
+      o.connect(g).connect(actx.destination); o.start(actx.currentTime+d); o.stop(actx.currentTime+d+.2); });
+    if(navigator.vibrate) navigator.vibrate([120,60,120]);
+  }catch(e){}
+}
+function paintSound(){ $('soundBtn').classList.toggle('on', sound); $('soundLbl').textContent = sound ? 'Звук вкл' : 'Звук'; }
+$('soundBtn').onclick = ()=>{ sound=!sound; try{localStorage.setItem('ak-admin-sound', sound?'1':'0');}catch(e){} paintSound(); if(sound){ beep(); toast('Звук включён: пикну, когда придёт заказ'); } };
+paintSound();
+
+/* ── вкладки ── */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  tab=b.dataset.tab; document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  ['orders','overview','terms'].forEach(t=>$('tab-'+t).hidden = t!==tab);
+  if(tab==='overview') drawOverview();
+});
+$('periodSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{ period=b.dataset.p;
+  $('periodSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); drawOverview(); });
+
+/* ── фильтры заказов ── */
+const FILTERS = [['all','Все'],['pending','Ждут оплаты'],['queue','В очереди'],['failed','Ошибки'],['done','Готово'],['refund','Возвраты'],['closed','Закрытые']];
+function drawChips(){
+  const q = S ? S.queue : {};
+  const cnt = {pending:q.pending, queue:(q.new||0)+(q.printing||0), failed:q.failed, refund:q.refunds};
+  $('chips').innerHTML = FILTERS.map(([k,l])=>`<button class="chip${filter===k?' on':''}" data-f="${k}">${l}${cnt[k]?` <span class="badge${k==='queue'||k==='pending'?' g':''}">${cnt[k]}</span>`:''}</button>`).join('');
+  $('chips').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ filter=c.dataset.f; drawChips(); loadOrders(true); });
+}
+let qT; $('q').oninput = ()=>{ clearTimeout(qT); qT=setTimeout(()=>loadOrders(true),300); };
+$('termSel').onchange = ()=>loadOrders(true);
+
+$('csvBtn').onclick = async ()=>{
+  try{
+    const r = await fetch('/admin/api/export.csv?days=365',{headers:{'X-Admin-Key':KEY}});
+    if(!r.ok) throw new Error();
+    const b = await r.blob(), a = document.createElement('a');
+    a.href = URL.createObjectURL(b); a.download = 'akbarak_zakazy.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast('Файл скачан — откроется в Excel');
+  }catch(e){ toast('Не удалось скачать', true); }
+};
+
+/* ── действия ── */
+const ACT = {
+  free:     {label:'✓ Бесплатно', cls:'ok',  ask:null, done:'Отправлено в печать бесплатно'},
+  reprint:  {label:'↻ Перепечатать', cls:'navy', ask:'Напечатать этот заказ ещё раз?', done:'Отправлено на печать ещё раз'},
+  cancel:   {label:'Отменить', cls:'bad', ask:'Отменить заказ? Если он оплачен онлайн, появится отметка «нужен возврат».', done:'Заказ отменён'},
+  refunded: {label:'Деньги вернул', cls:'gold', ask:'Отметить, что деньги студенту вернули?', done:'Отмечено: деньги возвращены'},
+};
+async function act(a, id, btn){
+  const A = ACT[a]; if(A.ask && !confirm(`#${id}: ${A.ask}`)) return;
+  btn.disabled = true;
+  try{ await api(`/admin/${a}/${id}`, {method:'POST'}); toast(A.done); await refresh(); }
+  catch(e){ toast(e.message, true); btn.disabled=false; }
+}
+function actsFor(o){
+  const a=[];
+  if(['pending_payment','rejected'].includes(o.status)) a.push('free');
+  if(['failed','printing','printed'].includes(o.status)) a.push('reprint');
+  if(o.refund==='needed') a.push('refunded');
+  if(['pending_payment','new','printing','failed'].includes(o.status)) a.push('cancel');
+  return a;
+}
+const SIDES = {duplex:'2 стороны', booklet:'брошюра', idcard:'ID-карта'};
+function orderHTML(o, fresh){
+  const color = o.print_type==='color';
+  const vol = o.order_type==='scan' ? `${o.pages} лист.` : `${o.pages} стр. × ${o.copies}`;
+  const tags = [`<span class="st ${H(o.status)}">${H(o.status_ru)}</span>`, `<span class="tag">${H(o.service_ru)}</span>`,
+    color?'<span class="tag color">цвет</span>':'<span class="tag">ч/б</span>', `<span class="tag">${vol}</span>`];
+  if(SIDES[o.sides]) tags.push(`<span class="tag">${SIDES[o.sides]}</span>`);
+  if(o.photo_format) tags.push(`<span class="tag">${H(o.photo_format)}</span>`);
+  if(o.page_range) tags.push(`<span class="tag">стр. ${H(o.page_range)}</span>`);
+  if(o.payment==='free') tags.push('<span class="tag free">бесплатно</span>');
+  if(o.refund==='needed') tags.push('<span class="st failed">нужен возврат</span>');
+  if(o.refund==='done') tags.push('<span class="tag">деньги возвращены</span>');
+  const acts = actsFor(o).map(a=>`<button class="btn ${ACT[a].cls}" data-a="${a}" data-id="${o.id}">${ACT[a].label}</button>`).join('');
+  const fname = ['copy','scan'].includes(o.order_type) ? (o.order_type==='copy'?'Копия на терминале':'Скан на терминале') : o.file_name;
+  return `<div class="card o s-${H(o.status)}${fresh?' fresh':''}">
+    <div class="id">#${o.id}</div>
+    <div style="min-width:0"><div class="fn">${H(fname)}</div><div class="meta">${H(o.created_local)}${o.printed_local?' · готов '+H(o.printed_local):''} · ${H(o.terminal_id||'—')} · ${H(o.payment||'—')}</div></div>
+    <div class="sum">${fmt(o.total)} <small>сом</small></div>
+    <div class="row2">${tags.join('')}</div>
+    ${o.error?`<div class="err">⚠ ${H(o.error)}</div>`:''}
+    ${acts?`<div class="acts">${acts}</div>`:''}
+  </div>`;
+}
+function drawOrders(freshIds){
+  if(!ORD.length){ $('list').innerHTML = '<div class="empty">Заказов нет</div>'; return; }
+  $('list').innerHTML = ORD.map(o=>orderHTML(o, freshIds && freshIds.has(o.id))).join('');
+  $('list').querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a, +b.dataset.id, b));
+}
+async function loadOrders(reset){
+  const p = new URLSearchParams({limit:150});
+  if(filter!=='all') p.set('status', filter);
+  if($('q').value.trim()) p.set('q', $('q').value.trim());
+  if($('termSel').value) p.set('terminal', $('termSel').value);
+  const d = await api('/admin/api/orders?'+p);
+  // новые оплаченные/ожидающие заказы → звук
+  const ids = new Set(d.orders.map(o=>o.id));
+  let fresh = new Set();
+  if(seen && !reset){ d.orders.forEach(o=>{ if(!seen.has(o.id)) fresh.add(o.id); }); }
+  if(fresh.size){ beep(); flashTitle(fresh.size); }
+  if(filter==='all' && !$('q').value && !$('termSel').value) seen = new Set([...(seen||[]), ...ids]);
+  else if(!seen) seen = ids;
+  const sig = JSON.stringify(d.orders.map(o=>[o.id,o.status,o.refund,o.error]));
+  if(reset || sig !== loadOrders._sig){ ORD = d.orders; drawOrders(fresh); loadOrders._sig = sig; }
+}
+let tH; function flashTitle(n){ let i=0; clearInterval(tH); tH=setInterval(()=>{ document.title = (i++%2)?`🔔 Новый заказ (${n})`:'АкБарак — админка'; if(i>10){clearInterval(tH);document.title='АкБарак — админка';} },800); }
+
+/* ── сводка ── */
+function drawAlerts(){
+  const q=S.queue, a=[];
+  const off = S.terminals.filter(t=>!t.online).map(t=>t.id);
+  const badP = S.terminals.filter(t=>t.online && t.printer!=='ok');
+  if(off.length) a.push(['bad','terms',`🔴 Не на связи: ${off.join(', ')}`]);
+  badP.forEach(t=>a.push(['bad','terms',`🖨 ${t.id}: ${t.printer}`]));
+  if(q.failed) a.push(['bad','failed',`⚠ Ошибки печати: ${q.failed}`]);
+  if(q.refunds) a.push(['warn','refund',`↩ Нужен возврат: ${q.refunds}`]);
+  if(q.pending) a.push(['info','pending',`💳 Ждут оплаты: ${q.pending}`]);
+  $('alerts').innerHTML = a.map(([c,go,t])=>`<button class="alert ${c}" data-go="${go}">${H(t)}</button>`).join('');
+  $('alerts').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
+    const g=b.dataset.go;
+    if(g==='terms'){ document.querySelector('nav [data-tab=terms]').click(); return; }
+    document.querySelector('nav [data-tab=orders]').click(); filter=g; drawChips(); loadOrders(true);
+  });
+  const qn=(q.new||0)+(q.printing||0)+(q.pending||0);
+  $('bQueue').hidden=!qn; $('bQueue').textContent=qn;
+  $('bTerms').hidden=!off.length; $('bTerms').textContent=off.length;
+}
+function kpi(v,unit,l,d,main){ return `<div class="card kpi${main?' main':''}"><div class="v">${v}${unit?` <small>${unit}</small>`:''}</div><div class="l">${l}</div>${d||''}</div>`; }
+function delta(cur, prev){
+  if(!prev && !cur) return ''; if(!prev) return '<div class="d" style="color:var(--ok)">новое</div>';
+  const p = Math.round((cur-prev)/prev*100); const c = p>=0?'var(--ok)':'var(--bad)';
+  return `<div class="d" style="color:${c}">${p>=0?'▲':'▼'} ${Math.abs(p)}% к вчера</div>`;
+}
+function bars(data, valKey, labKey, h, gold){
+  const W=700, pad=26, top=18, n=data.length, max=Math.max(1,...data.map(d=>d[valKey])), bw=(W-pad)/n;
+  let s=`<svg viewBox="0 0 ${W} ${h+34}" role="img">`;
+  for(let i=0;i<=3;i++){ const y=top+(h-top)*i/3; s+=`<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/>`; }
+  s+=`<text x="0" y="${top+4}" font-size="11" fill="var(--muted)" font-weight="700">${fmt(max)}</text>`;
+  data.forEach((d,i)=>{ const v=d[valKey], bh=Math.max(v?3:0,(h-top)*v/max), x=pad+i*bw+bw*.15, y=h-bh;
+    s+=`<rect x="${x}" y="${y}" width="${bw*.7}" height="${bh}" rx="3" fill="${i===n-1&&gold?'var(--gold)':'var(--navy)'}" opacity="${i===n-1||!gold?1:.85}"><title>${H(d[labKey])}: ${fmt(v)}</title></rect>`;
+    if(v && n<=14) s+=`<text x="${x+bw*.35}" y="${y-5}" font-size="11" text-anchor="middle" fill="var(--ink)" font-weight="800">${fmt(v)}</text>`;
+    if(n<=14 || i%3===0) s+=`<text x="${x+bw*.35}" y="${h+18}" font-size="11" text-anchor="middle" fill="var(--muted)" font-weight="700">${H(d[labKey])}</text>`;
+  });
+  return s+'</svg>';
+}
+function drawOverview(){
+  if(!S) return;
+  const P=S.periods[period], Y=S.periods.yesterday, isT=period==='today';
+  const avg = P.orders ? Math.round(P.revenue/(P.orders-P.free||1)) : 0;
+  $('kpis').innerHTML =
+    kpi(fmt(P.revenue),'сом','Выручка', isT?delta(P.revenue,Y.revenue):'', true)+
+    kpi(fmt(P.orders),'','Заказов', isT?delta(P.orders,Y.orders):'')+
+    kpi(fmt(P.sheets),'','Листов напечатано')+
+    kpi(fmt(avg),'сом','Средний чек')+
+    kpi(fmt(P.free),'','Бесплатных');
+  $('daysChart').innerHTML = bars(S.days,'revenue','date',170,true);
+  $('hoursChart').innerHTML = bars(S.hours.map((v,i)=>({v,l:String(i).padStart(2,'0')})).slice(7,24),'v','l',90,false);
+  const mx = Math.max(1,...S.services.map(s=>s.orders));
+  $('svc').innerHTML = S.services.length ? S.services.map(s=>`<tr><td>${H(s.name)}<div class="bar" style="width:${Math.round(s.orders/mx*100)}%"></div></td><td>${s.orders} шт</td><td><b>${fmt(s.revenue)}</b> с</td></tr>`).join('')
+    : '<tr><td class="empty">Пока пусто</td></tr>';
+  $('allTime').textContent = `За всё время: ${fmt(S.all_time.orders)} заказов · ${fmt(S.all_time.revenue)} сом · время Бишкека`;
+}
+function drawTerms(){
+  const sel=$('termSel'), cur=sel.value;
+  sel.innerHTML='<option value="">Все терминалы</option>'+S.terminals.map(t=>`<option${t.id===cur?' selected':''}>${H(t.id)}</option>`).join('');
+  if(!S.terminals.length){ $('terms').innerHTML='<div class="empty">Терминалы ещё не выходили на связь. Запустите 2_ZAPUSK_PECHATI.bat на ноутбуке.</div>'; return; }
+  $('terms').innerHTML = S.terminals.map(t=>`<div class="card t">
+    <div class="top"><i class="dot${t.online?' on':''}"></i><div class="nm">${H(t.id)}</div><div style="flex:1"></div>
+      <span class="st ${t.online?'printed':'failed'}">${t.online?'на связи':'НЕ НА СВЯЗИ'}</span></div>
+    <div class="ln" style="margin-top:10px"><span>Принтер</span><b style="color:${t.printer==='ok'?'var(--ok)':'var(--bad)'}">${t.printer==='ok'?'готов':H(t.printer)}</b></div>
+    <div class="ln"><span>Последний сигнал</span><b>${H(t.last_seen)}</b></div>
+    <div class="ln"><span>Заказов сегодня</span><b>${t.today}</b></div>
+    <div class="ln"><span>За 30 дней</span><b>${t.orders} шт · ${fmt(t.revenue)} сом</b></div>
+    <div class="acts">
+      <button class="btn navy" data-test="${H(t.id)}" data-color="0">🖨 Тест ч/б</button>
+      ${S.color_enabled?`<button class="btn gold" data-test="${H(t.id)}" data-color="1">🎨 Тест цвет</button>`:''}
+      <a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="text-decoration:none">Экран ↗</a>
+    </div></div>`).join('');
+  $('terms').querySelectorAll('[data-test]').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;
+    try{ const d=await api(`/admin/test/${encodeURIComponent(b.dataset.test)}?color=${b.dataset.color}`,{method:'POST'});
+      toast(`Тестовая страница #${d.order_id} отправлена на ${b.dataset.test}`); refresh(); }
+    catch(e){ toast(e.message,true); } finally{ b.disabled=false; }
+  });
+}
+async function loadSummary(){
+  S = await api('/admin/api/summary');
+  $('nowLbl').textContent = S.now.slice(-5);
+  drawAlerts(); drawChips(); drawTerms(); if(tab==='overview') drawOverview();
+}
+
+async function refresh(){
+  if(busy) return; busy=true;
+  try{ await Promise.all([loadSummary(), loadOrders()]); $('live').classList.remove('off'); }
+  catch(e){ $('live').classList.add('off'); if(/доступ/i.test(e.message)) toast('Нет доступа: проверьте ключ в ссылке', true); }
+  finally{ busy=false; }
+}
+$('refreshBtn').onclick = ()=>{ refresh(); toast('Обновлено'); };
+drawChips(); refresh();
+setInterval(()=>{ if(!document.hidden) refresh(); }, 5000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refresh(); });
+})();
+</script>
+</body>
+</html>
