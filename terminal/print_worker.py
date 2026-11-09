@@ -56,7 +56,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-09 v8 любой ноут"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-09 v9 брошюра pypdf7"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -243,9 +243,11 @@ def _page_list(page_range, total):
 def make_booklet(pdf_path, page_range=None):
     """Собирает брошюру: на каждом листе А4 (альбомном) по 2 страницы А5 с каждой стороны,
     в таком порядке, чтобы после сгиба пополам получилась книжечка. Возвращает путь к новому PDF."""
-    from pypdf import PdfReader, PdfWriter, PageObject, Transformation
-    reader = PdfReader(pdf_path)
-    src = [reader.pages[i] for i in _page_list(page_range, len(reader.pages))]
+    from pypdf import PdfReader, PdfWriter, Transformation
+    # pypdf 7: страницы можно менять только если они привязаны к writer —
+    # поэтому сначала копируем исходник в отдельный writer
+    srcw = PdfWriter(clone_from=PdfReader(pdf_path))
+    src = [srcw.pages[i] for i in _page_list(page_range, len(srcw.pages))]
     if not src:
         raise ValueError("нет страниц для брошюры")
     while len(src) % 4:
@@ -267,14 +269,12 @@ def make_booklet(pdf_path, page_range=None):
 
     writer = PdfWriter()
     for i in range(n // 4):
-        front = PageObject.create_blank_page(width=W, height=H)
+        front = writer.add_blank_page(width=W, height=H)
         place(front, src[n - 1 - 2 * i], True)
         place(front, src[2 * i], False)
-        back = PageObject.create_blank_page(width=W, height=H)
+        back = writer.add_blank_page(width=W, height=H)
         place(back, src[2 * i + 1], True)
         place(back, src[n - 2 - 2 * i], False)
-        writer.add_page(front)
-        writer.add_page(back)
     out = os.path.splitext(pdf_path)[0] + "_booklet.pdf"
     with open(out, "wb") as f:
         writer.write(f)
