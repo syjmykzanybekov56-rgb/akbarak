@@ -280,6 +280,83 @@ def pdf_page_count(path: str):
         return None
 
 
+_DOCX_EM_PER_CHAR = 0.52     # средняя ширина буквы в долях кегля (подобрано по реальным рефератам)
+_DOCX_LINE_K = 1.26          # высота «одинарной» строки в долях кегля
+
+
+def _docx_layout(z, xml):
+    """Кегль, межстрочный интервал и поля страницы из самого документа (по умолчанию — ГОСТ-реферат)."""
+    import re
+    size, mult = 14.0, 1.5
+    try:
+        st = z.read("word/styles.xml").decode("utf-8", "ignore")
+        blocks = re.findall(r"<w:docDefaults>.*?</w:docDefaults>", st, flags=re.S) + \
+            re.findall(r'<w:style [^>]*w:styleId="(?:Normal|a)"[^>]*>.*?</w:style>', st, flags=re.S)
+        for b in blocks:
+            m = re.search(r'<w:sz w:val="(\d+)"', b)
+            if m:
+                size = int(m.group(1)) / 2
+            m = re.search(r'<w:spacing [^>]*w:line="(\d+)"(?: [^>]*w:lineRule="(\w+)")?', b)
+            if m and (m.group(2) or "auto") == "auto":
+                mult = int(m.group(1)) / 240
+    except KeyError:
+        pass
+    pw, ph, ml, mr, mt, mb = 11906, 16838, 1701, 850, 1134, 1134       # А4, поля 3/1.5/2/2 см (в twip)
+    m = re.search(r"<w:pgSz [^>]*>", xml)
+    if m:
+        pw = int((re.search(r'w:w="(\d+)"', m.group(0)) or [0, pw])[1]); ph = int((re.search(r'w:h="(\d+)"', m.group(0)) or [0, ph])[1])
+    m = re.search(r"<w:pgMar [^>]*>", xml)
+    if m:
+        g = lambda k, d: abs(int((re.search(rf'w:{k}="(-?\d+)"', m.group(0)) or [0, d])[1]))
+        ml, mr, mt, mb = g("left", ml), g("right", mr), g("top", mt), g("bottom", mb)
+    width_pt, height_pt = (pw - ml - mr) / 20, (ph - mt - mb) / 20
+    cpl = max(20, width_pt / (size * _DOCX_EM_PER_CHAR))
+    lpp = max(10, height_pt / (size * _DOCX_LINE_K * max(1.0, mult)))
+    return cpl, lpp
+
+
+def docx_page_count(path: str):
+    """Страницы Word-файла (.docx) без Word: число из свойств документа (его пишет Word при сохранении),
+    иначе — оценка по тексту, таблицам, картинкам и разрывам с учётом шрифта и полей."""
+    import re
+    import zipfile
+    try:
+        with zipfile.ZipFile(path) as z:
+            names = set(z.namelist())
+            if "docProps/app.xml" in names:
+                m = re.search(r"<(?:\w+:)?Pages>(\d+)</(?:\w+:)?Pages>", z.read("docProps/app.xml").decode("utf-8", "ignore"))
+                if m and int(m.group(1)) > 1:      # «1» часто бывает у файлов не из Word — тогда считаем сами
+                    return int(m.group(1))
+            xml = z.read("word/document.xml").decode("utf-8", "ignore")
+            cpl, lpp = _docx_layout(z, xml)
+    except Exception:
+        return None
+    breaks = len(re.findall(r'<w:br [^>]*w:type="page"', xml)) + len(re.findall(r"<w:pageBreakBefore(?: [^>]*)?/>", xml)) \
+        + len(re.findall(r'<w:type w:val="nextPage"', xml))
+    lines = 0.0
+    for tbl in re.findall(r"<w:tbl>.*?</w:tbl>", xml, flags=re.S):
+        for tr in re.findall(r"<w:tr[ >].*?</w:tr>", tbl, flags=re.S):
+            cells = re.findall(r"<w:tc>.*?</w:tc>", tr, flags=re.S) or [tr]
+            n = len(cells)
+            lines += max(1, max(len("".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", c))) * n // cpl + 1 for c in cells))
+    body = re.sub(r"<w:tbl>.*?</w:tbl>", "", xml, flags=re.S)
+    for par in re.findall(r"<w:p[ >].*?</w:p>", body, flags=re.S):
+        text = "".join(re.findall(r"<w:t[^>]*>([^<]*)</w:t>", par))
+        lines += max(1, -(-len(text) // cpl))
+        lines += 0.4 * lpp * (par.count("<w:drawing") + par.count("<w:pict"))
+    # разрывы страниц оставляют недозаполненные страницы: добавляем по полстраницы на каждый
+    return max(breaks + 1, int(lines / lpp + 0.5 * breaks + 0.4 + 0.5), 1)
+
+
+def txt_page_count(path: str):
+    try:
+        with open(path, encoding="utf-8", errors="ignore") as f:
+            lines = sum(max(1, -(-len(l.rstrip()) // 90)) for l in f)
+        return max(1, -(-lines // 55))
+    except Exception:
+        return None
+
+
 def clamp(value, low, high, default):
     try:
         return max(low, min(high, int(value)))
@@ -406,7 +483,9 @@ def upload():
                 if order_type == "photo":
                     pages, rng = 1, None
                 else:
-                    real = pdf_page_count(file_path) if ext == ".pdf" else None
+                    real = (pdf_page_count(file_path) if ext == ".pdf"
+                            else docx_page_count(file_path) if ext == ".docx"
+                            else txt_page_count(file_path) if ext == ".txt" else None)
                     rng = page_range if len(files) == 1 else None
                     if rng:
                         selected = parse_range(rng, real)
