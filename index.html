@@ -1311,9 +1311,70 @@ function handleFiles(input){
     const reader = new FileReader();
     reader.onload = e => loadPDF(e.target.result);
     reader.readAsArrayBuffer(file);
+  } else if(ext === 'docx' || ext === 'txt'){
+    // Word/TXT: показываем, сколько страниц выйдет, и сразу считаем цену
+    img.style.display = 'none';
+    pdf.style.display = 'none';
+    pdfDoc = null;
+    const foot = document.getElementById('preview-footer');
+    foot.textContent = 'Считаю страницы…';
+    wrap.classList.add('show');
+    countDocPages(file, ext).then(n => {
+      if(!n){ foot.textContent = 'Число страниц посчитаем при загрузке'; return; }
+      pdfTotal = n; state.pages = n;
+      recalcPrint();
+      foot.innerHTML = (ext==='docx'?'Word-документ':'Текстовый файл') + ': <b>' + n + ' стр.</b> — цена посчитана по ним';
+    });
   } else {
     wrap.classList.remove('show');
   }
+}
+
+// ── Подсчёт страниц Word (.docx) и TXT прямо в телефоне. Та же формула, что на сервере (docx_page_count) ──
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise((ok, no) => { const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    sc.onload = () => ok(window.JSZip); sc.onerror = no; document.head.appendChild(sc); });
+}
+async function countDocPages(file, ext){
+  try{
+    if(ext === 'txt'){
+      const t = await file.text();
+      const lines = t.split(/\r?\n/).reduce((a,l)=>a+Math.max(1,Math.ceil(l.trimEnd().length/90)),0);
+      return Math.max(1, Math.ceil(lines/55));
+    }
+    const JSZip = await loadJSZip();
+    const z = await JSZip.loadAsync(await file.arrayBuffer());
+    const app = z.file('docProps/app.xml');
+    if(app){ const m = (await app.async('string')).match(/<(?:\w+:)?Pages>(\d+)<\/(?:\w+:)?Pages>/); if(m && +m[1] > 1) return +m[1]; }
+    const xml = await z.file('word/document.xml').async('string');
+    const st = z.file('word/styles.xml') ? await z.file('word/styles.xml').async('string') : '';
+    let size = 14, mult = 1.5;
+    const blocks = (st.match(/<w:docDefaults>[\s\S]*?<\/w:docDefaults>/g)||[]).concat(st.match(/<w:style [^>]*w:styleId="(?:Normal|a)"[^>]*>[\s\S]*?<\/w:style>/g)||[]);
+    blocks.forEach(b => { let m = b.match(/<w:sz w:val="(\d+)"/); if(m) size = m[1]/2;
+      m = b.match(/<w:spacing [^>]*w:line="(\d+)"(?: [^>]*w:lineRule="(\w+)")?/); if(m && (m[2]||'auto')==='auto') mult = m[1]/240; });
+    let pw=11906, ph=16838, ml=1701, mr=850, mt=1134, mb=1134;
+    let m = xml.match(/<w:pgSz [^>]*>/); if(m){ const w=m[0].match(/w:w="(\d+)"/), h=m[0].match(/w:h="(\d+)"/); if(w) pw=+w[1]; if(h) ph=+h[1]; }
+    m = xml.match(/<w:pgMar [^>]*>/);
+    if(m){ const g=(k,d)=>{ const r=m[0].match(new RegExp('w:'+k+'="(-?\\d+)"')); return r?Math.abs(+r[1]):d; };
+      ml=g('left',ml); mr=g('right',mr); mt=g('top',mt); mb=g('bottom',mb); }
+    const cpl = Math.max(20, ((pw-ml-mr)/20)/(size*0.52));
+    const lpp = Math.max(10, ((ph-mt-mb)/20)/(size*1.26*Math.max(1,mult)));
+    const breaks = (xml.match(/<w:br [^>]*w:type="page"/g)||[]).length + (xml.match(/<w:pageBreakBefore(?: [^>]*)?\/>/g)||[]).length + (xml.match(/<w:type w:val="nextPage"/g)||[]).length;
+    const textOf = x => (x.match(/<w:t[^>]*>[^<]*<\/w:t>/g)||[]).map(t=>t.replace(/<[^>]+>/g,'')).join('');
+    let lines = 0;
+    (xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g)||[]).forEach(tbl => (tbl.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g)||[]).forEach(tr => {
+      const cells = tr.match(/<w:tc>[\s\S]*?<\/w:tc>/g)||[tr];
+      lines += Math.max(1, ...cells.map(c => Math.floor(textOf(c).length*cells.length/cpl)+1));
+    }));
+    const body = xml.replace(/<w:tbl>[\s\S]*?<\/w:tbl>/g,'');
+    (body.match(/<w:p[ >][\s\S]*?<\/w:p>/g)||[]).forEach(p => {
+      lines += Math.max(1, Math.ceil(textOf(p).length/cpl));
+      lines += 0.4*lpp*((p.match(/<w:drawing/g)||[]).length + (p.match(/<w:pict/g)||[]).length);
+    });
+    return Math.max(breaks+1, Math.round(lines/lpp + 0.5*breaks + 0.4), 1);
+  }catch(e){ console.error(e); return null; }
 }
 
 function removeFile(){
