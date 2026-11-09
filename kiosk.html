@@ -562,6 +562,24 @@ function homeQrs(){
   qr($('qrAttract'), orderUrl(), 256);
 }
 homeQrs();
+
+/* Автообновление: раз в 3 минуты проверяем, не вышла ли новая версия экрана.
+   Перезагружаемся только на главном экране, когда никто не оформляет заказ. */
+(function autoUpdate(){
+  let base = null;
+  const sig = t => t.length + ':' + t.slice(-400);
+  async function check(){
+    try{
+      const r = await fetch(location.pathname + '?v=' + Date.now(), {cache: 'no-store'});
+      if(!r.ok) return;
+      const t = sig(await r.text());
+      if(base === null){ base = t; return; }
+      if(t !== base && (view === 'home' || view === 'attract')) location.reload();
+    }catch(e){}
+  }
+  check();
+  setInterval(check, 3 * 60 * 1000);
+})();
 I18N.onChange(homeQrs);
 function goHome(){
   stopFlow(); stopAttract();
