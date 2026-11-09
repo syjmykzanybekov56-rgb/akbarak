@@ -23,6 +23,10 @@
     "Авто": ["Авто", "Auto"],
     "Светлая": ["Ачык", "Light"],
     "Тёмная": ["Караңгы", "Dark"],
+    "Печать через Telegram": ["Telegram аркылуу басып чыгаруу", "Print via Telegram"],
+    "Открыть": ["Ачуу", "Open"],
+    "Telegram-бот": ["Telegram-бот", "Telegram bot"],
+    "или отправь файл в Telegram": ["же файлды Telegram'га жибер", "or send the file on Telegram"],
     // ── общее ──
     "Печать": ["Басып чыгаруу", "Print"],
     "Копия": ["Көчүрмө", "Copy"],

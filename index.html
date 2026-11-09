@@ -102,6 +102,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
 .ad-sheet ul{margin:6px 0 16px 18px;font-size:14px;line-height:1.55;color:rgba(var(--fg),.75);font-weight:600}
 .ad-sheet .st-btn{margin-bottom:8px}
 .ad-close{background:rgba(var(--fg),.08)!important;color:var(--white)!important}
+.tg-card{text-decoration:none;color:inherit}
 .install-card{display:flex;align-items:center;gap:12px;margin:0 20px 18px;padding:14px;border-radius:18px;background:rgba(245,166,35,0.10);border:1px solid rgba(245,166,35,0.35)}
 .install-ico{font-size:28px}
 .install-ttl{font-size:14px;font-weight:900;color:var(--white);margin-bottom:3px}
@@ -363,6 +364,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
     <div class="menu-body">
       <div class="menu-item" onclick="toggleMenu();go('s-home')"><span class="menu-item-ico">🏠</span>Главная</div>
       <div class="menu-item" onclick="toggleMenu();go('s-how')"><span class="menu-item-ico">📖</span>Инструкция</div>
+      <div class="menu-item" onclick="location.href='https://t.me/PrintKGMA_bot'"><span class="menu-item-ico">✈️</span>Telegram-бот</div>
       <div class="menu-item" onclick="location.href='/partner.html'"><span class="menu-item-ico">🤝</span>Сотрудничество</div>
       <div class="menu-item" onclick="toggleMenu();go('s-about')"><span class="menu-item-ico">ℹ️</span>О нас</div>
       <div class="menu-item" onclick="location.href='/oferta.html'"><span class="menu-item-ico">📜</span>Публичная оферта</div>
@@ -370,6 +372,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
       <div class="menu-item" onclick="cycleTheme()"><span class="menu-item-ico">🌓</span>Тема<span class="theme-val" id="theme-val">Авто</span></div>
       <div class="menu-divider"></div>
       <div class="menu-contact">📞 0773 731 212</div>
+      <div class="menu-contact">✈️ @PrintKGMA_bot</div>
       <div class="menu-contact">📍 КГМА, Бишкек</div>
     </div>
   </div>
@@ -402,6 +405,15 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
         <div class="price-chip"><div class="price-amt">6 с</div><div class="price-lbl">Скан</div></div>
       </div>
     </div>
+
+    <a class="install-card tg-card" href="https://t.me/PrintKGMA_bot" target="_blank" rel="noopener">
+      <div class="install-ico"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#2AABEE"/><path d="M5.4 11.8l11.3-4.4c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-2.9 5.3-4.8c.2-.2 0-.3-.3-.1l-6.6 4.1-2.8-.9c-.6-.2-.6-.6.1-.9z" fill="#fff"/></svg></div>
+      <div style="flex:1">
+        <div class="install-ttl">Печать через Telegram</div>
+        <div class="install-sub">Отправь файл боту <b>@PrintKGMA_bot</b> — он посчитает цену и напишет, когда готово.</div>
+      </div>
+      <span class="install-btn">Открыть</span>
+    </a>
 
     <div class="install-card" id="install-card" style="display:none">
       <div class="install-ico">📲</div>
