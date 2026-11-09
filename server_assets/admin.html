@@ -377,12 +377,13 @@ function drawTerms(){
     <div class="top"><i class="dot${t.online?' on':''}"></i><div class="nm">${H(t.id)}</div><div style="flex:1"></div>
       <span class="st ${t.online?'printed':'failed'}">${t.online?'на связи':'НЕ НА СВЯЗИ'}</span></div>
     <div class="ln" style="margin-top:10px"><span>Принтер</span><b style="color:${t.printer==='ok'?'var(--ok)':'var(--bad)'}">${t.printer==='ok'?'готов':H(t.printer)}</b></div>
+    <div class="ln"><span>Цвет</span><b>${t.color===0?'только ч/б (цвет скрыт)':t.color===1?'цветной':'неизвестно'}</b></div>
     <div class="ln"><span>Последний сигнал</span><b>${H(t.last_seen)}</b></div>
     <div class="ln"><span>Заказов сегодня</span><b>${t.today}</b></div>
     <div class="ln"><span>За 30 дней</span><b>${t.orders} шт · ${fmt(t.revenue)} сом</b></div>
     <div class="acts">
       <button class="btn navy" data-test="${H(t.id)}" data-color="0">🖨 Тест ч/б</button>
-      ${S.color_enabled?`<button class="btn gold" data-test="${H(t.id)}" data-color="1">🎨 Тест цвет</button>`:''}
+      ${S.color_enabled && t.color!==0?`<button class="btn gold" data-test="${H(t.id)}" data-color="1">🎨 Тест цвет</button>`:''}
       <a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="text-decoration:none">Экран ↗</a>
     </div></div>`).join('');
   $('terms').querySelectorAll('[data-test]').forEach(b=>b.onclick=async()=>{

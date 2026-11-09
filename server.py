@@ -184,11 +184,28 @@ def init_db():
             offline_alerted INTEGER DEFAULT 0
         )
     """)
+    try:   # цветной ли принтер у терминала: сообщает программа печати (NULL — неизвестно)
+        conn.execute("ALTER TABLE terminals ADD COLUMN color INTEGER")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
 
 init_db()
+
+
+def color_ok(terminal_id=None):
+    """Цвет доступен: включён на сервере и принтер этого терминала не чёрно-белый."""
+    if not COLOR_ENABLED:
+        return False
+    conn = db()
+    row = conn.execute("SELECT color FROM terminals WHERE id=?", ((terminal_id or DEFAULT_TERMINAL)[:40],)).fetchone()
+    conn.close()
+    return not (row and row["color"] == 0)
+
+
+NO_COLOR_TERMINAL_MSG = "На этом терминале сейчас чёрно-белый принтер — цветная печать временно недоступна"
 
 # «Ак сынак» — честный входной контроль на занятии (прототип)
 import sinak  # noqa: E402
@@ -400,7 +417,7 @@ def index():
 @app.route("/config", methods=["GET"])
 def config():
     """Что сейчас умеет терминал — сайт прячет недоступные режимы."""
-    return jsonify({"color": COLOR_ENABLED, "duplex": DUPLEX_ENABLED,
+    return jsonify({"color": color_ok(request.args.get("t")), "duplex": DUPLEX_ENABLED,
                     "prices": PRICES, "sheet_prices": SHEET_PRICES})
 
 
@@ -444,6 +461,8 @@ def upload():
 
         if (photo_format or request.form.get("print_type") == "color") and not COLOR_ENABLED:
             return jsonify({"error": NO_COLOR_MSG}), 400
+        if (photo_format or request.form.get("print_type") == "color") and not color_ok(terminal):
+            return jsonify({"error": NO_COLOR_TERMINAL_MSG}), 400
         sides = request.form.get("sides") or "single"
         if sides not in SIDES:
             sides = "single"
@@ -718,6 +737,8 @@ def order():
         # Цветной скан делает сам сканер — цветной принтер нужен только для цветной копии
         if color and order_type == "copy" and not COLOR_ENABLED:
             return jsonify({"error": NO_COLOR_MSG}), 400
+        if color and order_type == "copy" and not color_ok(data.get("terminal")):
+            return jsonify({"error": NO_COLOR_TERMINAL_MSG}), 400
         print_type = "color" if color else "bw"
         # Листы кладут на стекло по одному: после каждого студент нажимает «следующий лист»
         pages = clamp(data.get("pages"), 1, MAX_SCAN_SHEETS, 1)
@@ -979,6 +1000,11 @@ def heartbeat():
     prev = conn.execute("SELECT printer_status FROM terminals WHERE id=?", (terminal,)).fetchone()
     conn.close()
     touch_terminal(terminal, printer)
+    if data.get("color") is not None:
+        conn = db()
+        conn.execute("UPDATE terminals SET color=? WHERE id=?", (1 if data["color"] else 0, terminal))
+        conn.commit()
+        conn.close()
     if printer and printer != "ok" and (not prev or prev["printer_status"] != printer):
         notify(f"🖨 Терминал {terminal}: {printer}")
     return jsonify({"success": True})
@@ -1309,7 +1335,7 @@ def admin_summary():
         online = bool(t["last_seen"] and t["last_seen"] >= ago(minutes=2))
         ls = _local(t["last_seen"])
         st = terminals_rev.get(t["id"], {"orders": 0, "revenue": 0, "today": 0})
-        term_out.append({"id": t["id"], "online": online, "printer": t["printer_status"] or "ok",
+        term_out.append({"id": t["id"], "online": online, "printer": t["printer_status"] or "ok", "color": t.get("color"),
                          "last_seen": ls.strftime("%d.%m %H:%M:%S") if ls else "—", **st})
     q = {r["status"]: r["c"] for r in queue}
     return jsonify({
@@ -1387,8 +1413,8 @@ def admin_test(terminal_id):
     if not os.path.exists(src):
         return jsonify({"error": "Нет тестовой страницы на сервере"}), 500
     color = request.args.get("color") == "1"
-    if color and not COLOR_ENABLED:
-        return jsonify({"error": NO_COLOR_MSG}), 400
+    if color and not color_ok(terminal_id):
+        return jsonify({"error": NO_COLOR_TERMINAL_MSG}), 400
     dst = os.path.join(FILES_DIR, f"{uuid.uuid4().hex}.pdf")
     with open(src, "rb") as a, open(dst, "wb") as b:
         b.write(a.read())
@@ -1464,7 +1490,7 @@ tgbot.register(app, {
     "order_total": order_total, "pdf_page_count": pdf_page_count, "docx_page_count": docx_page_count,
     "txt_page_count": txt_page_count, "gopay": gopay, "PRICES": PRICES, "SIDES": SIDES,
     "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
-    "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok,
+    "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok, "color_ok": color_ok,
 })
 
 

@@ -123,7 +123,7 @@ def draft_total(d):
 def draft_kb(d):
     i = d["id"]
     kb = []
-    if H["COLOR_ENABLED"]:
+    if H["color_ok"](d["terminal"]):
         kb.append([btn(("✅ " if not d["color"] else "") + "Ч/Б", f"d:{i}:bw"),
                    btn(("✅ " if d["color"] else "") + "Цвет", f"d:{i}:color")])
     kb.append([btn("➖", f"d:{i}:minus"), btn(f"Копий: {d['copies']}", f"d:{i}:noop"), btn("➕", f"d:{i}:plus")])
@@ -200,7 +200,7 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False):
         H["remove"](path)
         return send(chat_id, "Файл не открывается — возможно, он повреждён или защищён паролем.")
     pages = max(1, min(H["MAX_PAGES"], pages))
-    color = 1 if (is_photo or ext in (".jpg", ".jpeg", ".png")) and H["COLOR_ENABLED"] else 0
+    color = 1 if (is_photo or ext in (".jpg", ".jpeg", ".png")) and H["color_ok"](H["DEFAULT_TERMINAL"]) else 0
     conn = H["db"]()
     cur = conn.execute(
         "INSERT INTO tg_drafts (chat_id, file_path, file_name, pages, copies, color, sides, terminal, created_at) "
@@ -251,7 +251,7 @@ def on_callback(cq):
 
     if action == "bw":
         d["color"] = 0
-    elif action == "color" and H["COLOR_ENABLED"]:
+    elif action == "color" and H["color_ok"](d["terminal"]):
         d["color"] = 1
     elif action == "plus":
         d["copies"] = min(20, d["copies"] + 1)
@@ -263,6 +263,9 @@ def on_callback(cq):
         terms = terminal_ids()
         i = terms.index(d["terminal"]) if d["terminal"] in terms else -1
         d["terminal"] = terms[(i + 1) % len(terms)]
+        if d["color"] and not H["color_ok"](d["terminal"]):
+            d["color"] = 0
+            answer = "На этом терминале только ч/б"
     elif action == "cancel":
         H["remove"](d["file_path"])
         conn = H["db"]()
@@ -278,10 +281,16 @@ def on_callback(cq):
 
     save_draft(d)
     edit(chat_id, msg_id, draft_text(d), draft_kb(d))
-    tg("answerCallbackQuery", callback_query_id=cq["id"])
+    tg("answerCallbackQuery", callback_query_id=cq["id"], text=answer)
 
 
 def pay(cq, d, chat_id, msg_id):
+    if d["color"] and not H["color_ok"](d["terminal"]):
+        d["color"] = 0
+        save_draft(d)
+        edit(chat_id, msg_id, draft_text(d), draft_kb(d))
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], show_alert=True,
+                  text="На этом терминале сейчас только ч/б. Цену пересчитал — нажми «Оплатить» ещё раз.")
     total = draft_total(d)
     token = secrets.token_urlsafe(16)
     conn = H["db"]()

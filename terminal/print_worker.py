@@ -66,7 +66,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-09 v9 понятные ошибки принтера"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-09 v10 ч/б принтер — без цвета"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -148,8 +148,24 @@ def report(order_id, action, error=None):
     return False
 
 
+def printer_is_color():
+    """True — цветной принтер, False — чёрно-белый (например, Pantum), None — не удалось узнать.
+    Сервер по этому прячет цветную печать на этом терминале."""
+    try:
+        import win32print
+        h = win32print.OpenPrinter(PRINTER_NAME)
+        try:
+            port = win32print.GetPrinter(h, 2)["pPortName"]
+        finally:
+            win32print.ClosePrinter(h)
+        return bool(win32print.DeviceCapabilities(PRINTER_NAME, port, 32))   # DC_COLORDEVICE
+    except Exception:
+        return None
+
+
 def send_heartbeat(status):
-    api("POST", "/heartbeat", json={"terminal": TERMINAL_ID, "printer_status": status}, timeout=10)
+    api("POST", "/heartbeat", json={"terminal": TERMINAL_ID, "printer_status": status,
+                                     "color": printer_is_color()}, timeout=10)
 
 
 # ─────────────────────── Состояние принтера ───────────────────────
@@ -799,12 +815,15 @@ def main():
     log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
     log.info("Ключ терминала: %s", "задан" if WORKER_KEY else "не задан")
+    c = printer_is_color()
+    log.info("Цветной принтер: %s", {True: "да", False: "НЕТ — цветная печать на этом терминале скрыта", None: "не удалось узнать"}[c])
 
     last_beat, last_status = 0, None
     while True:
         try:
             status = printer_status()
             if time.time() - last_beat > HEARTBEAT_INTERVAL or status != last_status:
+                refresh_printer()
                 send_heartbeat(status)
                 last_beat, last_status = time.time(), status
 

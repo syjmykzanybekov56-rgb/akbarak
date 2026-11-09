@@ -935,7 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return a.includes("'color'") || a.includes('setCopy(this,12)');
   });
   if(!FEATURES.color) colorPills().forEach(b => b.style.display = 'none');
-  fetch(SERVER + '/config').then(r => r.json()).then(c => {
+  fetch(SERVER + '/config?t=' + encodeURIComponent(new URLSearchParams(location.search).get('t') || '')).then(r => r.json()).then(c => {
     if(c.color) colorPills().forEach(b => b.style.display = '');
   }).catch(() => {});
   if(!FEATURES.photo){
@@ -1555,7 +1555,7 @@ function priceFor(pages){
   return pages*page;
 }
 // Сервер говорит, что сейчас умеет терминал: показываем двустороннюю печать, только если она есть
-fetch(SERVER+'/config').then(r=>r.json()).then(c=>{
+fetch(SERVER+'/config?t='+encodeURIComponent(new URLSearchParams(location.search).get('t')||'')).then(r=>r.json()).then(c=>{
   if(c.sheet_prices) SHEET = c.sheet_prices;
   if(c.duplex) document.getElementById('sides-row').style.display='';
 }).catch(()=>{});
