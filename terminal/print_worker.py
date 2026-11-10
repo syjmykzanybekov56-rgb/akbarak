@@ -66,7 +66,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-10 v11 сам снимает «автономно»"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-09 v10 ч/б принтер — без цвета"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -184,27 +184,6 @@ PRINTER_FLAGS = [  # флаги Windows PRINTER_STATUS_*
 ]
 
 
-def clear_work_offline():
-    """Windows сама ставит «Работать автономно», если принтер на минуту пропал (выключили, уснул, кабель).
-    Пробуем снять эту галочку сами; без прав администратора Windows может не дать — тогда просим человека."""
-    try:
-        import win32print
-        h = win32print.OpenPrinter(PRINTER_NAME, {"DesiredAccess": win32print.PRINTER_ALL_ACCESS})
-        try:
-            info = win32print.GetPrinter(h, 2)
-            if not info["Attributes"] & 0x00000400:
-                return True
-            info["Attributes"] &= ~0x00000400
-            info["pSecurityDescriptor"] = None
-            win32print.SetPrinter(h, 2, info, 0)
-            return not (win32print.GetPrinter(h, 2)["Attributes"] & 0x00000400)
-        finally:
-            win32print.ClosePrinter(h)
-    except Exception as e:
-        log.warning("Не удалось снять «Работать автономно»: %s", e)
-        return False
-
-
 def printer_status():
     """'ok' или описание проблемы на русском."""
     try:
@@ -216,11 +195,7 @@ def printer_status():
             win32print.ClosePrinter(h)
         problems = [text for flag, text in PRINTER_FLAGS if info["Status"] & flag]
         if info["Attributes"] & 0x00000400:  # PRINTER_ATTRIBUTE_WORK_OFFLINE
-            if clear_work_offline():
-                log.info("Снял в Windows галочку «Работать автономно» у принтера %s", PRINTER_NAME)
-            else:
-                problems.append("в Windows включён режим «Работать автономно» — снимите галочку: "
-                                "Принтеры и сканеры → принтер → Открыть очередь печати → меню «Принтер»")
+            problems.append("в Windows включён режим «Работать автономно»")
         return ", ".join(problems) or "ok"
     except ImportError:
         return "ok"  # pywin32 не установлен — проверить нельзя
