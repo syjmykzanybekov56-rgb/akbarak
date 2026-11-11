@@ -1009,12 +1009,40 @@ def mkassa_webhook():
     return jsonify({"success": True}), 200
 
 
+@app.route("/mkassa/relay/next", methods=["GET"])
+@require_worker
+def mkassa_relay_next():
+    """Ноутбук терминала (в КР) забирает запрос к MKassa. Пустой ответ — заданий нет.
+    В задании есть ключ MKassa, поэтому без WORKER_KEY канал не работает вообще."""
+    if not WORKER_KEY or request.headers.get("X-Worker-Key") != WORKER_KEY:
+        time.sleep(20)
+        return ("", 204)
+    if not mkassa.enabled():
+        time.sleep(20)
+        return ("", 204)
+    job = mkassa.RELAY.next((request.args.get("terminal") or "?")[:40], wait=25)
+    return jsonify(job) if job else ("", 204)
+
+
+@app.route("/mkassa/relay/result", methods=["POST"])
+@require_worker
+def mkassa_relay_result():
+    if not WORKER_KEY or request.headers.get("X-Worker-Key") != WORKER_KEY:
+        return jsonify({"error": "Нет доступа"}), 403
+    data = request.get_json(silent=True) or {}
+    if data.get("id"):
+        mkassa.RELAY.done(data["id"], {"status": data.get("status", 0), "text": data.get("text", ""),
+                                       "error": data.get("error")})
+    return jsonify({"ok": True})
+
+
 @app.route("/admin/api/mkassa", methods=["GET"])
 def admin_mkassa():
     if not _admin_key_ok():
         return jsonify({"error": "нет доступа"}), 403
     out = {"enabled": mkassa.enabled(), "active_provider": PAY_NAME, "branch": mkassa.BRANCH,
            "cashier": mkassa.CASHIER, "long_living": mkassa.LONG_LIVING, "last_error": mkassa.LAST_ERROR,
+           "relay_alive": mkassa.RELAY.alive(), "relay_terminals": sorted(mkassa.RELAY.seen),
            "webhook_url": request.host_url.rstrip("/").replace("http://", "https://") + "/mkassa_webhook"}
     if mkassa.enabled() and request.args.get("branches"):
         try:
