@@ -602,7 +602,11 @@ def kiosk_session_get(session_id):
         "state": "uploaded",
         "order_id": sess["order_id"],
         "token": first["access_token"],
-        "files": [{"name": i["file_name"], "pages": i["pages"]} for i in items],
+        "files": [{"name": i["file_name"], "pages": i["pages"],
+                   "image": os.path.splitext(i["file_name"] or "")[1].lower() in (".jpg", ".jpeg", ".png")}
+                  for i in items],
+        "color": color_ok(sess["terminal_id"]),
+        "print_type": items[0]["print_type"] if items else "bw",
         "preview": f"/kiosk/preview/{sess['order_id']}",
         "duplex": DUPLEX_ENABLED,
         "copies": items[0]["copies"] if items else 1,
@@ -648,26 +652,55 @@ def kiosk_options(order_id):
         return jsonify({"error": "Заказ не найден"}), 404
     try:
         copies = clamp(data.get("copies"), 1, 50, 1)
-        items = conn.execute("SELECT id, pages, print_type, order_type, sides, file_name FROM orders "
-                             "WHERE group_id=? AND status='pending_payment'", (group_id,)).fetchall()
+        items = conn.execute("SELECT id, pages, print_type, order_type, sides, file_name, file_path, terminal_id, "
+                             "page_range FROM orders WHERE group_id=? AND status='pending_payment' ORDER BY id",
+                             (group_id,)).fetchall()
         if not items:
             return jsonify({"error": "Заказ уже оплачен"}), 409
-        total = 0
-        for i in items:
+        color = data.get("color")
+        if color and not color_ok(items[0]["terminal_id"]):
+            return jsonify({"error": NO_COLOR_TERMINAL_MSG}), 400
+        # диапазон страниц: {"files": [{"from": 2, "to": 5}, ...]} — по одному на файл, по порядку
+        ranges = data.get("ranges") if isinstance(data.get("ranges"), list) else None
+        total, out = 0, []
+        for n, i in enumerate(items):
             if i["order_type"] == "photo":
                 continue
+            is_image = os.path.splitext(i["file_name"] or "")[1].lower() in (".jpg", ".jpeg", ".png")
             item_sides = i["sides"] or "single"
             if sides is not None:
-                is_image = os.path.splitext(i["file_name"] or "")[1].lower() in (".jpg", ".jpeg", ".png")
                 item_sides = "single" if is_image else sides   # картинка — одна страница
-            item_total = order_total(i["order_type"], i["print_type"], item_sides, i["pages"] or 1, copies)
+            ptype = i["print_type"] if color is None else ("color" if color else "bw")
+            pages, rng = i["pages"] or 1, i["page_range"]
+            real = _real_pages(i["file_path"], i["file_name"]) or pages
+            if ranges is not None and n < len(ranges) and not is_image and isinstance(ranges[n], dict):
+                a = clamp(ranges[n].get("from"), 1, real, 1)
+                b = clamp(ranges[n].get("to"), a, real, real)
+                rng = None if (a == 1 and b == real) else (str(a) if a == b else f"{a}-{b}")
+                pages = b - a + 1
+            pages = max(1, min(MAX_PAGES, pages))
+            item_total = order_total(i["order_type"], ptype, item_sides, pages, copies)
             total += item_total
-            conn.execute("UPDATE orders SET copies=?, total=?, sides=? WHERE id=?",
-                         (copies, item_total, item_sides, i["id"]))
+            conn.execute("UPDATE orders SET copies=?, total=?, sides=?, print_type=?, pages=?, page_range=? WHERE id=?",
+                         (copies, item_total, item_sides, ptype, pages, rng, i["id"]))
+            out.append({"pages": pages, "real": real, "range": rng})
         conn.commit()
-        return jsonify({"success": True, "copies": copies, "total": total, "sides": sides or "single"})
+        return jsonify({"success": True, "copies": copies, "total": total, "sides": sides or "single",
+                        "files": out})
     finally:
         conn.close()
+
+
+def _real_pages(path, name):
+    """Сколько страниц в файле на самом деле (без учёта выбранного диапазона)."""
+    ext = os.path.splitext(name or path or "")[1].lower()
+    if not path or not os.path.exists(path):
+        return None
+    try:
+        return (pdf_page_count(path) if ext == ".pdf" else docx_page_count(path) if ext == ".docx"
+                else txt_page_count(path) if ext == ".txt" else 1)
+    except Exception:
+        return None
 
 
 @app.route("/kiosk/cancel/<int:order_id>", methods=["POST"])

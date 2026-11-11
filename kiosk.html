@@ -161,6 +161,13 @@
     font-weight:800;font-size:1.3vw;white-space:nowrap}
   .sides button.on{background:var(--gold);border-color:var(--gold);color:var(--night)}
   .sides button:disabled{opacity:.45}
+  .rng{display:flex;align-items:center;gap:.35vw;flex:none;font-size:1.05vw;color:var(--text-dim)}
+  .rng button{width:3.6vw;height:3.6vw;border-radius:50%;background:rgba(var(--fg),.1);border:1px solid rgba(var(--fg),.18);
+    font-family:var(--disp);font-weight:700;font-size:1.7vw;line-height:1;display:grid;place-items:center;color:var(--txt)}
+  .rng button:active{background:rgba(var(--fg),.22)} .rng button:disabled{opacity:.3}
+  .rng output{font-family:var(--disp);font-weight:800;font-size:1.6vw;min-width:2.8vw;text-align:center;color:var(--txt);font-variant-numeric:tabular-nums}
+  .rng i{font-style:normal;margin:0 .3vw}
+  .files.ranged{max-height:30vh;overflow:auto}
   .sum small{font-family:var(--body);font-size:1.3vw;color:var(--text-dim);font-weight:700;letter-spacing:0;margin-left:.6vw}
   .acts{display:flex;align-items:center;gap:1.4vw;margin-top:auto}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:1vw;padding:2.6vh 3vw;border-radius:999px;font-weight:800;font-size:1.5vw}
@@ -479,7 +486,8 @@ const NOTICES = [
 
 // Что сейчас умеет терминал (сервер /config): цветная копия — только с цветным принтером
 let CFG = {color: false, prices: {copy_bw: 6, copy_color: 12, scan_bw: 6, scan_color: 12}};
-fetch(SERVER + '/config?t=' + encodeURIComponent(TERMINAL), {cache: 'no-store'}).then(r => r.json()).then(c => { CFG = c; }).catch(() => {});
+function loadCfg(){ fetch(SERVER + '/config?t=' + encodeURIComponent(TERMINAL), {cache: 'no-store'}).then(r => r.json()).then(c => { if(c && c.prices) CFG = c; }).catch(() => {}); }
+loadCfg(); setInterval(loadCfg, 60000);
 const MAX_SHEETS = 30;
 // Реклама: ads.json рядом с сайтом (меняется без кода). Обновляем раз в 10 минут.
 let ADS = {enabled: false, items: []};
@@ -714,18 +722,31 @@ function docsScreen(){
 function showOrder(d){
   stopFlow();
   cur = {orderId: d.order_id, token: d.token, unit: d.unit, files: d.files, copies: d.copies || 1, total: d.total, type: 'print',
-         sides: 'single', duplex: !!d.duplex};
-  const pages = d.files.reduce((a, f) => a + (f.pages || 1), 0);
+         sides: 'single', duplex: !!d.duplex, canColor: !!d.color, color: d.print_type === 'color'};
+  cur.files.forEach(f => { f.pages = f.pages || 1; f.real = f.pages; f.from = 1; f.to = f.pages; });
+  const pages = cur.files.reduce((a, f) => a + f.pages, 0);
   cur.pages = pages;
+  const ranged = cur.files.some(f => !f.image && f.real > 1);
   pane(head('Ваш заказ', ruPages(pages)) +
-    '<ul class="files">' + d.files.map(f => '<li><svg><use href="#i-copy"/></svg><span>' + esc(f.name) + '</span><small>' + ruPages(f.pages || 1) + '</small></li>').join('') + '</ul>' +
-    '<div class="opts"><div><div class="opt-l">Копий каждого файла</div><div class="stepper">' +
+    '<ul class="files' + (ranged ? ' ranged' : '') + '">' + cur.files.map((f, n) => '<li><svg><use href="#i-copy"/></svg><span>' + esc(f.name) + '</span>' +
+      (!f.image && f.real > 1
+        ? '<div class="rng">стр.' +
+            '<button id="rf' + n + 'm" data-hold="rng(' + n + ',\'from\',-1)">−</button><output id="rf' + n + '">1</output><button id="rf' + n + 'p" data-hold="rng(' + n + ',\'from\',1)">+</button>' +
+            '<i>по</i>' +
+            '<button id="rt' + n + 'm" data-hold="rng(' + n + ',\'to\',-1)">−</button><output id="rt' + n + '">' + f.real + '</output><button id="rt' + n + 'p" data-hold="rng(' + n + ',\'to\',1)">+</button>' +
+            '<i>из ' + f.real + '</i></div>'
+        : '<small>' + ruPages(f.pages) + '</small>') + '</li>').join('') + '</ul>' +
+    '<div class="opts" style="flex-wrap:wrap;row-gap:2.6vh"><div><div class="opt-l">Копий каждого файла</div><div class="stepper">' +
       '<button id="cMinus" onclick="setCopies(-1)">−</button><output id="cVal">1</output><button id="cPlus" onclick="setCopies(1)">+</button></div></div>' +
+      (cur.canColor ? '<div><div class="opt-l">Цвет</div><div class="sides" id="colorSel">' +
+        '<button data-c="0" onclick="setColor(false)">Ч/Б · ' + ((CFG.prices || {}).print_bw || 5) + ' с</button>' +
+        '<button data-c="1" onclick="setColor(true)">Цвет · ' + ((CFG.prices || {}).print_color || 10) + ' с</button></div></div>' : '') +
       (cur.duplex ? '<div><div class="opt-l">Стороны</div><div class="sides" id="sidesSel">' +
         [['single', 'Одна'], ['duplex', 'Две'], ['booklet', 'Брошюра']].map(([k, t]) =>
           '<button data-s="' + k + '" onclick="setSides(\'' + k + '\')">' + t + '</button>').join('') + '</div></div>' : '') +
       '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
     '<div class="acts"><button class="btn main" id="payBtn" onclick="payOrder()"></button><button class="btn ghost" onclick="cancelAndHome()">Отменить</button></div>');
+  bindHold();
   drawOrder();
   paper(previewHtml(), '');
   loadPreview(0);
@@ -899,7 +920,7 @@ function receiptHtml(){
   return '<div class="doc-h" style="--i:0">Чек заказа</div><div class="receipt" style="--i:1">' +
     cur.files.map(f => '<div class="row"><span>' + esc(f.name) + '</span><span>' + (f.pages || 1) + ' × ' + cur.copies + '</span></div>').join('') +
     '<div class="tot"><span>Итого</span><b id="rcTot">' + cur.total + ' сом</b></div></div>' +
-    '<div class="stamp" style="--i:3"><svg><use href="#tunduk"/></svg>Чёрно-белая<br>печать</div>';
+    '<div class="stamp" style="--i:3" id="pvStamp"><svg><use href="#tunduk"/></svg>' + (cur.color ? 'Цветная' : 'Чёрно-белая') + '<br>печать</div>';
 }
 function drawOrder(){
   $('cVal').textContent = cur.copies;
@@ -908,15 +929,60 @@ function drawOrder(){
   $('cPlus').disabled = cur.copies >= 20;
   $('sumVal').innerHTML = cur.total + '<small>сом</small>';
   $('payBtn').textContent = 'Оплатить ' + cur.total + ' сом';
+  document.querySelectorAll('#colorSel button').forEach(b => b.classList.toggle('on', (b.dataset.c === '1') === cur.color));
+  cur.files.forEach((f, n) => {
+    if(!$('rf' + n)) return;
+    $('rf' + n).textContent = f.from; $('rt' + n).textContent = f.to;
+    $('rf' + n + 'm').disabled = f.from <= 1; $('rf' + n + 'p').disabled = f.from >= f.to;
+    $('rt' + n + 'm').disabled = f.to <= f.from; $('rt' + n + 'p').disabled = f.to >= f.real;
+  });
+  const hp = document.querySelector('.svchead .pr'); if(hp) hp.textContent = ruPages(cur.files.reduce((a, f) => a + f.pages, 0));
+  if($('pvStamp')) $('pvStamp').innerHTML = '<svg><use href="#tunduk"/></svg>' + (cur.color ? 'Цветная' : 'Чёрно-белая') + '<br>печать';
   if($('rcTot')){
     $('rcTot').textContent = cur.total + ' сом';
-    document.querySelectorAll('.receipt .row span:last-child').forEach((e, i) => e.textContent = (cur.files[i].pages || 1) + ' × ' + cur.copies);
+    document.querySelectorAll('.pv .row span:last-child, .receipt .row span:last-child').forEach((e, i) => cur.files[i] && (e.textContent = cur.files[i].pages + ' × ' + cur.copies));
   }
+}
+/* Быстрая цена на экране, пока сервер считает точную */
+function quickTotal(){
+  if(cur.sides !== 'single') return;
+  const unit = (CFG.prices || {})['print_' + (cur.color ? 'color' : 'bw')] || (cur.color ? 10 : 5);
+  cur.pages = cur.files.reduce((a, f) => a + f.pages, 0);
+  cur.total = unit * cur.pages * cur.copies;
+}
+function setColor(on){
+  if(on === cur.color) return;
+  cur.color = on; quickTotal(); drawOrder(); saveOptions();
+}
+/* Диапазон страниц: с какой по какую */
+function rng(n, which, delta){
+  const f = cur.files[n]; if(!f) return;
+  if(which === 'from') f.from = Math.max(1, Math.min(f.to, f.from + delta));
+  else f.to = Math.max(f.from, Math.min(f.real, f.to + delta));
+  f.pages = f.to - f.from + 1;
+  quickTotal(); drawOrder(); saveOptions();
+  if(pv.file === n && pv.total > 1){                 // показываем выбранную страницу
+    const want = Math.min(pv.total, which === 'from' ? f.from : f.to);
+    if(want !== pv.page){ pv.page = want; pvDraw(); pvRender().catch(() => {}); }
+  }
+}
+/* Кнопки «−/+» диапазона: нажал — шаг, держишь — листает быстро */
+function bindHold(){
+  document.querySelectorAll('[data-hold]').forEach(b => {
+    const fn = new Function(b.dataset.hold);
+    let t1 = null, t2 = null;
+    const stop = () => { clearTimeout(t1); clearInterval(t2); };
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); stop(); fn();
+      t1 = setTimeout(() => { t2 = setInterval(() => { if(b.disabled) return stop(); fn(); }, 90); }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+  });
 }
 let copiesSave = null;
 function setCopies(delta){
   cur.copies = Math.max(1, Math.min(20, cur.copies + delta));
-  if(cur.sides === 'single') cur.total = cur.unit * cur.pages * cur.copies;   // сразу показываем, сервер подтвердит
+  quickTotal();   // сразу показываем, сервер подтвердит
   drawOrder();
   saveOptions();
 }
@@ -932,15 +998,25 @@ function saveOptions(){
   clearTimeout(copiesSave);
   copiesSave = setTimeout(async () => {
     try{
-      const r = await api('/kiosk/options/' + cur.orderId, {token: cur.token, copies: cur.copies, sides: cur.sides});
-      cur.total = r.total; drawOrder();
+      const r = await api('/kiosk/options/' + cur.orderId, optBody());
+      applyOpts(r);
       $('payBtn').disabled = false;
     }catch(e){
-      cur.sides = 'single'; drawOrder();             // режим недоступен — вернём одну сторону
-      try{ const r = await api('/kiosk/options/' + cur.orderId, {token: cur.token, copies: cur.copies, sides: 'single'}); cur.total = r.total; drawOrder(); }catch(e2){}
+      cur.sides = 'single'; if(!cur.canColor) cur.color = false; drawOrder();   // режим недоступен — вернём одну сторону
+      try{ const r = await api('/kiosk/options/' + cur.orderId, optBody()); applyOpts(r); }catch(e2){}
       $('payBtn').disabled = false;
     }
   }, 450);
+}
+
+function optBody(){
+  return {token: cur.token, copies: cur.copies, sides: cur.sides, color: !!cur.color,
+          ranges: cur.files.map(f => ({from: f.from, to: f.to}))};
+}
+function applyOpts(r){
+  cur.total = r.total;
+  (r.files || []).forEach((x, i) => { if(cur.files[i]) cur.files[i].pages = x.pages; });
+  drawOrder();
 }
 
 /* Копия и скан: всё на экране */
