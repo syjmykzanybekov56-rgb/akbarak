@@ -66,8 +66,8 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-09 v10 ч/б принтер — без цвета"   # видно в окне при запуске — так проверяете, что стоит новая версия
-SCAN_DPI = 300
+VERSION = "2026-11-11 v12 скан быстрее и с повтором"   # видно в окне при запуске — так проверяете, что стоит новая версия
+SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
 # Двусторонняя печать на принтере БЕЗ автоматического дуплекса (сейчас Pantum M6500W).
@@ -80,7 +80,7 @@ BACK_REVERSE = True          # печатать обороты в обратно
 BACK_ROTATE_DUPLEX = 0       # повернуть оборот на 180°, если он вверх ногами (0 или 180)
 BACK_ROTATE_BOOKLET = 180    # то же для брошюры
 MANUAL_WAIT_MIN = 15         # сколько ждать переворота, потом заказ — ошибка
-COPY_DPI = 300
+COPY_DPI = 200
 
 LIBREOFFICE_PATHS = [
     r"C:\Program Files\LibreOffice\program\soffice.exe",
@@ -481,7 +481,20 @@ def _wia_set(item, prop_id, name, value):
 
 
 def scan_to_jpeg(order_id, dpi, color=False, sheet=1):
-    """Сканирует лист со стекла (цвет или оттенки серого). Возвращает путь к JPEG или None."""
+    """Сканирует лист со стекла. Сканер после печати или сна часто отвечает «занят» —
+    поэтому до 3 попыток с паузой, прежде чем сдаться."""
+    for attempt in range(1, 4):
+        path = _scan_once(order_id, dpi, color, sheet)
+        if path:
+            return path
+        if attempt < 3:
+            log.warning("Заказ #%s: сканер не ответил (попытка %s из 3), жду и пробую снова…", order_id, attempt)
+            time.sleep(4)
+    return None
+
+
+def _scan_once(order_id, dpi, color=False, sheet=1):
+    """Одна попытка сканирования (цвет или оттенки серого). Возвращает путь к JPEG или None."""
     try:
         import win32com.client
         from PIL import Image
