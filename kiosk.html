@@ -338,6 +338,7 @@
   .vtabs button.on{background:var(--gold);border-color:var(--gold);color:var(--night)}
   .vbar{height:.7vh;border-radius:1vh;background:rgba(255,255,255,.15);overflow:hidden}
   .vbar b{display:block;height:100%;width:0;background:var(--gold)}
+  .lnks{display:flex;gap:3vw;align-items:center;flex-wrap:wrap}
   .ink.vid{padding:0!important}
   .ink.vid video{width:100%;height:100%;object-fit:cover;display:block}
 </style>
@@ -749,7 +750,7 @@ async function printToScreen(){
                  ["i-out",   "Выбери число копий здесь, оплати, и лист выйдет"]];
   pane(BACK + head('Печать', '5 сом за страницу') + stepsHtml(steps) +
        '<div class="wait"><div class="spin"></div>Ждём файл с телефона…</div>' +
-       '<button class="switch" onclick="printOnPhone()">Удобнее всё сделать в телефоне</button>' + vidLink('print'));
+       '<div class="lnks"><button class="switch" onclick="printOnPhone()">Удобнее всё сделать в телефоне</button>' + vidLink('print') + '</div>');
   runSteps(steps);
   paper('<h3 style="--i:0">Сканируй<br>и выбери файл</h3><div class="q" id="qrSess" style="--i:1"></div><small style="--i:2">Файл появится на этом экране</small>');
   setTimer(150, 'Вернёмся на главный экран через %s с', goHome);
@@ -1115,7 +1116,7 @@ function copyScan(key){
       (canColor ? '<div><div class="opt-l">Цвет</div><div class="sides" id="colorSel"><button data-c="0" onclick="csColor(false)">Ч/Б</button><button data-c="1" onclick="csColor(true)">Цвет</button></div></div>' : '') +
       '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
     '<div class="acts"><button class="btn main" id="payBtn" onclick="csPay()"></button></div>' +
-    '<button class="switch" onclick="csPhone(\'' + key + '\')">Удобнее заказать в телефоне</button>' + vidLink(key));
+    '<div class="lnks"><button class="switch" onclick="csPhone(\'' + key + '\')">Удобнее заказать в телефоне</button>' + vidLink(key) + '</div>');
   cur.draw = () => {
     if($('cVal')){ $('cVal').textContent = cur.copies; $('cMinus').disabled = cur.copies <= 1; $('cPlus').disabled = cur.copies >= 20; }
     $('shVal').textContent = cur.sheets; $('shMinus').disabled = cur.sheets <= 1; $('shPlus').disabled = cur.sheets >= MAX_SHEETS;
