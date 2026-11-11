@@ -841,6 +841,11 @@ def create_payment(order_id):
                     return jsonify({"error": "Заказ уже оплачен"}), 409
                 conn = db()
         payment = PAY.create_payment(order_id, amount, f"АкБарак заказ #{order_id}", return_url=return_url)
+        if PAY is mkassa and (not payment or not payment.get("payment_id")):
+            log.warning("MKassa не ответила (%s) — заказ #%s оплачивается через GoPay", mkassa.LAST_ERROR, order_id)
+            payment = gopay.create_payment(order_id, amount, f"АкБарак заказ #{order_id}", return_url=return_url)
+            if payment:
+                payment["expires_in"] = 0
         if not payment or not payment.get("payment_id"):
             conn.close()
             return jsonify({"error": f"Не удалось создать платёж в {PAY_NAME}"}), 502
@@ -849,7 +854,8 @@ def create_payment(order_id):
                          [(payment["payment_id"], r["id"]) for r in rows])
         conn.commit()
         conn.close()
-        return jsonify({"success": True, "amount": amount, "provider": "mkassa" if PAY is mkassa else "gopay",
+        return jsonify({"success": True, "amount": amount,
+                        "provider": "mkassa" if str(payment.get("payment_id", "")).startswith("MKSA") else "gopay",
                         "expires_in": payment.get("expires_in", 0),
                         "checkout_url": payment.get("checkout_url"), "qr_url": payment.get("qr_url")})
     except Exception as e:
@@ -1635,7 +1641,7 @@ import tgbot  # noqa: E402
 tgbot.register(app, {
     "db": db, "FILES_DIR": FILES_DIR, "now": now, "ago": ago, "remove": _remove,
     "order_total": order_total, "pdf_page_count": pdf_page_count, "docx_page_count": docx_page_count,
-    "txt_page_count": txt_page_count, "gopay": PAY, "sync_payment": sync_payment, "PRICES": PRICES, "SIDES": SIDES,
+    "txt_page_count": txt_page_count, "gopay": PAY, "gopay_fallback": gopay, "sync_payment": sync_payment, "PRICES": PRICES, "SIDES": SIDES,
     "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
     "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok, "color_ok": color_ok,
 })
