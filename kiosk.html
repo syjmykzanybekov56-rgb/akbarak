@@ -615,7 +615,7 @@ function drawTimer(){
   $('svcFill').style.transform = 'scaleX(' + Math.max(0, flowLeft / (flowMax || 1)) + ')';
   $('svcLeft').textContent = flowLabel.replace('%s', Math.max(0, flowLeft));
 }
-function stopFlow(){ clearInterval(flowTick); clearInterval(pollT); clearInterval(stepTick); flowMax = 0; }
+function stopFlow(){ clearInterval(flowTick); clearInterval(pollT); clearInterval(stepTick); clearTimeout(typeof payQrT !== "undefined" ? payQrT : 0); flowMax = 0; }
 
 async function api(path, body){
   const r = await fetch(SERVER + path, body === undefined ? {cache: 'no-store'} :
@@ -1013,16 +1013,28 @@ async function payOrder(){
   runSteps(steps);
   paper('<h3 style="--i:0">Сканируй<br>для оплаты</h3><div class="q" id="qrPay" style="--i:1"></div><small style="--i:2">Сумма: ' + cur.total + ' сом<br>Оплачивая, вы принимаете публичную оферту: akbarak.vercel.app/oferta.html</small>');
   setTimer(240, 'Заказ отменится через %s с без оплаты', cancelAndHome, false);
-  try{
-    const r = await fetch(SERVER + '/create_payment/' + cur.orderId, {method: 'POST'});
-    const d = await r.json();
-    if(!d.checkout_url) throw new Error(d.error || 'Не удалось создать оплату');
-    qr($('qrPay'), d.checkout_url, 512);
-  }catch(e){
-    $('qrPay').innerHTML = '<small>' + esc(e.message) + '</small>';
-  }
+  await makePayQr(cur.orderId);
   clearInterval(pollT);
   pollT = setInterval(checkOrder, 2500);
+}
+
+/* QR оплаты. У МБанка QR живёт ~60 с — обновляем его сами, пока ждём оплату */
+let payQrT = null;
+async function makePayQr(orderId){
+  clearTimeout(payQrT);
+  try{
+    const r = await fetch(SERVER + '/create_payment/' + orderId, {method: 'POST'});
+    const d = await r.json();
+    if(cur.orderId !== orderId || cur.paid) return;
+    if(!d.checkout_url){ if(r.status === 409) return; throw new Error(d.error || 'Не удалось создать оплату'); }
+    const box = $('qrPay'); if(!box) return;
+    box.innerHTML = '';
+    qr(box, d.checkout_url, 512);
+    if(d.expires_in > 0)
+      payQrT = setTimeout(() => { if(cur.orderId === orderId && !cur.paid && $('qrPay')) makePayQr(orderId); }, d.expires_in * 1000);
+  }catch(e){
+    const box = $('qrPay'); if(box) box.innerHTML = '<small>' + esc(e.message) + '</small>';
+  }
 }
 
 /* Статус заказа после оплаты */
