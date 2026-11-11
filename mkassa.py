@@ -15,6 +15,7 @@
 """
 
 import os
+import time
 import logging
 import requests
 
@@ -31,6 +32,86 @@ PAID = ("paid",)
 DEAD = ("failed", "overdue", "canceled", "cancelled", "rollback", "for_rollback")
 
 LAST_ERROR = ""
+
+# ─────────── Канал через Кыргызстан ───────────
+# MKassa не принимает запросы с зарубежных IP (Railway — за рубежом). Поэтому запросы
+# отдаём ноутбуку терминала (он в КР): он забирает задание, делает запрос и возвращает ответ.
+# Колбэки от MKassa приходят на сервер напрямую — их это ограничение не касается.
+import threading
+import uuid
+
+DIRECT = os.getenv("MKASSA_DIRECT", "0").strip() == "1"   # 1 — сервер сам ходит в MKassa (если он в КР)
+RELAY_WAIT = 20                                            # сколько ждём ответа от ноутбука
+
+
+class _Relay:
+    def __init__(self):
+        self.cv = threading.Condition()
+        self.jobs = []            # задания в очереди
+        self.results = {}         # id -> ответ
+        self.seen = {}            # терминал -> когда последний раз спрашивал задания
+
+    def alive(self):
+        return any(time.time() - t < 45 for t in self.seen.values())
+
+    def call(self, job):
+        job["id"] = uuid.uuid4().hex
+        with self.cv:
+            self.jobs.append(job)
+            self.cv.notify_all()
+            end = time.time() + RELAY_WAIT
+            while job["id"] not in self.results:
+                left = end - time.time()
+                if left <= 0:
+                    if job in self.jobs:
+                        self.jobs.remove(job)
+                    raise TimeoutError("ноутбук терминала не ответил")
+                self.cv.wait(left)
+            return self.results.pop(job["id"])
+
+    def next(self, terminal, wait=25):
+        with self.cv:
+            self.seen[terminal] = time.time()
+            end = time.time() + wait
+            while not self.jobs:
+                left = end - time.time()
+                if left <= 0:
+                    return None
+                self.cv.wait(min(left, 5))
+                self.seen[terminal] = time.time()
+            return self.jobs.pop(0)
+
+    def done(self, job_id, result):
+        with self.cv:
+            self.results[job_id] = result
+            if len(self.results) > 200:
+                self.results.clear()
+            self.cv.notify_all()
+
+
+RELAY = _Relay()
+
+
+class _Resp:
+    def __init__(self, status, text):
+        self.status_code, self.text = status, text or ""
+
+    def json(self):
+        import json
+        return json.loads(self.text)
+
+
+def _request(method, path, body=None):
+    """Запрос к MKassa: через ноутбук терминала (если он на связи), иначе напрямую."""
+    url = BASE_URL + path
+    headers = _h(body is not None)
+    if not DIRECT and RELAY.alive():
+        r = RELAY.call({"method": method, "url": url, "headers": headers, "json": body})
+        if r.get("error"):
+            raise ConnectionError("терминал: " + r["error"])
+        return _Resp(r.get("status", 0), r.get("text", ""))
+    r = requests.request(method, url, json=body, headers=headers, timeout=20)
+    return _Resp(r.status_code, r.text)
 
 
 def enabled() -> bool:
@@ -67,8 +148,7 @@ def create_payment(order_id: int, amount_som: int, description: str = "", return
     if _num(CASHIER) is not None:
         body["cashier"] = _num(CASHIER)
     try:
-        r = requests.post(f"{BASE_URL}/api/partners/transactions/init_payment/",
-                          json=body, headers=_h(True), timeout=20)
+        r = _request("POST", "/api/partners/transactions/init_payment/", body)
         logger.info("MKassa init_payment #%s: %s %s", order_id, r.status_code, r.text[:500])
         if r.status_code >= 300:
             LAST_ERROR = f"init_payment {r.status_code}: {r.text[:300]}"
@@ -92,7 +172,7 @@ def get_transaction(tx_id: str):
     if not tx_id:
         return None
     try:
-        r = requests.get(f"{BASE_URL}/api/partners/transactions/{tx_id}/", headers=_h(), timeout=20)
+        r = _request("GET", f"/api/partners/transactions/{tx_id}/")
         if r.status_code >= 300:
             LAST_ERROR = f"status {r.status_code}: {r.text[:300]}"
             return None
@@ -106,7 +186,7 @@ def get_transaction(tx_id: str):
 def cancel(tx_id: str) -> bool:
     """Отмена неоплаченного QR (после оплаты отменить нельзя)."""
     try:
-        r = requests.put(f"{BASE_URL}/api/partners/transactions/{tx_id}/cancel/", headers=_h(), timeout=15)
+        r = _request("PUT", f"/api/partners/transactions/{tx_id}/cancel/")
         return r.status_code < 300
     except Exception as e:
         logger.error("MKassa cancel %s: %s", tx_id, e)
@@ -115,7 +195,7 @@ def cancel(tx_id: str) -> bool:
 
 def branches():
     """Список торговых точек и кассиров — чтобы узнать MKASSA_BRANCH / MKASSA_CASHIER."""
-    r = requests.get(f"{BASE_URL}/api/partners/branches/", headers=_h(), timeout=20)
+    r = _request("GET", "/api/partners/branches/")
     try:
         return r.status_code, r.json()
     except ValueError:

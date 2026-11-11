@@ -18,6 +18,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from logging.handlers import RotatingFileHandler
 
@@ -66,7 +67,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-11 v12 скан быстрее и с повтором"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-11 v13 оплата МБанк через терминал"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -824,12 +825,59 @@ def process(order):
                 finished.discard(oid)
 
 
+# ─────────────────────── Канал к МБанку (MKassa) ───────────────────────
+# MKassa не пускает зарубежные IP, а наш сервер за рубежом. Ноутбук терминала в КР
+# забирает у сервера готовый запрос, отправляет его в MKassa и возвращает ответ.
+# Работает в отдельном потоке и не мешает печати. Ходит только на api.mkassa.kg.
+
+MKASSA_PREFIX = "https://api.mkassa.kg/api/partners/"
+
+
+def mkassa_relay_loop():
+    s = requests.Session()
+    s.headers["X-Worker-Key"] = WORKER_KEY
+    warned = False
+    while True:
+        try:
+            r = s.get(f"{SERVER}/mkassa/relay/next", params={"terminal": TERMINAL_ID}, timeout=40)
+            if r.status_code != 200:
+                if r.status_code == 403 and not warned:
+                    log.warning("МБанк-канал: сервер не принял ключ терминала (worker_key.txt)")
+                    warned = True
+                time.sleep(2 if r.status_code == 204 else 15)
+                continue
+            job = r.json()
+            out = {"id": job.get("id")}
+            url = str(job.get("url", ""))
+            if not url.startswith(MKASSA_PREFIX) or job.get("method") not in ("GET", "POST", "PUT"):
+                out["error"] = "запрещённый адрес"
+            else:
+                try:
+                    m = requests.request(job["method"], url, headers=job.get("headers") or {},
+                                         json=job.get("json"), timeout=18)
+                    out.update(status=m.status_code, text=m.text[:20000])
+                except Exception as e:
+                    out["error"] = str(e)[:300]
+            s.post(f"{SERVER}/mkassa/relay/result", json=out, timeout=15)
+            log.info("МБанк: %s %s → %s", job.get("method"), url.replace(MKASSA_PREFIX, ""),
+                     out.get("status", out.get("error")))
+        except Exception as e:
+            log.debug("МБанк-канал: %s", e)
+            time.sleep(5)
+
+
 def main():
     log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
     log.info("Ключ терминала: %s", "задан" if WORKER_KEY else "не задан")
     c = printer_is_color()
     log.info("Цветной принтер: %s", {True: "да", False: "НЕТ — цветная печать на этом терминале скрыта", None: "не удалось узнать"}[c])
+
+    if WORKER_KEY:
+        threading.Thread(target=mkassa_relay_loop, daemon=True).start()
+        log.info("Канал оплаты МБанк: включён")
+    else:
+        log.info("Канал оплаты МБанк: выключен (нет worker_key.txt)")
 
     last_beat, last_status = 0, None
     while True:
