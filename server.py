@@ -1009,12 +1009,20 @@ def mkassa_webhook():
     return jsonify({"success": True}), 200
 
 
+MKASSA_RELAY_KEY = os.getenv("MKASSA_RELAY_KEY", "").strip()
+
+
+def _relay_ok():
+    """Канал МБанка: пускаем только по ключу (MKASSA_RELAY_KEY или WORKER_KEY). Без ключа — никого."""
+    k = request.headers.get("X-Worker-Key") or ""
+    return bool(k) and any(x and secrets.compare_digest(k, x) for x in (MKASSA_RELAY_KEY, WORKER_KEY))
+
+
 @app.route("/mkassa/relay/next", methods=["GET"])
-@require_worker
 def mkassa_relay_next():
     """Ноутбук терминала (в КР) забирает запрос к MKassa. Пустой ответ — заданий нет.
-    В задании есть ключ MKassa, поэтому без WORKER_KEY канал не работает вообще."""
-    if not WORKER_KEY or request.headers.get("X-Worker-Key") != WORKER_KEY:
+    В задании есть ключ MKassa, поэтому без ключа канала задания не выдаются."""
+    if not _relay_ok():
         time.sleep(20)
         return ("", 204)
     if not mkassa.enabled():
@@ -1025,9 +1033,8 @@ def mkassa_relay_next():
 
 
 @app.route("/mkassa/relay/result", methods=["POST"])
-@require_worker
 def mkassa_relay_result():
-    if not WORKER_KEY or request.headers.get("X-Worker-Key") != WORKER_KEY:
+    if not _relay_ok():
         return jsonify({"error": "Нет доступа"}), 403
     data = request.get_json(silent=True) or {}
     if data.get("id"):
