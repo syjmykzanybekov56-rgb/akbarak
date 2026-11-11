@@ -461,6 +461,8 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
     payment = None
     try:
         payment = H["gopay"].create_payment(order_id, total, f"АкБарак заказ #{order_id}", return_url=return_url)
+        if not payment and H.get("gopay_fallback") and H["gopay_fallback"] is not H["gopay"]:
+            payment = H["gopay_fallback"].create_payment(order_id, total, f"АкБарак заказ #{order_id}", return_url=return_url)
     except Exception as e:
         log.error("gopay: %s", e)
     if not payment or not payment.get("checkout_url"):
