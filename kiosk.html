@@ -318,6 +318,28 @@
   .tgline b{font-size:1.05vw;color:#14283D;font-family:var(--disp)}
   .pic{color:#fff}
   .logo svg{filter:drop-shadow(0 0 .08vw rgba(20,40,61,.7))}
+  /* ── видео-инструкции ── */
+  .howbtn{display:none;position:absolute;right:6vw;top:50%;transform:translateY(-50%);z-index:2;flex-direction:column;align-items:center;gap:1.4vh;
+    color:var(--navy);font-weight:800;font-size:1.25vw;line-height:1.2;text-align:center}
+  .howbtn i{width:7vw;height:7vw;border-radius:50%;background:var(--navy);display:grid;place-items:center;box-shadow:0 0 0 1vw rgba(224,180,76,.28);animation:howpulse 2.4s ease-in-out infinite}
+  @keyframes howpulse{50%{box-shadow:0 0 0 1.8vw rgba(224,180,76,.12)}}
+  .howbtn i:after{content:"";border-left:2.2vw solid var(--gold);border-top:1.35vw solid transparent;border-bottom:1.35vw solid transparent;margin-left:.6vw}
+  .howbtn.on{display:flex}
+  .vidov{position:fixed;inset:0;z-index:50;background:rgba(9,20,36,.94);display:none;align-items:center;justify-content:center;gap:4vw;padding:5vh 5vw}
+  .vidov.on{display:flex}
+  .vidov .vbox{height:88vh;aspect-ratio:9/16;max-width:46vw;border-radius:1.4vw;overflow:hidden;background:#000;box-shadow:0 2vh 6vh rgba(0,0,0,.5)}
+  .vidov .vbox.wide{aspect-ratio:16/9;height:auto;width:58vw;max-width:none}
+  .vidov video{width:100%;height:100%;object-fit:contain;background:#000}
+  .vidov .vside{max-width:30vw;color:#fff;display:flex;flex-direction:column;gap:3vh}
+  .vidov h2{font-family:var(--disp);font-weight:800;font-size:3.2vw;line-height:1.05;letter-spacing:-.02em}
+  .vidov p{font-size:1.4vw;line-height:1.45;color:#B9C6DA;font-weight:600}
+  .vtabs{display:flex;flex-wrap:wrap;gap:.8vw}
+  .vtabs button{height:5vw;padding:0 1.6vw;border-radius:2.5vw;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:800;font-size:1.3vw}
+  .vtabs button.on{background:var(--gold);border-color:var(--gold);color:var(--night)}
+  .vbar{height:.7vh;border-radius:1vh;background:rgba(255,255,255,.15);overflow:hidden}
+  .vbar b{display:block;height:100%;width:0;background:var(--gold)}
+  .ink.vid{padding:0!important}
+  .ink.vid video{width:100%;height:100%;object-fit:cover;display:block}
 </style>
 </head>
 <body>
@@ -386,6 +408,7 @@
       <div class="herosheet">
         <h1>Распечатай<br><span class="g">с&nbsp;телефона</span></h1>
         <p>Наведи камеру на код справа или выбери услугу — покажем, что делать.</p>
+        <button class="howbtn" id="howBtn" onclick="openVid()"><i></i><span>Видео:<br>как это работает</span></button>
       </div>
       <div class="tiles">
         <button class="tile" onclick="openSvc('print')">
@@ -459,6 +482,18 @@
   </div>
 </section>
 
+<!-- ═══════════ ВИДЕО-ИНСТРУКЦИИ ═══════════ -->
+<div class="vidov" id="vidOv">
+  <div class="vbox" id="vidBox"><video id="vidPlayer" playsinline preload="auto"></video></div>
+  <div class="vside">
+    <h2 id="vidT"></h2>
+    <p id="vidP"></p>
+    <div class="vbar"><b id="vidBar"></b></div>
+    <div class="vtabs" id="vidTabs"></div>
+    <button class="btn main" onclick="closeVid()">Понятно, закрыть</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -491,6 +526,47 @@ loadCfg(); setInterval(loadCfg, 60000);
 const MAX_SHEETS = 30;
 // Реклама: ads.json рядом с сайтом (меняется без кода). Обновляем раз в 10 минут.
 let ADS = {enabled: false, items: []};
+/* Видео-инструкции: список в /videos.json, файлы в /videos/. Пустой список — кнопки нет. */
+let VIDEOS = [], vidCur = -1, vidIdx = 0;
+function loadVideos(){
+  fetch('/videos.json', {cache: 'no-store'}).then(r => r.json()).then(v => {
+    VIDEOS = (v && v.enabled !== false && Array.isArray(v.videos)) ? v.videos.filter(x => x && x.src) : [];
+    const b = $('howBtn'); if(b) b.classList.toggle('on', VIDEOS.length > 0);
+  }).catch(() => {});
+}
+loadVideos(); setInterval(loadVideos, 10 * 60 * 1000);
+function vidFor(key){ return Math.max(0, VIDEOS.findIndex(v => v.key === key)); }
+function openVid(key){
+  if(!VIDEOS.length) return;
+  disarmIdle();
+  $('vidOv').classList.add('on');
+  playVid(key ? vidFor(key) : 0);
+}
+function playVid(i){
+  vidCur = i;
+  const v = VIDEOS[i], el = $('vidPlayer');
+  $('vidT').textContent = v.title || '';
+  $('vidP').textContent = v.text || '';
+  $('vidBox').classList.toggle('wide', v.wide === true);
+  $('vidTabs').innerHTML = VIDEOS.length > 1 ? VIDEOS.map((x, n) =>
+    '<button class="' + (n === i ? 'on' : '') + '" onclick="playVid(' + n + ')">' + esc(x.tab || x.title || ('Видео ' + (n + 1))) + '</button>').join('') : '';
+  el.muted = false; el.src = v.src; el.currentTime = 0;
+  el.play().catch(() => { el.muted = true; el.play().catch(() => {}); });
+}
+function closeVid(){
+  const el = $('vidPlayer'); el.pause(); el.removeAttribute('src'); el.load();
+  $('vidOv').classList.remove('on'); vidCur = -1;
+  if(view === 'home') armIdle();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const el = $('vidPlayer');
+  el.addEventListener('timeupdate', () => {
+    $('vidBar').style.width = (el.duration ? el.currentTime / el.duration * 100 : 0) + '%';
+    if(typeof bumpTimer === 'function') bumpTimer();
+  });
+  el.addEventListener('ended', () => { if(vidCur >= 0 && vidCur < VIDEOS.length - 1) playVid(vidCur + 1); else closeVid(); });
+});
+
 function loadAds(){ fetch('/ads.json', {cache: 'no-store'}).then(r => r.json()).then(a => { ADS = a; }).catch(() => {}); }
 loadAds(); setInterval(loadAds, 10 * 60 * 1000);
 const AD_ICONS = {
@@ -595,6 +671,7 @@ homeQrs();
 })();
 I18N.onChange(homeQrs);
 function goHome(){
+  if($('vidOv') && $('vidOv').classList.contains('on')) closeVid();
   stopFlow(); stopAttract();
   show('home'); feed($('homeSheet'));
   armIdle();
@@ -604,6 +681,8 @@ function goHome(){
 let flowTick = null, flowLeft = 0, flowMax = 0, flowExpire = null, flowLabel = '', flowReset = true;
 let pollT = null, stepTick = null, blockUntil = 0, cur = {};
 
+const vidLink = key => VIDEOS.some(v => v.key === key)
+  ? '<button class="switch" onclick="openVid(\'' + key + '\')">▶ Посмотреть видео, как это сделать</button>' : '';
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const BACK = '<button class="back" onclick="cancelAndHome()"><svg><use href="#i-back"/></svg>Все услуги</button>';
 const head = (t, p) => '<div class="svchead"><h1>' + t + '</h1><div class="pr">' + (p || '') + '</div></div>';
@@ -670,7 +749,7 @@ async function printToScreen(){
                  ["i-out",   "Выбери число копий здесь, оплати, и лист выйдет"]];
   pane(BACK + head('Печать', '5 сом за страницу') + stepsHtml(steps) +
        '<div class="wait"><div class="spin"></div>Ждём файл с телефона…</div>' +
-       '<button class="switch" onclick="printOnPhone()">Удобнее всё сделать в телефоне</button>');
+       '<button class="switch" onclick="printOnPhone()">Удобнее всё сделать в телефоне</button>' + vidLink('print'));
   runSteps(steps);
   paper('<h3 style="--i:0">Сканируй<br>и выбери файл</h3><div class="q" id="qrSess" style="--i:1"></div><small style="--i:2">Файл появится на этом экране</small>');
   setTimer(150, 'Вернёмся на главный экран через %s с', goHome);
@@ -1036,7 +1115,7 @@ function copyScan(key){
       (canColor ? '<div><div class="opt-l">Цвет</div><div class="sides" id="colorSel"><button data-c="0" onclick="csColor(false)">Ч/Б</button><button data-c="1" onclick="csColor(true)">Цвет</button></div></div>' : '') +
       '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
     '<div class="acts"><button class="btn main" id="payBtn" onclick="csPay()"></button></div>' +
-    '<button class="switch" onclick="csPhone(\'' + key + '\')">Удобнее заказать в телефоне</button>');
+    '<button class="switch" onclick="csPhone(\'' + key + '\')">Удобнее заказать в телефоне</button>' + vidLink(key));
   cur.draw = () => {
     if($('cVal')){ $('cVal').textContent = cur.copies; $('cMinus').disabled = cur.copies <= 1; $('cPlus').disabled = cur.copies >= 20; }
     $('shVal').textContent = cur.sheets; $('shMinus').disabled = cur.sheets <= 1; $('shPlus').disabled = cur.sheets >= MAX_SHEETS;
@@ -1227,6 +1306,8 @@ function docs(){
 
 let docIdx = 0, docTimer = null, attractOn = false;
 function printDoc(){
+  // каждый второй лист заставки — видео-инструкция (без звука), если видео есть
+  if(VIDEOS.length && docIdx % 2 === 1) return attractVideo();
   const list = docs(), d = list[docIdx % list.length], sheet = $('docSheet');
   sheet.classList.add('out');
   $('sayH').classList.add('fade'); $('sayP').classList.add('fade');
@@ -1239,6 +1320,26 @@ function printDoc(){
     docIdx++;
   }, attractOn && docIdx ? 900 : 0);
 }
+function attractVideo(){
+  const v = VIDEOS[vidIdx++ % VIDEOS.length], sheet = $('docSheet');
+  clearInterval(docTimer);
+  sheet.classList.add('out');
+  $('sayH').classList.add('fade'); $('sayP').classList.add('fade');
+  setTimeout(() => {
+    if(!attractOn) return;
+    $('docInk').className = 'ink vid';
+    $('docInk').innerHTML = '<video muted playsinline autoplay src="' + esc(v.src) + '"></video>';
+    $('sayH').textContent = v.title || 'Как это работает'; $('sayP').textContent = v.text || 'Коснись экрана — покажем со звуком';
+    $('sayH').classList.remove('fade'); $('sayP').classList.remove('fade');
+    feed(sheet);
+    docIdx++;
+    const el = $('docInk').querySelector('video');
+    const next = () => { if(!attractOn || !el.isConnected) return; printDoc(); docTimer = setInterval(printDoc, DOC_SEC * 1000); };
+    el.addEventListener('ended', next, {once: true});
+    el.addEventListener('error', next, {once: true});
+    el.play().catch(next);
+  }, 900);
+}
 function startAttract(){
   if(attractOn) return;
   stopFlow(); cur = {}; attractOn = true; docIdx = 0;
@@ -1246,13 +1347,18 @@ function startAttract(){
   show('attract'); printDoc();
   docTimer = setInterval(printDoc, DOC_SEC * 1000);
 }
-function stopAttract(){ attractOn = false; clearInterval(docTimer); }
+function stopAttract(){
+  attractOn = false; clearInterval(docTimer);
+  const v = $('docInk') && $('docInk').querySelector('video');
+  if(v){ v.pause(); $('docInk').innerHTML = ''; docIdx += docIdx % 2; }
+}
 
 /* ─────────── Простой и касания ─────────── */
 let idleTimer = null;
 function armIdle(){ clearTimeout(idleTimer); idleTimer = setTimeout(startAttract, IDLE_SEC * 1000); }
 function disarmIdle(){ clearTimeout(idleTimer); }
 function activity(e){
+  if($('vidOv').classList.contains('on')) return;
   if(view === 'attract'){ blockUntil = Date.now() + 600; goHome(); return; }
   if(view === 'svc'){ bumpTimer(); return; }
   armIdle();
