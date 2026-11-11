@@ -380,6 +380,11 @@ def on_callback(cq):
         return send(chat_id, hello(action))
 
     if kind == "o":                                    # проверка оплаты
+        if H.get("sync_payment"):
+            try:
+                H["sync_payment"](oid, wait=True)          # МБанк: спросить статус напрямую
+            except Exception as e:
+                log.error("sync_payment: %s", e)
         conn = H["db"]()
         row = conn.execute("SELECT status, terminal_id FROM orders WHERE id=? AND tg_chat_id=?",
                            (oid, str(chat_id))).fetchone()

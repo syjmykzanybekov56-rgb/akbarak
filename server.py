@@ -19,6 +19,7 @@
     FILE_TTL_HOURS     через сколько часов удалять файлы (по умолчанию 24)
     DEFAULT_TERMINAL   id терминала по умолчанию (по умолчанию kgma-1)
     GOPAY_*            см. gopay.py
+    MKASSA_*           см. mkassa.py (МБанк QR; если задан MKASSA_API_KEY — оплата идёт через него)
 """
 
 import io
@@ -37,7 +38,12 @@ from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
 import gopay
+import mkassa
 import doc_templates
+
+# Какой платёжный сервис: MKassa (МБанк QR), если на Railway есть MKASSA_API_KEY, иначе GoPay
+PAY = mkassa if mkassa.enabled() else gopay
+PAY_NAME = "МБанк" if PAY is mkassa else "GoPay"
 
 try:
     from pypdf import PdfReader
@@ -794,16 +800,24 @@ def create_payment(order_id):
         amount = sum(r["total"] for r in rows)
         tok = conn.execute("SELECT access_token FROM orders WHERE id=?", (order_id,)).fetchone()
         return_url = f"{SITE_URL}/?order={order_id}&token={tok['access_token']}" if tok and tok["access_token"] else SITE_URL
-        payment = gopay.create_payment(order_id, amount, f"АкБарак заказ #{order_id}", return_url=return_url)
+        if PAY is mkassa:
+            prev = conn.execute("SELECT gopay_payment_id FROM orders WHERE id=?", (order_id,)).fetchone()
+            if prev and prev["gopay_payment_id"]:
+                conn.close()
+                if _mkassa_sync_tx(prev["gopay_payment_id"]):      # старый QR уже оплачен
+                    return jsonify({"error": "Заказ уже оплачен"}), 409
+                conn = db()
+        payment = PAY.create_payment(order_id, amount, f"АкБарак заказ #{order_id}", return_url=return_url)
         if not payment or not payment.get("payment_id"):
             conn.close()
-            return jsonify({"error": "Не удалось создать платёж в GoPay"}), 502
+            return jsonify({"error": f"Не удалось создать платёж в {PAY_NAME}"}), 502
 
         conn.executemany("UPDATE orders SET gopay_payment_id=? WHERE id=?",
                          [(payment["payment_id"], r["id"]) for r in rows])
         conn.commit()
         conn.close()
-        return jsonify({"success": True, "amount": amount,
+        return jsonify({"success": True, "amount": amount, "provider": "mkassa" if PAY is mkassa else "gopay",
+                        "expires_in": payment.get("expires_in", 0),
                         "checkout_url": payment.get("checkout_url"), "qr_url": payment.get("qr_url")})
     except Exception as e:
         log.exception("create_payment")
@@ -873,8 +887,107 @@ def gopay_webhook():
         return jsonify({"error": str(e)}), 500
 
 
+# ─────────────────────── MKassa (МБанк QR) ───────────────────────
+
+def _mkassa_apply(tx):
+    """Применяет статус транзакции, полученной из API MKassa. True — если заказ оплачен."""
+    if not tx or (tx.get("status") or "").lower() not in mkassa.PAID:
+        return False
+    oid = mkassa.order_id_of(tx)
+    if not oid:
+        return False
+    conn = db()
+    try:
+        row = conn.execute("SELECT group_id FROM orders WHERE id=?", (oid,)).fetchone()
+        if not row:
+            return False
+        rows = conn.execute("SELECT id, status, total FROM orders WHERE group_id=?", (row["group_id"],)).fetchall() \
+            if row["group_id"] else conn.execute("SELECT id, status, total FROM orders WHERE id=?", (oid,)).fetchall()
+        expected = sum(r["total"] for r in rows if r["status"] != "cancelled")
+        to_queue = [r["id"] for r in rows if r["status"] in ("pending_payment", "rejected")]
+        if not to_queue:
+            return True
+        paid = mkassa.amount_som(tx)
+        if abs(paid - expected) > 0.01:
+            notify(f"⚠️ МБанк: сумма не совпадает! Заказ #{oid}: ждали {expected} сом, пришло {paid}. "
+                   f"Транзакция {tx.get('id')}. Печать не запущена, проверьте вручную.")
+            return False
+        conn.executemany("UPDATE orders SET status='new', paid_at=?, gopay_payment_id=? WHERE id=?",
+                         [(now(), tx.get("id"), i) for i in to_queue])
+        conn.commit()
+    finally:
+        conn.close()
+    tgbot.order_event(to_queue, "paid")
+    return True
+
+
+def _mkassa_sync_tx(tx_id):
+    return _mkassa_apply(mkassa.get_transaction(tx_id))
+
+
+_SYNC = {}          # order_id -> время последней проверки
+_SYNC_LOCK = threading.Lock()
+
+
+def sync_payment(order_id, wait=False):
+    """Запасной путь, если колбэк МБанка не дошёл: сами спрашиваем статус (не чаще раза в 4 с)."""
+    if PAY is not mkassa:
+        return
+    with _SYNC_LOCK:
+        if time.time() - _SYNC.get(order_id, 0) < 4:
+            return
+        _SYNC[order_id] = time.time()
+        if len(_SYNC) > 500:
+            for k in [k for k, v in _SYNC.items() if time.time() - v > 600]:
+                _SYNC.pop(k, None)
+    conn = db()
+    row = conn.execute("SELECT gopay_payment_id, status FROM orders WHERE id=?", (order_id,)).fetchone()
+    conn.close()
+    if not row or row["status"] != "pending_payment" or not row["gopay_payment_id"]:
+        return
+    if wait:
+        _mkassa_sync_tx(row["gopay_payment_id"])
+    else:
+        threading.Thread(target=_mkassa_sync_tx, args=(row["gopay_payment_id"],), daemon=True).start()
+
+
+@app.route("/mkassa_webhook", methods=["POST"])
+def mkassa_webhook():
+    """Колбэк от MKassa. Не верим телу — перепроверяем транзакцию по API.
+    500 → MKassa повторит отправку (так написано в их доке)."""
+    data = request.get_json(silent=True) or {}
+    tx_id = str(data.get("id") or "").strip()
+    if not tx_id or not mkassa.enabled():
+        return jsonify({"success": False}), 200
+    tx = mkassa.get_transaction(tx_id)
+    if tx is None:
+        return jsonify({"error": "MKassa недоступна, повторите"}), 500
+    try:
+        _mkassa_apply(tx)
+    except Exception:
+        log.exception("mkassa_webhook")
+        return jsonify({"error": "internal"}), 500
+    return jsonify({"success": True}), 200
+
+
+@app.route("/admin/api/mkassa", methods=["GET"])
+def admin_mkassa():
+    if not _admin_key_ok():
+        return jsonify({"error": "нет доступа"}), 403
+    out = {"enabled": mkassa.enabled(), "active_provider": PAY_NAME, "branch": mkassa.BRANCH,
+           "cashier": mkassa.CASHIER, "long_living": mkassa.LONG_LIVING, "last_error": mkassa.LAST_ERROR,
+           "webhook_url": request.host_url.rstrip("/").replace("http://", "https://") + "/mkassa_webhook"}
+    if mkassa.enabled() and request.args.get("branches"):
+        try:
+            out["branches_status"], out["branches"] = mkassa.branches()
+        except Exception as e:
+            out["branches_error"] = str(e)
+    return jsonify(out)
+
+
 @app.route("/payment_status/<int:order_id>", methods=["GET"])
 def payment_status(order_id):
+    sync_payment(order_id, wait=True)
     conn = db()
     row = conn.execute("SELECT status FROM orders WHERE id=?", (order_id,)).fetchone()
     conn.close()
@@ -1090,6 +1203,7 @@ def order_status(order_id):
     statuses = [i["status"] for i in items]
     if any(s == "pending_payment" for s in statuses):
         overall = "pending_payment"
+        sync_payment(order_id)
     elif any(s == "cancelled" for s in statuses):
         overall = "cancelled"
     elif any(s == "failed" for s in statuses):
@@ -1488,7 +1602,7 @@ import tgbot  # noqa: E402
 tgbot.register(app, {
     "db": db, "FILES_DIR": FILES_DIR, "now": now, "ago": ago, "remove": _remove,
     "order_total": order_total, "pdf_page_count": pdf_page_count, "docx_page_count": docx_page_count,
-    "txt_page_count": txt_page_count, "gopay": gopay, "PRICES": PRICES, "SIDES": SIDES,
+    "txt_page_count": txt_page_count, "gopay": PAY, "sync_payment": sync_payment, "PRICES": PRICES, "SIDES": SIDES,
     "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
     "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok, "color_ok": color_ok,
 })
