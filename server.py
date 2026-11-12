@@ -190,10 +190,19 @@ def init_db():
             offline_alerted INTEGER DEFAULT 0
         )
     """)
-    try:   # цветной ли принтер у терминала: сообщает программа печати (NULL — неизвестно)
-        conn.execute("ALTER TABLE terminals ADD COLUMN color INTEGER")
-    except sqlite3.OperationalError:
-        pass
+    for stmt in [   # цветной ли принтер (NULL — неизвестно), расходники, команды для принтера
+        "ALTER TABLE terminals ADD COLUMN color INTEGER",
+        "ALTER TABLE terminals ADD COLUMN paper_loaded INTEGER",
+        "ALTER TABLE terminals ADD COLUMN paper_at TEXT",
+        "ALTER TABLE terminals ADD COLUMN ink_at TEXT",
+        "ALTER TABLE terminals ADD COLUMN supply_alerted TEXT DEFAULT ''",
+        "ALTER TABLE terminals ADD COLUMN cmd TEXT",
+        "ALTER TABLE terminals ADD COLUMN cmd_result TEXT",
+    ]:
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -1177,6 +1186,110 @@ def terminal_info(terminal_id):
                     "sheets_today": row["sheets"], "orders_today": row["orders"]})
 
 
+# ─────────────────────── Расходники: бумага, чернила/тонер ───────────────────────
+# Датчиков нет, поэтому считаем по напечатанному: владелец в админке отмечает
+# «загрузил N листов» и «заправил», а сервер вычитает напечатанное с этого момента.
+INK_BLACK_YIELD = int(os.getenv("INK_BLACK_YIELD", "4000"))   # Epson L-серия: чёрная бутылка ~4000 стр.
+INK_COLOR_YIELD = int(os.getenv("INK_COLOR_YIELD", "6500"))   # цветные ~6500 стр.
+TONER_YIELD = int(os.getenv("TONER_YIELD", "1600"))           # Pantum PA-210 ~1600 стр.
+PAPER_LOW = int(os.getenv("PAPER_LOW", "20"))
+
+
+def _supplies(conn, t):
+    t = dict(t)
+    out = {"paper_loaded": t.get("paper_loaded"), "paper_left": None, "ink": None}
+    printed = "status IN ('printed','done') AND COALESCE(order_type,'print') IN ('print','copy','photo')"
+    if t.get("paper_at") and t.get("paper_loaded"):
+        r = conn.execute(f"SELECT COALESCE(SUM(CASE WHEN COALESCE(order_type,'print')='photo' THEN copies "
+                         f"WHEN COALESCE(sides,'single')='single' THEN pages*copies "
+                         f"ELSE ((pages+1)/2)*copies END),0) s FROM orders "
+                         f"WHERE terminal_id=? AND {printed} AND COALESCE(printed_at,created_at) >= ?",
+                         (t["id"], t["paper_at"])).fetchone()
+        out["paper_left"] = max(0, t["paper_loaded"] - r["s"])
+        out["paper_at"] = (_local(t["paper_at"]) or datetime.now()).strftime("%d.%m %H:%M")
+    if t.get("ink_at"):
+        r = conn.execute(f"SELECT COALESCE(SUM(CASE WHEN print_type='color' THEN 0 ELSE pages*copies END),0) bw, "
+                         f"COALESCE(SUM(CASE WHEN print_type='color' THEN pages*copies ELSE 0 END),0) col "
+                         f"FROM orders WHERE terminal_id=? AND {printed} AND COALESCE(printed_at,created_at) >= ?",
+                         (t["id"], t["ink_at"])).fetchone()
+        pct = lambda used, cap: max(0, round(100 - used * 100 / cap))
+        if t.get("color") == 0:
+            out["ink"] = {"kind": "toner", "toner": pct(r["bw"] + r["col"], TONER_YIELD)}
+        else:
+            out["ink"] = {"kind": "ink", "black": pct(r["bw"] + 0.5 * r["col"], INK_BLACK_YIELD),
+                          "color": pct(r["col"], INK_COLOR_YIELD)}
+        out["ink_at"] = (_local(t["ink_at"]) or datetime.now()).strftime("%d.%m %H:%M")
+    return out
+
+
+def _supply_alerts(terminal):
+    """Предупреждаем владельца один раз: мало бумаги / мало чернил."""
+    conn = db()
+    try:
+        t = conn.execute("SELECT * FROM terminals WHERE id=?", (terminal,)).fetchone()
+        if not t:
+            return
+        s, sent, msgs = _supplies(conn, t), set(filter(None, (t["supply_alerted"] or "").split(","))), []
+        if s["paper_left"] is not None and s["paper_left"] <= PAPER_LOW and "paper" not in sent:
+            msgs.append(f"📄 {terminal}: осталось ~{s['paper_left']} листов бумаги — пора доложить.")
+            sent.add("paper")
+        ink = s.get("ink") or {}
+        for k, name in (("black", "чёрных чернил"), ("color", "цветных чернил"), ("toner", "тонера")):
+            if k in ink and ink[k] <= 10 and k not in sent:
+                msgs.append(f"💧 {terminal}: осталось ~{ink[k]}% {name} — пора заправить.")
+                sent.add(k)
+        if msgs:
+            conn.execute("UPDATE terminals SET supply_alerted=? WHERE id=?", (",".join(sent), terminal))
+            conn.commit()
+            notify("\n".join(msgs))
+    finally:
+        conn.close()
+
+
+@app.route("/admin/api/supplies/<terminal_id>", methods=["POST"])
+def admin_supplies(terminal_id):
+    if not _admin_key_ok():
+        return jsonify({"error": "нет доступа"}), 403
+    data = request.get_json(silent=True) or {}
+    conn = db()
+    try:
+        t = conn.execute("SELECT supply_alerted FROM terminals WHERE id=?", (terminal_id,)).fetchone()
+        if not t:
+            return jsonify({"error": "Терминал не найден"}), 404
+        sent = set(filter(None, (t["supply_alerted"] or "").split(",")))
+        if data.get("paper") is not None:
+            n = clamp(data.get("paper"), 1, 5000, 100)
+            conn.execute("UPDATE terminals SET paper_loaded=?, paper_at=? WHERE id=?", (n, now(), terminal_id))
+            sent.discard("paper")
+        if data.get("ink"):
+            conn.execute("UPDATE terminals SET ink_at=? WHERE id=?", (now(), terminal_id))
+            sent -= {"black", "color", "toner"}
+        conn.execute("UPDATE terminals SET supply_alerted=? WHERE id=?", (",".join(sent), terminal_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({"success": True})
+
+
+PRINTER_CMDS = {"nozzle": "проверка дюз", "clean": "прочистка дюз"}
+
+
+@app.route("/admin/api/cmd/<terminal_id>", methods=["POST"])
+def admin_printer_cmd(terminal_id):
+    """Команда принтеру (Epson): проверка или прочистка дюз. Терминал заберёт её со следующим сигналом."""
+    if not _admin_key_ok():
+        return jsonify({"error": "нет доступа"}), 403
+    cmd = (request.get_json(silent=True) or {}).get("cmd")
+    if cmd not in PRINTER_CMDS:
+        return jsonify({"error": "Неизвестная команда"}), 400
+    conn = db()
+    conn.execute("UPDATE terminals SET cmd=?, cmd_result=? WHERE id=?",
+                 (cmd, f"⏳ {PRINTER_CMDS[cmd]}: ждём терминал…", terminal_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
 @app.route("/heartbeat", methods=["POST"])
 @require_worker
 def heartbeat():
@@ -1194,7 +1307,22 @@ def heartbeat():
         conn.close()
     if printer and printer != "ok" and (not prev or prev["printer_status"] != printer):
         notify(f"🖨 Терминал {terminal}: {printer}")
-    return jsonify({"success": True})
+    conn = db()
+    out = {"success": True}
+    if data.get("cmd_result"):
+        conn.execute("UPDATE terminals SET cmd_result=? WHERE id=?", (str(data["cmd_result"])[:200], terminal))
+    row = conn.execute("SELECT cmd FROM terminals WHERE id=?", (terminal,)).fetchone()
+    if row and row["cmd"]:
+        out["cmd"] = row["cmd"]
+        conn.execute("UPDATE terminals SET cmd=NULL, cmd_result=? WHERE id=?",
+                     (f"⏳ {PRINTER_CMDS.get(row['cmd'], row['cmd'])}: отправлено на принтер…", terminal))
+    conn.commit()
+    conn.close()
+    try:
+        _supply_alerts(terminal)
+    except Exception:
+        log.exception("supply alerts")
+    return jsonify(out)
 
 
 @app.route("/scan_upload/<int:order_id>", methods=["POST"])
@@ -1477,6 +1605,7 @@ def admin_summary():
         "SELECT id, total, pages, copies, status, refund, payment, order_type, print_type, terminal_id, created_at "
         "FROM orders WHERE created_at >= ?", (ago(hours=24 * 31),)).fetchall()
     terms = [dict(t) for t in conn.execute("SELECT * FROM terminals ORDER BY id")]
+    sup = {t["id"]: _supplies(conn, t) for t in terms}
     queue = conn.execute("SELECT status, COUNT(*) c FROM orders WHERE status IN "
                          "('pending_payment','new','printing','failed') GROUP BY status").fetchall()
     refunds = conn.execute("SELECT COUNT(*) c FROM orders WHERE refund='needed'").fetchone()["c"]
@@ -1524,7 +1653,8 @@ def admin_summary():
         ls = _local(t["last_seen"])
         st = terminals_rev.get(t["id"], {"orders": 0, "revenue": 0, "today": 0})
         term_out.append({"id": t["id"], "online": online, "printer": t["printer_status"] or "ok", "color": t.get("color"),
-                         "last_seen": ls.strftime("%d.%m %H:%M:%S") if ls else "—", **st})
+                         "last_seen": ls.strftime("%d.%m %H:%M:%S") if ls else "—", **st,
+                         "supplies": sup.get(t["id"]), "cmd_result": t.get("cmd_result")})
     q = {r["status"]: r["c"] for r in queue}
     return jsonify({
         "now": local_now.strftime("%d.%m.%Y %H:%M"),
