@@ -67,7 +67,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-11 v13 оплата МБанк через терминал"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-12 v14 прочистка дюз из админки"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -164,9 +164,66 @@ def printer_is_color():
         return None
 
 
+CMD_RESULT = None
+
+
 def send_heartbeat(status):
-    api("POST", "/heartbeat", json={"terminal": TERMINAL_ID, "printer_status": status,
-                                     "color": printer_is_color()}, timeout=10)
+    global CMD_RESULT
+    body = {"terminal": TERMINAL_ID, "printer_status": status, "color": printer_is_color()}
+    if CMD_RESULT:
+        body["cmd_result"] = CMD_RESULT
+    resp = api("POST", "/heartbeat", json=body, timeout=10)
+    if resp is None or resp.status_code != 200:
+        return
+    CMD_RESULT = None
+    try:
+        cmd = resp.json().get("cmd")
+    except Exception:
+        cmd = None
+    if cmd:
+        CMD_RESULT = printer_service(cmd)
+
+
+# ─────────────────────── Обслуживание Epson: проверка и прочистка дюз ───────────────────────
+# Те же служебные команды, что шлёт утилита Epson (формат ESC/P «remote mode», как в escputil).
+# Отправляются «сырым» заданием в очередь принтера. Работает на струйных Epson (L-серия).
+
+def _epson_remote(cmd: bytes) -> bytes:
+    init = b"\x00\x00\x00\x1b\x01@EJL 1284.4\n@EJL     \n\x1b@\x1b@"
+    return init + b"\x1b(R\x08\x00\x00REMOTE1" + cmd + b"\x1b\x00\x00\x00"
+
+
+EPSON_CMDS = {
+    "nozzle": ("проверка дюз", b"NC\x02\x00\x00\x00"),   # печатает тестовый шаблон
+    "clean": ("прочистка дюз", b"CH\x02\x00\x00\x00"),    # цикл прочистки головки (~1 мин)
+}
+
+
+def printer_service(cmd):
+    name, code = EPSON_CMDS.get(cmd, (cmd, None))
+    if code is None:
+        return f"❌ неизвестная команда {cmd}"
+    if "EPSON" not in (PRINTER_NAME or "").upper():
+        log.warning("%s: принтер %s не Epson — команда не поддерживается", name, PRINTER_NAME)
+        return f"❌ {name}: только для Epson (сейчас {PRINTER_NAME})"
+    try:
+        import win32print
+        h = win32print.OpenPrinter(PRINTER_NAME)
+        try:
+            win32print.StartDocPrinter(h, 1, (f"AkBarak {name}", None, "RAW"))
+            try:
+                win32print.StartPagePrinter(h)
+                win32print.WritePrinter(h, _epson_remote(code))
+                win32print.EndPagePrinter(h)
+            finally:
+                win32print.EndDocPrinter(h)
+        finally:
+            win32print.ClosePrinter(h)
+        log.info("🧽 %s: команда отправлена на %s", name, PRINTER_NAME)
+        return f"✅ {name}: отправлено на принтер " + time.strftime("%H:%M")
+    except Exception as e:
+        log.error("%s: %s", name, e)
+        return f"❌ {name}: {str(e)[:120]}"
 
 
 # ─────────────────────── Состояние принтера ───────────────────────

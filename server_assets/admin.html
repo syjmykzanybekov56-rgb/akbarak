@@ -369,6 +369,17 @@ function drawOverview(){
     : '<tr><td class="empty">Пока пусто</td></tr>';
   $('allTime').textContent = `За всё время: ${fmt(S.all_time.orders)} заказов · ${fmt(S.all_time.revenue)} сом · время Бишкека`;
 }
+function bar(label,pct,txt){const c=pct<=10?'var(--bad)':pct<=25?'#d98a00':'var(--ok)';
+  return `<div class="ln"><span>${label}</span><b>${txt}</b></div><div style="height:8px;border-radius:4px;background:rgba(127,127,127,.18);overflow:hidden;margin:2px 0 6px"><i style="display:block;height:100%;width:${Math.max(2,Math.min(100,pct))}%;background:${c}"></i></div>`;}
+function supHtml(t){const s=t.supplies||{};let h='';
+  if(s.paper_left!=null) h+=bar('Бумага (≈ по счётчику)',s.paper_left*100/(s.paper_loaded||1),`~${s.paper_left} из ${s.paper_loaded} листов`);
+  else h+='<div class="ln"><span>Бумага</span><b style="opacity:.6">нажмите «Загрузил бумагу»</b></div>';
+  const k=s.ink;
+  if(k&&k.kind==='ink'){h+=bar('Чёрные чернила (≈)',k.black,`~${k.black}%`);h+=bar('Цветные чернила (≈)',k.color,`~${k.color}%`);}
+  else if(k&&k.kind==='toner'){h+=bar('Тонер (≈)',k.toner,`~${k.toner}%`);}
+  else h+=`<div class="ln"><span>${t.color===0?'Тонер':'Чернила'}</span><b style="opacity:.6">отметьте после заправки</b></div>`;
+  if(t.cmd_result) h+=`<div class="ln"><span>Обслуживание</span><b>${H(t.cmd_result)}</b></div>`;
+  return h;}
 function drawTerms(){
   const sel=$('termSel'), cur=sel.value;
   sel.innerHTML='<option value="">Все терминалы</option>'+S.terminals.map(t=>`<option${t.id===cur?' selected':''}>${H(t.id)}</option>`).join('');
@@ -379,13 +390,30 @@ function drawTerms(){
     <div class="ln" style="margin-top:10px"><span>Принтер</span><b style="color:${t.printer==='ok'?'var(--ok)':'var(--bad)'}">${t.printer==='ok'?'готов':H(t.printer)}</b></div>
     <div class="ln"><span>Цвет</span><b>${t.color===0?'только ч/б (цвет скрыт)':t.color===1?'цветной':'неизвестно'}</b></div>
     <div class="ln"><span>Последний сигнал</span><b>${H(t.last_seen)}</b></div>
+    ${supHtml(t)}
     <div class="ln"><span>Заказов сегодня</span><b>${t.today}</b></div>
     <div class="ln"><span>За 30 дней</span><b>${t.orders} шт · ${fmt(t.revenue)} сом</b></div>
     <div class="acts">
       <button class="btn navy" data-test="${H(t.id)}" data-color="0">🖨 Тест ч/б</button>
       ${S.color_enabled && t.color!==0?`<button class="btn gold" data-test="${H(t.id)}" data-color="1">🎨 Тест цвет</button>`:''}
+      <button class="btn ghost" data-paper="${H(t.id)}">📄 Загрузил бумагу</button>
+      <button class="btn ghost" data-ink="${H(t.id)}" data-kind="${t.color===0?'toner':'ink'}">💧 ${t.color===0?'Заменил картридж':'Заправил чернила'}</button>
+      ${t.color!==0?`<button class="btn ghost" data-cmd="nozzle" data-t="${H(t.id)}">🔎 Проверка дюз</button><button class="btn ghost" data-cmd="clean" data-t="${H(t.id)}">🧽 Прочистка дюз</button>`:''}
       <a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="text-decoration:none">Экран ↗</a>
     </div></div>`).join('');
+  $('terms').querySelectorAll('[data-paper]').forEach(b=>b.onclick=async()=>{
+    const n=prompt('Сколько листов сейчас в лотке принтера '+b.dataset.paper+'?','100'); if(!n) return;
+    try{ await api('/admin/api/supplies/'+encodeURIComponent(b.dataset.paper),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paper:parseInt(n)})}); toast('Записал: '+n+' листов'); refresh(); }catch(e){ toast(e.message,true); }
+  });
+  $('terms').querySelectorAll('[data-ink]').forEach(b=>b.onclick=async()=>{
+    if(!confirm(b.dataset.kind==='toner'?'Отметить: поставил новый картридж (100%)?':'Отметить: заправил все чернила до полного (100%)?')) return;
+    try{ await api('/admin/api/supplies/'+encodeURIComponent(b.dataset.ink),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ink:true})}); toast('Записал'); refresh(); }catch(e){ toast(e.message,true); }
+  });
+  $('terms').querySelectorAll('[data-cmd]').forEach(b=>b.onclick=async()=>{
+    const what=b.dataset.cmd==='clean'?'прочистку дюз (≈1 мин, расходует немного чернил)':'проверку дюз (напечатает тестовый шаблон)';
+    if(!confirm('Запустить '+what+' на '+b.dataset.t+'?')) return;
+    try{ await api('/admin/api/cmd/'+encodeURIComponent(b.dataset.t),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:b.dataset.cmd})}); toast('Команда отправлена, терминал выполнит её в течение минуты'); refresh(); }catch(e){ toast(e.message,true); }
+  });
   $('terms').querySelectorAll('[data-test]').forEach(b=>b.onclick=async()=>{
     b.disabled=true;
     try{ const d=await api(`/admin/test/${encodeURIComponent(b.dataset.test)}?color=${b.dataset.color}`,{method:'POST'});
