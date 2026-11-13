@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /terminal/
+Disallow: /server_assets/
+Disallow: /download/
+Disallow: /kiosk.html
+Disallow: /send.html
+Disallow: /sinak-test.html
+
+Sitemap: https://akbarak.vercel.app/sitemap.xml
