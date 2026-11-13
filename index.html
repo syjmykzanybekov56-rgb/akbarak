@@ -352,6 +352,28 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
 .sec-ttl{color:var(--gray);letter-spacing:.5px;text-transform:none;font-size:13px;font-weight:600}
 .theme-val{margin-left:auto;font-size:12px;color:var(--gray);font-weight:700}
 </style>
+<script>
+// Telegram Mini App: сайт открыт внутри бота @PrintKGMA_bot (кнопка «АкБарак» / меню бота)
+(function(){
+  var inTG = /tgWebApp/.test(location.hash) || /[?&]tg=1/.test(location.search);
+  try{ if(inTG) sessionStorage.setItem('ak-tg','1'); else inTG = sessionStorage.getItem('ak-tg')==='1'; }catch(e){}
+  window.AK_TG = inTG;
+  if(inTG){
+    document.documentElement.classList.add('in-tg');
+    document.write('<script src="https://telegram.org/js/telegram-web-app.js"><\/script>');
+  }
+})();
+</script>
+<style>
+/* Внутри Telegram: свои кнопки «назад» не нужны — есть родная кнопка Telegram */
+.in-tg .hdr .back-btn{visibility:hidden}
+.in-tg #tg-card, .in-tg .menu-item-tg{display:none!important}
+.in-tg body{overscroll-behavior:none}
+.in-tg .pill, .in-tg button, .in-tg .menu-item{-webkit-tap-highlight-color:transparent}
+.in-tg .screen.active{animation:tgIn .22s ease-out}
+@keyframes tgIn{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.in-tg .screen.active{animation:none}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -374,7 +396,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
     <div class="menu-body">
       <div class="menu-item" onclick="toggleMenu();go('s-home')"><span class="menu-item-ico">🏠</span>Главная</div>
       <div class="menu-item" onclick="toggleMenu();go('s-how')"><span class="menu-item-ico">📖</span>Инструкция</div>
-      <div class="menu-item" onclick="location.href=tgLink()"><span class="menu-item-ico">✈️</span>Telegram-бот</div>
+      <div class="menu-item menu-item-tg" onclick="location.href=tgLink()"><span class="menu-item-ico">✈️</span>Telegram-бот</div>
       <a class="menu-item" href="/about.html" style="text-decoration:none"><span class="menu-item-ico">🏢</span>Сайт компании</a>
       <div class="menu-item" onclick="location.href='/partner.html'"><span class="menu-item-ico">🤝</span>Сотрудничество</div>
       <div class="menu-item" onclick="toggleMenu();go('s-about')"><span class="menu-item-ico">ℹ️</span>О нас</div>
@@ -1800,6 +1822,85 @@ function cycleTheme(){
 function tgLink(){ const l = (window.I18N && I18N.lang) || 'ru'; return 'https://t.me/PrintKGMA_bot?start=lang_' + l; }
 (function(){ const set = () => { const a = document.getElementById('tg-card'); if(a) a.href = tgLink(); };
   set(); if(window.I18N && I18N.onChange) I18N.onChange(set); })();
+</script>
+<script>
+// Telegram Mini App: родная кнопка «Назад», цвета шапки под тему, вибро-отклик, окна Telegram вместо alert
+(function(){
+  if(!window.AK_TG) return;
+  var tg = window.Telegram && Telegram.WebApp;
+  if(!tg) return;
+  try{ tg.ready(); tg.expand(); }catch(e){}
+  try{ if(tg.isVersionAtLeast && tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes(); }catch(e){}
+
+  // Тема: если студент сам не выбирал тему на сайте — как в Telegram
+  var saved = 'auto'; try{ saved = localStorage.getItem('ak-theme') || 'auto'; }catch(e){}
+  if(saved === 'auto' && typeof applyTheme === 'function'){
+    var r = document.documentElement;
+    if(tg.colorScheme === 'dark') r.setAttribute('data-theme','dark'); else r.setAttribute('data-theme','light');
+  }
+  function paint(){
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#EEF1F5';
+    try{ tg.setHeaderColor(bg); }catch(e){}
+    try{ tg.setBackgroundColor(bg); }catch(e){}
+    try{ if(tg.isVersionAtLeast('7.10')) tg.setBottomBarColor(bg); }catch(e){}
+  }
+  paint();
+  if(typeof cycleTheme === 'function'){
+    var _cycle = cycleTheme;
+    window.cycleTheme = function(){ _cycle(); paint(); };
+  }
+  try{ tg.onEvent('themeChanged', function(){
+    var t='auto'; try{ t = localStorage.getItem('ak-theme') || 'auto'; }catch(e){}
+    if(t === 'auto') document.documentElement.setAttribute('data-theme', tg.colorScheme === 'dark' ? 'dark' : 'light');
+    paint();
+  }); }catch(e){}
+
+  // Родная кнопка «Назад»
+  var current = 's-home';
+  function syncBack(){
+    var menuOpen = document.getElementById('menu-panel') && document.getElementById('menu-panel').classList.contains('show');
+    if(current !== 's-home' || menuOpen) tg.BackButton.show(); else tg.BackButton.hide();
+  }
+  var _go = go;
+  window.go = function(id){
+    _go(id); current = id;
+    try{ tg.HapticFeedback.selectionChanged(); }catch(e){}
+    syncBack();
+  };
+  if(typeof toggleMenu === 'function'){
+    var _menu = toggleMenu;
+    window.toggleMenu = function(){ _menu(); syncBack(); };
+  }
+  tg.BackButton.onClick(function(){
+    var mp = document.getElementById('menu-panel');
+    if(mp && mp.classList.contains('show')){ window.toggleMenu(); return; }
+    window.go('s-home');
+  });
+  var act = document.querySelector('.screen.active');
+  if(act && act.id) current = act.id;
+  syncBack();
+
+  // Лёгкая вибрация на выбор опций и кнопки
+  document.addEventListener('click', function(e){
+    var el = e.target.closest && e.target.closest('.pill, .pay-method, button, .menu-item, .svc, .card');
+    if(!el) return;
+    try{
+      if(el.classList.contains('pay-method')) tg.HapticFeedback.impactOccurred('medium');
+      else tg.HapticFeedback.impactOccurred('light');
+    }catch(err){}
+  }, true);
+
+  // Сообщения — окнами Telegram
+  window.alert = function(msg){ try{ tg.showAlert(String(msg)); }catch(e){} };
+
+  // Ссылки на Telegram открываем внутри Telegram
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href^="https://t.me/"]');
+    if(!a) return;
+    e.preventDefault();
+    try{ tg.openTelegramLink(a.href); }catch(err){ location.href = a.href; }
+  }, true);
+})();
 </script>
 </body>
 </html>

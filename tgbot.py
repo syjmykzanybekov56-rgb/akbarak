@@ -25,6 +25,7 @@ log = logging.getLogger("akbarak.tg")
 TOKEN = "".join((os.getenv("TG_CLIENT_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")).split())   # без пробелов/переносов
 API = f"https://api.telegram.org/bot{TOKEN}"
 SECRET = hashlib.sha256(("akbarak-tg:" + TOKEN).encode()).hexdigest()[:40]
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://akbarak.vercel.app/?tg=1")   # мини-приложение (сайт внутри Telegram)
 MAX_TG_MB = 20                      # Telegram отдаёт ботам файлы до 20 МБ
 DRAFT_HOURS = 6
 
@@ -68,9 +69,11 @@ def esc(s):
     return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def btn(text, data=None, url=None):
+def btn(text, data=None, url=None, web_app=None):
     b = {"text": text}
-    if url:
+    if web_app:
+        b["web_app"] = {"url": web_app}
+    elif url:
         b["url"] = url
     else:
         b["callback_data"] = data
@@ -233,6 +236,19 @@ def set_lang(chat_id, lang):
     conn.close()
 
 
+APP_BTN = {"ru": "🖨 Открыть АкБарак", "ky": "🖨 АкБаракты ачуу", "en": "🖨 Open AkBarak"}
+
+
+def app_row(lang):
+    """Кнопка мини-приложения: сайт заказа открывается прямо в Telegram."""
+    return [btn(APP_BTN.get(lang, APP_BTN["ru"]), web_app=WEBAPP_URL)]
+
+
+def set_menu_button():
+    """Кнопка «АкБарак» слева от поля ввода — открывает мини-приложение."""
+    return tg("setChatMenuButton", menu_button={"type": "web_app", "text": "АкБарак", "web_app": {"url": WEBAPP_URL}})
+
+
 def lang_kb():
     return [[btn("🇷🇺 Русский", "l:0:ru"), btn("🇰🇬 Кыргызча", "l:0:ky"), btn("🇬🇧 English", "l:0:en")]]
 
@@ -377,7 +393,7 @@ def on_callback(cq):
         set_lang(chat_id, action)
         edit(chat_id, msg_id, T("lang_set", action))
         tg("answerCallbackQuery", callback_query_id=cq["id"])
-        return send(chat_id, hello(action))
+        return send(chat_id, hello(action), [app_row(action)])
 
     if kind == "o":                                    # проверка оплаты
         if H.get("sync_payment"):
@@ -522,7 +538,8 @@ def on_update(u):
         return send(chat_id, T("help", lang))
     if text.startswith("/lang"):
         return send(chat_id, T("lang_pick", lang), lang_kb())
-    send(chat_id, hello(lang), lang_kb() if text == "/start" else None)
+    kb = [app_row(lang)] + (lang_kb() if text == "/start" else [])
+    send(chat_id, hello(lang), kb)
 
 
 # ─────────────────────── События заказа → сообщение студенту ───────────────────────
@@ -580,6 +597,8 @@ def register(app, helpers):
         pass
     conn.commit()
     conn.close()
+    if TOKEN:   # кнопка мини-приложения в меню бота — ставим при каждом запуске сервера, без ручной настройки
+        threading.Thread(target=set_menu_button, daemon=True).start()
 
     @app.route("/tg/webhook", methods=["POST"])
     def tg_webhook():
@@ -626,6 +645,7 @@ def register(app, helpers):
                                           {"command": "help", "description": c3}, {"command": "lang", "description": c4}], **extra)
             tg("setMyDescription", description=DESC[lc][0], **extra)
             tg("setMyShortDescription", short_description=DESC[lc][1], **extra)
+        set_menu_button()
         if not ok:
             return jsonify({"success": False, "bot": me.get("username"), "error": LAST_ERROR["text"] or "setWebhook не прошёл"}), 400
         return jsonify({"success": True, "bot": me.get("username"), "webhook": base.rstrip("/") + "/tg/webhook"})
