@@ -25,7 +25,6 @@ log = logging.getLogger("akbarak.tg")
 TOKEN = "".join((os.getenv("TG_CLIENT_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")).split())   # без пробелов/переносов
 API = f"https://api.telegram.org/bot{TOKEN}"
 SECRET = hashlib.sha256(("akbarak-tg:" + TOKEN).encode()).hexdigest()[:40]
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://akbarak.vercel.app/?tg=1")   # мини-приложение (сайт внутри Telegram)
 MAX_TG_MB = 20                      # Telegram отдаёт ботам файлы до 20 МБ
 DRAFT_HOURS = 6
 
@@ -88,34 +87,87 @@ LANGS = ("ru", "ky", "en")
 
 TX = {
     "hello": (
-        "👋 <b>АкБарак</b> — печать с телефона 24/7.\n\n"
-        "Отправь сюда файл — <b>PDF, Word (.docx), TXT или фото</b>. "
-        "Я посчитаю страницы и цену, ты оплатишь по ссылке, и лист выйдет из терминала.\n\n"
-        "💰 Цены: {prices}.\n📍 Терминал: КГМА.\n\n"
-        "/orders — мои заказы · /help — помощь · /lang — язык",
-        "👋 <b>АкБарак</b> — телефондон басып чыгаруу 24/7.\n\n"
-        "Бул жакка файл жибер — <b>PDF, Word (.docx), TXT же сүрөт</b>. "
-        "Мен барактарды жана баасын эсептейм, сен шилтеме аркылуу төлөйсүң, барак терминалдан чыгат.\n\n"
-        "💰 Баалар: {prices}.\n📍 Терминал: КММА.\n\n"
-        "/orders — буйрутмаларым · /help — жардам · /lang — тил",
-        "👋 <b>AkBarak</b> — print from your phone 24/7.\n\n"
-        "Send me a file — <b>PDF, Word (.docx), TXT or a photo</b>. "
-        "I'll count the pages and the price, you pay by link, and the sheet comes out of the terminal.\n\n"
-        "💰 Prices: {prices}.\n📍 Terminal: KSMA.\n\n"
-        "/orders — my orders · /help — help · /lang — language"),
+        "👋 Привет! Это <b>АкБарак</b> — печать с телефона.\n\n"
+        "<b>Как напечатать:</b>\n"
+        "1️⃣ Нажми 📎 внизу → <b>Файл</b> и выбери документ\n"
+        "2️⃣ Выбери ч/б или цвет и сколько копий\n"
+        "3️⃣ Оплати — лист выйдет из терминала\n\n"
+        "📄 PDF · Word (.docx) · TXT · фото\n"
+        "💰 {prices}\n"
+        "📍 Терминал: КГМА",
+        "👋 Салам! Бул <b>АкБарак</b> — телефондон басып чыгаруу.\n\n"
+        "<b>Кантип басып чыгаруу керек:</b>\n"
+        "1️⃣ Төмөндөгү 📎 → <b>Файл</b> басып, документти танда\n"
+        "2️⃣ Ак-кара же түстүү жана канча нуска экенин танда\n"
+        "3️⃣ Төлө — барак терминалдан чыгат\n\n"
+        "📄 PDF · Word (.docx) · TXT · сүрөт\n"
+        "💰 {prices}\n"
+        "📍 Терминал: КММА",
+        "👋 Hi! This is <b>AkBarak</b> — print from your phone.\n\n"
+        "<b>How to print:</b>\n"
+        "1️⃣ Tap 📎 below → <b>File</b> and pick a document\n"
+        "2️⃣ Choose B/W or colour and the number of copies\n"
+        "3️⃣ Pay — the sheet comes out of the terminal\n\n"
+        "📄 PDF · Word (.docx) · TXT · photo\n"
+        "💰 {prices}\n"
+        "📍 Terminal: KSMA"),
     "help": (
-        "<b>Как напечатать</b>\n1. Отправь файл сюда (скрепка 📎 → Файл). Можно несколько по очереди.\n"
-        "2. Выбери ч/б или цвет и число копий.\n3. Нажми «Оплатить» и оплати в банке.\n"
-        "4. Подойди к терминалу — лист выйдет сам. Я напишу, когда будет готово.\n\n"
-        "Word старого формата (.doc) пересохрани в .docx или PDF.\nВопросы: 0773 731 212 (WhatsApp).",
-        "<b>Кантип басып чыгаруу керек</b>\n1. Файлды бул жакка жибер (📎 → Файл). Бир нечесин кезек менен жиберсе болот.\n"
-        "2. Ак-кара же түстүү жана нуска санын танда.\n3. «Төлөө» баскычын басып, банк аркылуу төлө.\n"
-        "4. Терминалга бар — барак өзү чыгат. Даяр болгондо жазам.\n\n"
-        "Эски Word (.doc) файлын .docx же PDF кылып кайра сакта.\nСуроолор: 0773 731 212 (WhatsApp).",
-        "<b>How to print</b>\n1. Send the file here (📎 → File). You can send several, one by one.\n"
-        "2. Choose B/W or colour and the number of copies.\n3. Tap “Pay” and pay in your bank app.\n"
-        "4. Go to the terminal — the sheet comes out by itself. I'll message you when it's ready.\n\n"
-        "Old Word files (.doc): save as .docx or PDF first.\nQuestions: +996 773 731 212 (WhatsApp)."),
+        "📎 <b>Как отправить файл</b>\n\n"
+        "<b>Из телефона:</b> скрепка 📎 внизу → <b>Файл</b>. Telegram сразу покажет последние загрузки, "
+        "искать по папкам не нужно.\n\n"
+        "<b>Из WhatsApp или другого чата:</b> зажми файл → <b>Поделиться</b> → Telegram → <b>АкБарак</b>.\n\n"
+        "<b>Фото:</b> 📎 → Галерея. Лучше отправить «как файл» — так качество будет выше.\n\n"
+        "Можно отправить несколько файлов по очереди — на каждый придёт свой чек.\n"
+        "Старый Word (.doc) пересохрани в .docx или PDF.\n\n"
+        "❓ Вопросы: 0773 731 212 (WhatsApp)",
+        "📎 <b>Файлды кантип жиберүү керек</b>\n\n"
+        "<b>Телефондон:</b> төмөндөгү 📎 → <b>Файл</b>. Telegram акыркы жүктөлгөн файлдарды дароо көрсөтөт, "
+        "папкалардан издөөнүн кереги жок.\n\n"
+        "<b>WhatsApp же башка чаттан:</b> файлды басып кармап тур → <b>Бөлүшүү</b> → Telegram → <b>АкБарак</b>.\n\n"
+        "<b>Сүрөт:</b> 📎 → Галерея. «Файл катары» жиберсең, сапаты жакшы болот.\n\n"
+        "Бир нече файлды кезек менен жиберсе болот — ар бирине өз чеги келет.\n"
+        "Эски Word (.doc) файлын .docx же PDF кылып сакта.\n\n"
+        "❓ Суроолор: 0773 731 212 (WhatsApp)",
+        "📎 <b>How to send a file</b>\n\n"
+        "<b>From your phone:</b> tap 📎 below → <b>File</b>. Telegram shows your recent downloads right away — "
+        "no digging through folders.\n\n"
+        "<b>From WhatsApp or another chat:</b> long-press the file → <b>Share</b> → Telegram → <b>AkBarak</b>.\n\n"
+        "<b>Photos:</b> 📎 → Gallery. Send it “as a file” for better quality.\n\n"
+        "You can send several files one by one — each gets its own receipt.\n"
+        "Old Word files (.doc): save as .docx or PDF first.\n\n"
+        "❓ Questions: +996 773 731 212 (WhatsApp)"),
+    "hint": ("📎 Просто отправь сюда файл: скрепка внизу → <b>Файл</b>. Я посчитаю страницы и цену.",
+             "📎 Бул жакка файл жибер: төмөндөгү 📎 → <b>Файл</b>. Барактарды жана баасын эсептейм.",
+             "📎 Just send me a file: 📎 below → <b>File</b>. I'll count the pages and the price."),
+    "kb_send": ("📎 Как отправить файл", "📎 Файлды кантип жиберүү", "📎 How to send a file"),
+    "kb_orders": ("🧾 Мои заказы", "🧾 Буйрутмаларым", "🧾 My orders"),
+    "kb_prices": ("💰 Цены", "💰 Баалар", "💰 Prices"),
+    "kb_lang": ("🌐 Язык", "🌐 Тил", "🌐 Language"),
+    "kb_placeholder": ("Отправь файл через 📎", "📎 аркылуу файл жибер", "Send a file with 📎"),
+    "price_list": ("💰 <b>Цены</b>\n\n"
+                   "🖨 Печать ч/б — <b>{pbw} сом</b>/стр\n{pcolor}"
+                   "📠 Копия — <b>{cbw} сом</b>/стр\n"
+                   "🔍 Скан — <b>{sbw} сом</b>/стр (скан приходит в телефон)\n"
+                   "📸 Фото на документы — <b>50 сом</b>\n\n"
+                   "Оплата: МБанк и другие банки.",
+                   "💰 <b>Баалар</b>\n\n"
+                   "🖨 Ак-кара басуу — <b>{pbw} сом</b>/бет\n{pcolor}"
+                   "📠 Көчүрмө — <b>{cbw} сом</b>/бет\n"
+                   "🔍 Скан — <b>{sbw} сом</b>/бет (скан телефонго келет)\n"
+                   "📸 Документке сүрөт — <b>50 сом</b>\n\n"
+                   "Төлөм: МБанк жана башка банктар.",
+                   "💰 <b>Prices</b>\n\n"
+                   "🖨 B/W print — <b>{pbw} som</b>/page\n{pcolor}"
+                   "📠 Copy — <b>{cbw} som</b>/page\n"
+                   "🔍 Scan — <b>{sbw} som</b>/page (sent to your phone)\n"
+                   "📸 ID photo — <b>50 som</b>\n\n"
+                   "Payment: MBank and other banks."),
+    "price_color": ("🎨 Печать цвет — <b>{c} сом</b>/стр\n", "🎨 Түстүү басуу — <b>{c} сом</b>/бет\n",
+                    "🎨 Colour print — <b>{c} som</b>/page\n"),
+    "receipt": ("ЧЕК", "ЧЕК", "RECEIPT"),
+    "pages_x": ("{p} стр × {c} коп.", "{p} бет × {c} нуска", "{p} pages × {c} copies"),
+    "st_paid": ("Оплата", "Төлөм", "Paid"), "st_print": ("Печать", "Басуу", "Printing"),
+    "st_done": ("Готово", "Даяр", "Done"),
     "prices": ("ч/б {bw} сом/стр", "ак-кара {bw} сом/бет", "B/W {bw} som/page"),
     "prices_c": (", цвет {c} сом/стр", ", түстүү {c} сом/бет", ", colour {c} som/page"),
     "lang_pick": ("Выбери язык:", "Тилди танда:", "Choose a language:"),
@@ -236,17 +288,55 @@ def set_lang(chat_id, lang):
     conn.close()
 
 
-APP_BTN = {"ru": "🖨 Открыть АкБарак", "ky": "🖨 АкБаракты ачуу", "en": "🖨 Open AkBarak"}
+WELCOME_IMG = os.getenv("TG_WELCOME_IMG", "https://akbarak.vercel.app/icons/bot-welcome.jpg")
 
 
-def app_row(lang):
-    """Кнопка мини-приложения: сайт заказа открывается прямо в Telegram."""
-    return [btn(APP_BTN.get(lang, APP_BTN["ru"]), web_app=WEBAPP_URL)]
+def main_kb(lang):
+    """Постоянные кнопки под полем ввода."""
+    return {"keyboard": [[{"text": T("kb_send", lang)}],
+                         [{"text": T("kb_orders", lang)}, {"text": T("kb_prices", lang)}, {"text": T("kb_lang", lang)}]],
+            "resize_keyboard": True, "is_persistent": True, "input_field_placeholder": T("kb_placeholder", lang)}
+
+
+def kb_action(text):
+    """Какая постоянная кнопка нажата (на любом языке)."""
+    for key in ("kb_send", "kb_orders", "kb_prices", "kb_lang"):
+        if text in TX[key]:
+            return key
+    return None
+
+
+def send_reply_kb(chat_id, text, lang):
+    return tg("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML", disable_web_page_preview=True,
+              reply_markup=main_kb(lang))
+
+
+def send_hello(chat_id, lang):
+    """Приветствие с картинкой АкБарака и постоянными кнопками."""
+    r = tg("sendPhoto", chat_id=chat_id, photo=WELCOME_IMG, caption=hello(lang), parse_mode="HTML",
+           reply_markup=main_kb(lang))
+    if not r:   # картинка не загрузилась — шлём текстом
+        send_reply_kb(chat_id, hello(lang), lang)
+
+
+def price_list(lang):
+    P = H["PRICES"]
+    pc = T("price_color", lang, c=P["print_color"]) if H["color_ok"](H["DEFAULT_TERMINAL"]) else ""
+    return T("price_list", lang, pbw=P["print_bw"], pcolor=pc, cbw=P["copy_bw"], sbw=P["scan_bw"])
+
+
+def steps(lang, stage):
+    """Полоска прогресса заказа: оплата → печать → готово."""
+    names = [T("st_paid", lang), T("st_print", lang), T("st_done", lang)]
+    marks = []
+    for i, n in enumerate(names):
+        marks.append(("✅ " if i < stage else "🔵 " if i == stage else "⚪ ") + n)
+    return " ─ ".join(marks)
 
 
 def set_menu_button():
-    """Кнопка «АкБарак» слева от поля ввода — открывает мини-приложение."""
-    return tg("setChatMenuButton", menu_button={"type": "web_app", "text": "АкБарак", "web_app": {"url": WEBAPP_URL}})
+    """Кнопка меню бота — список команд (без мини-приложения)."""
+    return tg("setChatMenuButton", menu_button={"type": "commands"})
 
 
 def lang_kb():
@@ -268,12 +358,17 @@ def hello(lang):
 
 
 def draft_text(d, lang):
-    return (f"📄 <b>{esc(d['file_name'])}</b>\n"
-            f"{T('pages', lang)}: <b>{d['pages']}</b>\n\n"
-            f"{T('print', lang)}: {T('color' if d['color'] else 'bw', lang)}, {T(d['sides'], lang)}\n"
-            f"{T('copies', lang)}: {d['copies']}\n"
-            f"{T('terminal', lang)}: {esc(d['terminal'])}\n\n"
-            f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>")
+    line = "┄" * 18
+    mode = T("color" if d["color"] else "bw", lang) + " · " + T(d["sides"], lang)
+    return (f"🧾 <b>{T('receipt', lang)} · АкБарак</b>\n{line}\n"
+            f"📄 <b>{esc(d['file_name'])}</b>\n\n"
+            f"📑 {T('pages', lang)}: <b>{d['pages']}</b>\n"
+            f"{'🎨' if d['color'] else '⚫'} {T('print', lang)}: <b>{mode}</b>\n"
+            f"🔁 {T('copies', lang)}: <b>{d['copies']}</b>\n"
+            f"📍 {T('terminal', lang)}: <b>{esc(d['terminal'])}</b>\n"
+            f"{line}\n"
+            f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>\n"
+            f"<i>{T('pages_x', lang, p=d['pages'], c=d['copies'])}</i>")
 
 
 def draft_total(d):
@@ -284,9 +379,9 @@ def draft_kb(d, lang):
     i = d["id"]
     kb = []
     if H["color_ok"](d["terminal"]):
-        kb.append([btn(("✅ " if not d["color"] else "") + T("BW", lang), f"d:{i}:bw"),
-                   btn(("✅ " if d["color"] else "") + T("COLOR", lang), f"d:{i}:color")])
-    kb.append([btn("➖", f"d:{i}:minus"), btn(f"{T('copies', lang)}: {d['copies']}", f"d:{i}:noop"), btn("➕", f"d:{i}:plus")])
+        kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw"),
+                   btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color")])
+    kb.append([btn("−", f"d:{i}:minus"), btn(f"🔁 {d['copies']}", f"d:{i}:noop"), btn("+", f"d:{i}:plus")])
     if H["DUPLEX_ENABLED"] and d["pages"] > 1:
         kb.append([btn(("✅ " if d["sides"] == k else "") + T("s_" + k, lang), f"d:{i}:s_{k}")
                    for k in ("single", "duplex", "booklet")])
@@ -333,6 +428,7 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False, lang="ru"):
         return send(chat_id, T("bad_ext", lang, ext=esc(ext or "?")))
     if size and size > MAX_TG_MB * 1024 * 1024:
         return send(chat_id, T("too_big", lang, mb=MAX_TG_MB))
+    tg("sendChatAction", chat_id=chat_id, action="upload_document")
     wait = send(chat_id, T("counting", lang))
     info = tg("getFile", file_id=file_id)
     if not info or not info.get("file_path"):
@@ -393,7 +489,7 @@ def on_callback(cq):
         set_lang(chat_id, action)
         edit(chat_id, msg_id, T("lang_set", action))
         tg("answerCallbackQuery", callback_query_id=cq["id"])
-        return send(chat_id, hello(action), [app_row(action)])
+        return send_hello(chat_id, action)
 
     if kind == "o":                                    # проверка оплаты
         if H.get("sync_payment"):
@@ -532,14 +628,18 @@ def on_update(u):
     if "photo" in m:
         ph = m["photo"][-1]                             # самое большое
         return on_file(chat_id, ph["file_id"], f"photo_{m.get('message_id')}.jpg", ph.get("file_size"), True, lang=lang)
-    if text.startswith("/orders"):
+    act = kb_action(text)
+    if text.startswith("/orders") or act == "kb_orders":
         return my_orders(chat_id, lang)
-    if text.startswith("/help"):
-        return send(chat_id, T("help", lang))
-    if text.startswith("/lang"):
+    if text.startswith("/help") or act == "kb_send":
+        return send_reply_kb(chat_id, T("help", lang), lang)
+    if text.startswith("/prices") or act == "kb_prices":
+        return send_reply_kb(chat_id, price_list(lang), lang)
+    if text.startswith("/lang") or act == "kb_lang":
         return send(chat_id, T("lang_pick", lang), lang_kb())
-    kb = [app_row(lang)] + (lang_kb() if text == "/start" else [])
-    send(chat_id, hello(lang), kb)
+    if text.startswith("/start"):
+        return send_hello(chat_id, lang)
+    send_reply_kb(chat_id, T("hint", lang), lang)
 
 
 # ─────────────────────── События заказа → сообщение студенту ───────────────────────
@@ -562,7 +662,11 @@ def order_event(order_ids, event):
             conn.close()
             for r in rows:
                 lang = get_lang(r["tg_chat_id"])
-                send(r["tg_chat_id"], T("ev_" + event, lang, id=r["id"], term=esc(r["terminal_id"])))
+                text = T("ev_" + event, lang, id=r["id"], term=esc(r["terminal_id"]))
+                stage = {"paid": 1, "printing": 1, "printed": 3}.get(event)
+                if stage is not None:
+                    text += "\n\n" + steps(lang, stage)
+                send(r["tg_chat_id"], text)
         except Exception as e:
             log.error("order_event: %s", e)
 
