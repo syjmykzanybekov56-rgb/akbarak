@@ -603,7 +603,7 @@ const SERVICES = {
 /* ─────────── Вспомогательное ─────────── */
 const $ = id => document.getElementById(id);
 const L = () => "&lang=" + I18N.lang;   // язык экрана передаём на телефон
-const orderUrl = svc => SITE + "/?t=" + encodeURIComponent(TERMINAL) + (svc ? "&s=" + svc : "") + L();
+const orderUrl = svc => SITE + "/app.html?t=" + encodeURIComponent(TERMINAL) + (svc ? "&s=" + svc : "") + L();
 function qr(el, text, size){
   el.innerHTML = "";
   try{ new QRCode(el, {text, width: size, height: size, colorDark: "#0F2747", colorLight: "#FFFFFF", correctLevel: QRCode.CorrectLevel.M}); }
@@ -1240,7 +1240,7 @@ async function checkOrder(){
          '<p class="lead2">Файл откроется на телефоне — нажми «Скачать скан». Ссылка работает сутки.</p>' +
          '<div class="acts"><button class="btn ghost" onclick="cancelAndHome()">Готово</button></div>');
     paper('<h3 style="--i:0">Скачать скан</h3><div class="q" id="qrDl" style="--i:1"></div><small style="--i:2">Ссылка только для тебя</small>');
-    qr($('qrDl'), SITE + '/?order=' + cur.orderId + '&token=' + encodeURIComponent(cur.token) + L(), 512);
+    qr($('qrDl'), SITE + '/app.html?order=' + cur.orderId + '&token=' + encodeURIComponent(cur.token) + L(), 512);
     setTimer(90, 'Вернёмся на главный экран через %s с', goHome);
   } else if(d.status === 'done'){
     stopFlow();

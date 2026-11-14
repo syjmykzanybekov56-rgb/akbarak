@@ -130,7 +130,7 @@ $('send').addEventListener('click', () => {
   x.onload = () => {
     let d = {}; try{ d = JSON.parse(x.responseText); }catch(e){}
     if(x.status !== 200 || !d.success) return fail(d.error || 'Не получилось отправить файл. Попробуй ещё раз.');
-    $('alt').href = SITE + '/?order=' + d.order_id + '&token=' + encodeURIComponent(d.token) + (TERMINAL ? '&t=' + encodeURIComponent(TERMINAL) : '');
+    $('alt').href = SITE + '/app.html?order=' + d.order_id + '&token=' + encodeURIComponent(d.token) + (TERMINAL ? '&t=' + encodeURIComponent(TERMINAL) : '');
     $('form').style.display = 'none'; $('done').style.display = 'block';
   };
   x.onerror = () => fail('Нет связи. Проверь интернет и попробуй ещё раз.');

@@ -841,7 +841,7 @@ def create_payment(order_id):
 
         amount = sum(r["total"] for r in rows)
         tok = conn.execute("SELECT access_token FROM orders WHERE id=?", (order_id,)).fetchone()
-        return_url = f"{SITE_URL}/?order={order_id}&token={tok['access_token']}" if tok and tok["access_token"] else SITE_URL
+        return_url = f"{SITE_URL}/app.html?order={order_id}&token={tok['access_token']}" if tok and tok["access_token"] else SITE_URL
         if PAY is mkassa:
             prev = conn.execute("SELECT gopay_payment_id FROM orders WHERE id=?", (order_id,)).fetchone()
             if prev and prev["gopay_payment_id"]:

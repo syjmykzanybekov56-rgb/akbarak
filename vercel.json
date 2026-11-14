@@ -1,0 +1,86 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "t"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "order"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "s"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "shared"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "tg"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "lang"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "token"
+        }
+      ],
+      "destination": "/app.html",
+      "permanent": false
+    },
+    {
+      "source": "/about.html",
+      "destination": "/",
+      "permanent": true
+    }
+  ]
+}

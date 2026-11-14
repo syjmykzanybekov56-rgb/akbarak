@@ -181,9 +181,9 @@ TX = {
     "bad_ext": ("Формат {ext} не печатаю. Подойдут PDF, Word (.docx), TXT и фото.",
                 "{ext} форматын басып чыгарбайм. PDF, Word (.docx), TXT жана сүрөт болот.",
                 "I can't print {ext}. PDF, Word (.docx), TXT and photos are fine."),
-    "too_big": ("Файл больше {mb} МБ — Telegram не даёт мне его скачать.\nЗагрузи его на сайте: akbarak.vercel.app",
-                "Файл {mb} МБдан чоң — Telegram аны жүктөп алууга бербейт.\nСайтка жүктө: akbarak.vercel.app",
-                "The file is over {mb} MB — Telegram won't let me download it.\nUpload it on the website: akbarak.vercel.app"),
+    "too_big": ("Файл больше {mb} МБ — Telegram не даёт мне его скачать.\nЗагрузи его на сайте: akbarak.vercel.app/app.html",
+                "Файл {mb} МБдан чоң — Telegram аны жүктөп алууга бербейт.\nСайтка жүктө: akbarak.vercel.app/app.html",
+                "The file is over {mb} MB — Telegram won't let me download it.\nUpload it on the website: akbarak.vercel.app/app.html"),
     "counting": ("⏳ Получил файл, считаю страницы…", "⏳ Файл келди, барактарды эсептеп жатам…", "⏳ Got it, counting pages…"),
     "dl_fail": ("Не получилось скачать файл. Попробуй ещё раз.", "Файлды жүктөй албадым. Дагы бир жолу аракет кыл.",
                 "Couldn't download the file. Please try again."),
@@ -569,7 +569,7 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
     conn.commit()
     conn.close()
 
-    return_url = f"{H['SITE_URL']}/?order={order_id}&token={token}"
+    return_url = f"{H['SITE_URL']}/app.html?order={order_id}&token={token}"
     payment = None
     try:
         payment = H["gopay"].create_payment(order_id, total, f"АкБарак заказ #{order_id}", return_url=return_url)

@@ -31,9 +31,9 @@ self.addEventListener('fetch', event => {
         list.push(key);
       }
       await cache.put('/shared/list', new Response(JSON.stringify(list), {headers: {'content-type': 'application/json'}}));
-      return Response.redirect('/?shared=1', 303);
+      return Response.redirect('/app.html?shared=1', 303);
     } catch (e) {
-      return Response.redirect('/?shared=error', 303);
+      return Response.redirect('/app.html?shared=error', 303);
     }
   })());
 });

@@ -1,7 +1,7 @@
 {
   "name": "АкБарак — печать с телефона",
   "short_name": "АкБарак",
-  "start_url": "/",
+  "start_url": "/app.html",
   "display": "standalone",
   "background_color": "#0E2340",
   "theme_color": "#0E2340",
