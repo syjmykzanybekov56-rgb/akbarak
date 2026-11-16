@@ -218,6 +218,17 @@ TX = {
     "pay_go": ("🧾 Заказ <b>#{id}</b>. Нажми «Оплатить» — откроется оплата.\nПосле оплаты я сразу отправлю файл на терминал.",
                "🧾 Буйрутма <b>#{id}</b>. «Төлөө» баскычын бас — төлөм ачылат.\nТөлөгөндөн кийин файлды дароо терминалга жиберем.",
                "🧾 Order <b>#{id}</b>. Tap “Pay” to open the payment page.\nAs soon as you pay, I'll send the file to the terminal."),
+    "cart": ("🧺 <b>Корзина</b> · одна оплата за все файлы", "🧺 <b>Себет</b> · бардык файлдарга бир төлөм",
+             "🧺 <b>Cart</b> · one payment for all files"),
+    "cart_hint": ("Настроить цвет и копии можно в карточке каждого файла выше.",
+                  "Түсүн жана нускасын жогорудагы ар бир файлдын карточкасынан тандаса болот.",
+                  "Set colour and copies on each file's card above."),
+    "pay_all": ("Оплатить всё", "Баарын төлөө", "Pay for all"),
+    "clear": ("🗑 Очистить корзину", "🗑 Себетти тазалоо", "🗑 Clear cart"),
+    "cleared": ("🗑 Корзина очищена", "🗑 Себет тазаланды", "🗑 Cart cleared"),
+    "remove": ("🗑 Убрать файл", "🗑 Файлды алып салуу", "🗑 Remove file"),
+    "in_cart": ("🧺 В корзине — оплата одна, внизу", "🧺 Себетте — төлөм бир, ылдыйда", "🧺 In the cart — one payment, below"),
+    "files_n": ("Файлов", "Файлдар", "Files"),
     "check": ("🔄 Я оплатил — проверить", "🔄 Төлөдүм — текшерүү", "🔄 I've paid — check"),
     "not_found": ("Заказ не найден", "Буйрутма табылган жок", "Order not found"),
     "not_paid": ("Оплата ещё не пришла. Если оплатил — подожди минуту.", "Төлөм али келе элек. Төлөсөң — бир мүнөт күт.",
@@ -375,7 +386,8 @@ def draft_total(d):
     return H["order_total"]("print", "color" if d["color"] else "bw", d["sides"], d["pages"], d["copies"])
 
 
-def draft_kb(d, lang):
+def draft_kb(d, lang, multi=False):
+    """multi=True — файлов несколько: оплата одна, в корзине внизу."""
     i = d["id"]
     kb = []
     if H["color_ok"](d["terminal"]):
@@ -388,6 +400,10 @@ def draft_kb(d, lang):
     terms = terminal_ids()
     if len(terms) > 1:
         kb.append([btn(f"📍 {T('terminal', lang)}: {d['terminal']} ({T('change', lang)})", f"d:{i}:term")])
+    if multi:
+        kb.append([btn(T("in_cart", lang), f"d:{i}:noop")])
+        kb.append([btn(T("remove", lang), f"d:{i}:cancel")])
+        return kb
     kb.append([btn(f"💳 {T('pay', lang)} {draft_total(d)} {T('som', lang)}", f"d:{i}:pay")])
     kb.append([btn(T("cancel", lang), f"d:{i}:cancel")])
     return kb
@@ -416,6 +432,87 @@ def save_draft(d):
                  (d["copies"], d["color"], d["sides"], d["terminal"], d.get("msg_id"), d.get("order_id"), d["id"]))
     conn.commit()
     conn.close()
+
+
+_LOCKS = {}
+_LOCKS_GUARD = threading.Lock()
+
+
+def chat_lock(chat_id):
+    """Файлы альбома приходят почти одновременно — корзину чата обновляем по очереди."""
+    with _LOCKS_GUARD:
+        return _LOCKS.setdefault(str(chat_id), threading.Lock())
+
+
+def open_drafts(chat_id):
+    conn = H["db"]()
+    rows = conn.execute("SELECT * FROM tg_drafts WHERE chat_id=? AND order_id IS NULL ORDER BY id",
+                        (str(chat_id),)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def cart_msg(chat_id, msg_id=None, clear=False):
+    """id сообщения-корзины в чате (хранится в БД)."""
+    conn = H["db"]()
+    if clear or msg_id:
+        conn.execute("INSERT INTO tg_carts (chat_id, msg_id) VALUES (?,?) "
+                     "ON CONFLICT(chat_id) DO UPDATE SET msg_id=excluded.msg_id", (str(chat_id), msg_id))
+        conn.commit()
+        conn.close()
+        return msg_id
+    row = conn.execute("SELECT msg_id FROM tg_carts WHERE chat_id=?", (str(chat_id),)).fetchone()
+    conn.close()
+    return row["msg_id"] if row else None
+
+
+def cart_text(ds, lang):
+    line = "┄" * 18
+    rows = []
+    for n, d in enumerate(ds, 1):
+        mode = T("color" if d["color"] else "bw", lang)
+        if d["sides"] != "single":
+            mode += " · " + T(d["sides"], lang)
+        rows.append(f"{n}. 📄 <b>{esc(d['file_name'])}</b>\n"
+                    f"     {d['pages']} × {d['copies']} · {mode} — <b>{draft_total(d)} {T('som', lang)}</b>")
+    total = sum(draft_total(d) for d in ds)
+    return (f"{T('cart', lang)}\n{line}\n" + "\n".join(rows) + f"\n{line}\n"
+            f"{T('files_n', lang)}: <b>{len(ds)}</b>\n"
+            f"💰 {T('total', lang)}: <b>{total} {T('som', lang)}</b>\n\n<i>{T('cart_hint', lang)}</i>")
+
+
+def cart_kb(ds, lang):
+    total = sum(draft_total(d) for d in ds)
+    return [[btn(f"💳 {T('pay_all', lang)} — {total} {T('som', lang)}", "c:0:pay")],
+            [btn(T("clear", lang), "c:0:clear")]]
+
+
+def refresh_cart(chat_id, lang, to_bottom=False):
+    """Корзина появляется, когда файлов 2 и больше. to_bottom — переслать её вниз (пришёл новый файл)."""
+    ds = open_drafts(chat_id)
+    old = cart_msg(chat_id)
+    if len(ds) < 2:
+        if old:
+            tg("deleteMessage", chat_id=chat_id, message_id=old)
+            cart_msg(chat_id, None, clear=True)
+        return ds
+    if old and not to_bottom:
+        if (edit(chat_id, old, cart_text(ds, lang), cart_kb(ds, lang)) is not None
+                or "not modified" in (LAST_ERROR.get("text") or "")):
+            return ds
+    if old:
+        tg("deleteMessage", chat_id=chat_id, message_id=old)
+    m = send(chat_id, cart_text(ds, lang), cart_kb(ds, lang))
+    cart_msg(chat_id, m["message_id"] if m else None, clear=not m)
+    return ds
+
+
+def redraw_cards(ds, lang):
+    """Перерисовать карточки файлов (одна оплата ↔ корзина)."""
+    multi = len(ds) >= 2
+    for d in ds:
+        if d.get("msg_id"):
+            edit(d["chat_id"], d["msg_id"], draft_text(d, lang), draft_kb(d, lang, multi))
 
 
 # ─────────────────────── Приём файла ───────────────────────
@@ -455,6 +552,12 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False, lang="ru"):
         return send(chat_id, T("broken", lang))
     pages = max(1, min(H["MAX_PAGES"], pages))
     color = 1 if (is_photo or ext in (".jpg", ".jpeg", ".png")) and H["color_ok"](H["DEFAULT_TERMINAL"]) else 0
+    with chat_lock(chat_id):
+        _add_draft(chat_id, path, file_name, pages, color, wait, lang)
+
+
+def _add_draft(chat_id, path, file_name, pages, color, wait, lang):
+    before = open_drafts(chat_id)
     conn = H["db"]()
     cur = conn.execute(
         "INSERT INTO tg_drafts (chat_id, file_path, file_name, pages, copies, color, sides, terminal, created_at) "
@@ -465,10 +568,14 @@ def on_file(chat_id, file_id, file_name, size, is_photo=False, lang="ru"):
     conn.close()
     if wait:
         tg("deleteMessage", chat_id=chat_id, message_id=wait["message_id"])
-    m = send(chat_id, draft_text(d, lang), draft_kb(d, lang))
+    multi = len(before) >= 1
+    m = send(chat_id, draft_text(d, lang), draft_kb(d, lang, multi))
     if m:
         d["msg_id"] = m["message_id"]
         save_draft(d)
+    if len(before) == 1:          # был один файл с кнопкой «Оплатить» — теперь оплата в корзине
+        redraw_cards(before, lang)
+    refresh_cart(chat_id, lang, to_bottom=True)
 
 
 # ─────────────────────── Кнопки ───────────────────────
@@ -511,6 +618,23 @@ def on_callback(cq):
             answer = T("paid_now", lang) + status_name(row["status"], lang)
         return tg("answerCallbackQuery", callback_query_id=cq["id"], text=answer, show_alert=True)
 
+    if kind == "c":                                    # корзина: оплатить всё / очистить
+        with chat_lock(chat_id):
+            if action == "pay":
+                return pay_all(cq, chat_id, msg_id, lang)
+            if action == "clear":
+                for d in open_drafts(chat_id):
+                    H["remove"](d["file_path"])
+                    conn = H["db"]()
+                    conn.execute("DELETE FROM tg_drafts WHERE id=?", (d["id"],))
+                    conn.commit()
+                    conn.close()
+                    if d.get("msg_id"):
+                        edit(chat_id, d["msg_id"], f"{T('cancelled', lang)}: {esc(d['file_name'])}")
+                cart_msg(chat_id, None, clear=True)
+                edit(chat_id, msg_id, T("cleared", lang))
+        return tg("answerCallbackQuery", callback_query_id=cq["id"])
+
     d = get_draft(oid, chat_id)
     if not d or d.get("order_id"):
         return tg("answerCallbackQuery", callback_query_id=cq["id"], text=T("stale", lang))
@@ -539,6 +663,11 @@ def on_callback(cq):
         conn.commit()
         conn.close()
         edit(chat_id, msg_id, f"{T('cancelled', lang)}: {esc(d['file_name'])}")
+        with chat_lock(chat_id):
+            left = open_drafts(chat_id)
+            if len(left) == 1:     # остался один файл — снова своя кнопка «Оплатить»
+                redraw_cards(left, lang)
+            refresh_cart(chat_id, lang)
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action == "pay":
         return pay(cq, d, chat_id, msg_id, lang)
@@ -546,7 +675,11 @@ def on_callback(cq):
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
 
     save_draft(d)
-    edit(chat_id, msg_id, draft_text(d, lang), draft_kb(d, lang))
+    with chat_lock(chat_id):
+        ds = open_drafts(chat_id)
+        edit(chat_id, msg_id, draft_text(d, lang), draft_kb(d, lang, len(ds) >= 2))
+        if len(ds) >= 2:
+            refresh_cart(chat_id, lang)
     tg("answerCallbackQuery", callback_query_id=cq["id"], text=answer)
 
 
@@ -593,6 +726,67 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
          draft_text(d, lang) + "\n\n" + T("pay_go", lang, id=order_id),
          [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"])],
           [btn(T("check", lang), f"o:{order_id}:check")]])
+    tg("answerCallbackQuery", callback_query_id=cq["id"])
+
+
+def pay_all(cq, chat_id, msg_id, lang="ru"):
+    """Одна оплата за все файлы корзины: заказы одной группы, один платёж."""
+    ds = open_drafts(chat_id)
+    if not ds:
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], text=T("stale", lang))
+    fixed = False
+    for d in ds:
+        if d["color"] and not H["color_ok"](d["terminal"]):
+            d["color"] = 0
+            save_draft(d)
+            fixed = True
+    if fixed:
+        redraw_cards(ds, lang)
+        refresh_cart(chat_id, lang)
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], show_alert=True, text=T("only_bw_pay", lang))
+    group_id, token = uuid.uuid4().hex, secrets.token_urlsafe(16)
+    ids, total = [], 0
+    conn = H["db"]()
+    for d in ds:
+        t = draft_total(d)
+        total += t
+        cur = conn.execute(
+            "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
+            "group_id, terminal_id, order_type, access_token, sides, tg_chat_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (d["file_name"], d["file_path"], "color" if d["color"] else "bw", d["pages"], d["copies"], t, "gopay",
+             "pending_payment", H["now"](), group_id, d["terminal"], "print", token, d["sides"], str(chat_id)))
+        ids.append(cur.lastrowid)
+        conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (cur.lastrowid, d["id"]))
+    conn.commit()
+    conn.close()
+    first = ids[0]
+    title = f"АкБарак заказ #{first}" + (f"–#{ids[-1]}" if len(ids) > 1 else "")
+    return_url = f"{H['SITE_URL']}/app.html?order={first}&token={token}"
+    payment = None
+    try:
+        payment = H["gopay"].create_payment(first, total, title, return_url=return_url)
+        if not payment and H.get("gopay_fallback") and H["gopay_fallback"] is not H["gopay"]:
+            payment = H["gopay_fallback"].create_payment(first, total, title, return_url=return_url)
+    except Exception as e:
+        log.error("gopay: %s", e)
+    q = ",".join("?" * len(ids))
+    conn = H["db"]()
+    if not payment or not payment.get("checkout_url"):
+        conn.execute(f"UPDATE orders SET status='rejected' WHERE id IN ({q})", ids)
+        conn.execute(f"UPDATE tg_drafts SET order_id=NULL WHERE order_id IN ({q})", ids)
+        conn.commit()
+        conn.close()
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], text=T("pay_fail", lang), show_alert=True)
+    conn.execute(f"UPDATE orders SET gopay_payment_id=? WHERE id IN ({q})", [payment.get("payment_id")] + ids)
+    conn.commit()
+    conn.close()
+    for d in ds:                                     # карточки файлов — без кнопок
+        if d.get("msg_id"):
+            edit(chat_id, d["msg_id"], draft_text(d, lang))
+    cart_msg(chat_id, None, clear=True)
+    edit(chat_id, msg_id, cart_text(ds, lang) + "\n\n" + T("pay_go", lang, id=first),
+         [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"])],
+          [btn(T("check", lang), f"o:{first}:check")]])
     tg("answerCallbackQuery", callback_query_id=cq["id"])
 
 
@@ -660,13 +854,16 @@ def order_event(order_ids, event):
             rows = conn.execute(f"SELECT id, tg_chat_id, terminal_id FROM orders WHERE id IN ({q}) "
                                 "AND tg_chat_id IS NOT NULL", ids).fetchall()
             conn.close()
+            by_chat = {}                                  # заказы одной оплаты — одним сообщением
             for r in rows:
-                lang = get_lang(r["tg_chat_id"])
-                text = T("ev_" + event, lang, id=r["id"], term=esc(r["terminal_id"]))
+                by_chat.setdefault((r["tg_chat_id"], r["terminal_id"]), []).append(r["id"])
+            for (chat, term), oids in by_chat.items():
+                lang = get_lang(chat)
+                text = T("ev_" + event, lang, id=", #".join(str(i) for i in oids), term=esc(term))
                 stage = {"paid": 1, "printing": 1, "printed": 3}.get(event)
                 if stage is not None:
                     text += "\n\n" + steps(lang, stage)
-                send(r["tg_chat_id"], text)
+                send(chat, text)
         except Exception as e:
             log.error("order_event: %s", e)
 
@@ -695,6 +892,7 @@ def register(app, helpers):
         pages INTEGER, copies INTEGER DEFAULT 1, color INTEGER DEFAULT 0, sides TEXT DEFAULT 'single',
         terminal TEXT, created_at TEXT, order_id INTEGER)""")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_users (chat_id TEXT PRIMARY KEY, lang TEXT)")
+    conn.execute("CREATE TABLE IF NOT EXISTS tg_carts (chat_id TEXT PRIMARY KEY, msg_id INTEGER)")
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN tg_chat_id TEXT")
     except Exception:
