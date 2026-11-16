@@ -183,6 +183,13 @@ section{padding:70px 0 0}
 .faq summary::after{content:"+";font-family:var(--font-display);color:#B98420;font-size:22px;line-height:1}
 .faq details[open] summary::after{content:"–"}
 .faq details p{margin-top:10px;color:#4A5B70;max-width:62ch}
+/* videos */
+.vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.vcard{display:flex;flex-direction:column;gap:10px}
+.vcard video{width:100%;aspect-ratio:9/16;object-fit:contain;background:#0E1D2E;border-radius:14px;border:1px solid rgba(255,255,255,.16)}
+.vcard b{font-size:17px}
+.vcard span{color:var(--mist);font-size:15px}
+@media (max-width:760px){.vgrid{grid-template-columns:1fr;max-width:340px;margin-inline:auto}}
 footer{padding:60px 0 40px;color:var(--mist);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
@@ -193,6 +200,7 @@ footer{padding:60px 0 40px;color:var(--mist);font-size:14px;display:flex;justify
   <a class="brand" href="#top" aria-label="АкБарак — на главную"><img src="data:image/webp;base64,UklGRmoFAABXRUJQVlA4IF4FAAAwGgCdASpIAFwAPj0aikQiIYps51QQAeJYgDGsCHID8Ly7/RetRaD+p7K/cd81eU26dvma/WbqgegB+rnWj/t37AH7O+l5+0fwj/tP+3Hs/f+2nXfi8fX/JZzD+348ybjeXvNgODrN4CR6mLW59SbxR7X163fsOlN4Y1kVciv3Ih8/4ONBacflWzNtSI+ifnxFLzmnW0QjBnX0R7/IAbACE0E3lxA7ZVplQpoaUmSHqXal+cKg3GVJF548d3ozvsEbtmNefBbXG2NUPgwQONq092gi3Mux3eToAAD+/wkPQMjwxXtVKHovl8qu9/wub/1CL+uehBX9tAa3oaPEVX/kVAKmCfMP/8w68LolZdYcljpOjToNynUMh7ZPbtKu9Vv+KaExX1wC062yll/Bevcqtklaod1SfOhZkHmRU/SFr5gqbLY/+9gjzTHcoi0uYfMJuwIEUAN2lDe9WrR9fEn6YPCDyxezOS6L+f8PUsSXamz/wcDRsMyq0x2tgZBKpOrKx2Bb8MkYtNsUHYMvqZkZGgP6safxVleDcVlM18F83GoeJ7M1a66YTLeK6lqYzQWsFvsOVkqO3iW4LBonLXGYFgqBtIrwvJRuL3gQ8asZIGO3mllxcbZXfjVJ1+Q5i3wsurncJuMnCuV/t3z98VH+f9A+e/eZZQsXgR/1v3x7D2OJv5eJGjgjE5zfIgS1CTIgBpYAPAekH6qV228AEXBr7WiVOABNBDsEE/flYEefpJNIM79sTPaPoUuQZxncsKMDmn3vQf4YPG+zfPqu7bJd2J4k7r8Y7WDX0TNzDOYgkbeATp4+IdXIFFiSVcRFfz7pGkU6u1lXZz6x405vNbLZLiiVr3/pbToCpfNszOBs1t83shadak4WbeNveiFotf9elzIV48ROj0Aw2Mjii8XoDUYiMdW+704t6K7LmUjXV2ZFig/ur/RuCJLVD8gB4bWbzHr31BZH83taWx0Src3zZLNPqyGhc1Fl9biMuO5F2O0UH/+oFmlCHl5hXDFaMoFORTsz9grzoN37JDXQgeoFej+ImWNtta70zoKG2RA7jo+n1Ucpa7vBSMgc26amJsiQrYwh+K39jbuOs0/iaynFSWu3Jt59ypkltf1+tYAXOthFxuW2Rufhhr/j4Xvakdy+zg2e/IqktDpdbW3j+23BXd5mVu3XxbdZxf7w8K9Tz1iPxv/HLEe0agyq8UeH/dGbP4bdxsV+k7h4o/331WUTCWkfg8ZInM0urmV+wg758w+3WgQ7AdWbaGdkdJfIzq85d7Wtj/pbzaIcAsyocVNek7XrVgl0NKPt8/rkfk4hftM1FbGniB9YFxEy8HHmZYxIVHB1u+a2+PX3bzne3QD9NV2+QcKtzcoAld7lRERMuDqpT9HlyVVBmv6LLYkuJ1R5BuoGRUH/BYxiBRXSvp+xS7axeoh81YkZVccq3PjIdP67ipAue6+9CY05pcIcqSJuZYZj5Rug9COI/e/oQjqeU3K32xeleIfx1H13spi6s6JEqxmKeYle9bkx/5hkm1OpNEsPx/N1akPQOfEqYZMX5ZQhb9HmZf0cpprHugPbqBcUZ6sjfBUZ9nTt1sqe1X7+NFpO1oK444O7ILWGMkcfdE6LpEwW/lU6yp2Dn1CdxBff9ycnIbqf9oCh5Tec5KvnsCY9ocnZ5akF0SC0651bFdlbqwxm5jURcmRe/0fwdzgZ6XTez/lxj7pwUDMn8pG6WtgmOrtH3R9za4IzgTuo5/hwz1/TGLQkoUGcsK945QpfWf+SD1Yz42t3MSXcQzoxjab6fLPGEG5TagdocnjF1ACA/Qf19c5ppAYAAAA=" alt=""><b><span>Ак</span>Барак</b></a>
   <nav class="nav" aria-label="Разделы">
     <a href="#how">Как это работает</a>
+    <a href="#videos">Видео</a>
     <a href="#prices">Цены</a>
     <a href="#where">Где нас найти</a>
     <a href="#partners">Партнёрам</a>
@@ -242,6 +250,11 @@ footer{padding:60px 0 40px;color:var(--mist);font-size:14px;display:flex;justify
       </div>
       <div class="formats"><span>Форматы:</span><span class="chip">PDF</span><span class="chip">DOC</span><span class="chip">DOCX</span><span class="chip">TXT</span><span class="chip">Фото</span></div>
     </div>
+  </section>
+
+  <section id="videos" class="wrap" hidden>
+    <div class="loc-head"><h2>Видеоинструкции</h2><p>Короткие ролики: как распечатать, сделать копию и отсканировать на терминале.</p></div>
+    <div class="vgrid" id="vgrid"></div>
   </section>
 
   <section id="inside" class="wrap">
@@ -367,6 +380,23 @@ footer{padding:60px 0 40px;color:var(--mist);font-size:14px;display:flex;justify
   }
   size();window.addEventListener('resize',()=>{size();if(still)draw()});draw();
 })();
+</script>
+<script>
+// Видеоинструкции: тот же список, что на терминале (/videos.json)
+fetch('/videos.json',{cache:'no-cache'}).then(r=>r.json()).then(d=>{
+  const list=(d&&d.enabled!==false&&d.videos)||[];
+  if(!list.length) return;
+  const g=document.getElementById('vgrid');
+  list.forEach(v=>{
+    const c=document.createElement('div'); c.className='vcard';
+    const vid=document.createElement('video'); vid.controls=true; vid.playsInline=true; vid.preload='metadata';
+    vid.src=v.src+(v.src.includes('#')?'':'#t=0.1'); vid.setAttribute('aria-label',v.title||'');
+    const b=document.createElement('b'); b.textContent=v.title||v.tab||'';
+    const t=document.createElement('span'); t.textContent=v.text||'';
+    c.append(vid,b,t); g.appendChild(c);
+  });
+  document.getElementById('videos').hidden=false;
+}).catch(()=>{});
 </script>
 </body>
 </html>

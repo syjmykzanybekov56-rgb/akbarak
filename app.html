@@ -137,6 +137,12 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
 .stat-l{font-size:10px;color:rgba(var(--fg),0.3);margin-top:3px;font-weight:700;letter-spacing:0.5px}
 
 /* ── PAGE HEADER ── */
+.vids{margin:0 20px 18px}
+.vids-tabs{display:flex;gap:8px;margin-bottom:10px;overflow-x:auto}
+.vids-tab{flex:0 0 auto;border:1.5px solid rgba(var(--fg),0.15);background:var(--panel);color:var(--white);font:inherit;font-size:13px;font-weight:800;padding:8px 14px;border-radius:999px;cursor:pointer}
+.vids-tab.on{background:var(--gold);border-color:var(--gold);color:#0D2240}
+.vids-player{display:block;width:100%;max-height:60vh;background:#000;border-radius:16px;aspect-ratio:9/16;object-fit:contain}
+.vids-cap{font-size:13px;color:rgba(var(--fg),0.6);font-weight:600;line-height:1.5;margin-top:8px}
 .page-hdr{display:flex;align-items:center;gap:12px;padding:12px 20px 20px}
 .page-ttl{font-size:20px;font-weight:900;color:var(--white);letter-spacing:-0.3px}
 .page-sub{padding:0 20px 16px;font-size:13px;color:rgba(var(--fg),0.4);line-height:1.6;font-weight:600}
@@ -908,6 +914,11 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
     <div class="status-bar"><span>9:41</span><span>WiFi 🔋</span></div>
     <div class="hdr"><button class="back-btn" onclick="go('s-home')">←</button><div class="logo-name" style="font-size:18px"><span>Ак</span>Барак</div><div style="width:38px"></div></div>
     <div class="page-hdr"><div class="page-ttl">📖 Инструкция</div></div>
+    <div class="vids" id="how-videos" hidden>
+      <div class="vids-tabs" id="how-vtabs" role="tablist"></div>
+      <video id="how-vplayer" class="vids-player" controls playsinline preload="metadata"></video>
+      <div class="vids-cap" id="how-vcap"></div>
+    </div>
     <div class="instr">
       <div class="instr-step"><div class="step-num">1</div><div class="step-txt">Выбери услугу: печать, копия, скан или шаблон</div></div>
       <div class="instr-step"><div class="step-num">2</div><div class="step-txt">Загрузи файл или следуй инструкции</div></div>
@@ -1899,6 +1910,24 @@ function tgLink(){ const l = (window.I18N && I18N.lang) || 'ru'; return 'https:/
     e.preventDefault();
     try{ tg.openTelegramLink(a.href); }catch(err){ location.href = a.href; }
   }, true);
+})();
+</script>
+<script>
+// Видеоинструкции на экране «Инструкция»: тот же список, что на терминале (/videos.json)
+(function(){
+  fetch('/videos.json',{cache:'no-cache'}).then(r=>r.json()).then(d=>{
+    const list=(d&&d.enabled!==false&&d.videos)||[];
+    if(!list.length) return;
+    const box=document.getElementById('how-videos'), tabs=document.getElementById('how-vtabs'),
+          pl=document.getElementById('how-vplayer'), cap=document.getElementById('how-vcap');
+    function show(i){
+      [...tabs.children].forEach((b,j)=>{b.classList.toggle('on',i===j);b.setAttribute('aria-selected',i===j)});
+      pl.src=list[i].src; cap.textContent=list[i].text||'';
+    }
+    list.forEach((v,i)=>{const b=document.createElement('button');b.type='button';b.className='vids-tab';b.setAttribute('role','tab');
+      b.textContent='▶ '+(v.tab||v.title);b.onclick=()=>{show(i);pl.play().catch(()=>{})};tabs.appendChild(b)});
+    show(0); box.hidden=false;
+  }).catch(()=>{});
 })();
 </script>
 </body>
