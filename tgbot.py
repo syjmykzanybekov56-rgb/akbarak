@@ -22,6 +22,14 @@ from flask import jsonify, request
 
 log = logging.getLogger("akbarak.tg")
 
+# Владелец печатает бесплатно: его chat_id из TG_CHAT_ID (+ можно добавить ещё через TG_FREE_CHAT_IDS, через запятую)
+FREE_CHATS = {x.strip() for x in (os.getenv("TG_CHAT_ID", "") + "," + os.getenv("TG_FREE_CHAT_IDS", "")).split(",") if x.strip()}
+
+
+def is_owner(chat_id):
+    return str(chat_id) in FREE_CHATS
+
+
 TOKEN = "".join((os.getenv("TG_CLIENT_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")).split())   # без пробелов/переносов
 API = f"https://api.telegram.org/bot{TOKEN}"
 SECRET = hashlib.sha256(("akbarak-tg:" + TOKEN).encode()).hexdigest()[:40]
@@ -281,6 +289,10 @@ TX = {
                   "Түсүн жана нускасын жогорудагы ар бир файлдын карточкасынан тандаса болот.",
                   "Set colour and copies on each file's card above."),
     "pay_all": ("Оплатить всё", "Баарын төлөө", "Pay for all"),
+    "free_btn": ("🆓 Печать бесплатно (владелец)", "🆓 Акысыз басып чыгаруу (ээси)", "🆓 Print free (owner)"),
+    "free_ok": ("✅ Отправлено в печать бесплатно. Заказ #{id}, терминал {term}.",
+                "✅ Акысыз басып чыгарууга жөнөтүлдү. Заказ #{id}, терминал {term}.",
+                "✅ Sent to print for free. Order #{id}, terminal {term}."),
     "clear": ("🗑 Очистить корзину", "🗑 Себетти тазалоо", "🗑 Clear cart"),
     "cleared": ("🗑 Корзина очищена", "🗑 Себет тазаланды", "🗑 Cart cleared"),
     "remove": ("🗑 Убрать файл", "🗑 Файлды алып салуу", "🗑 Remove file"),
@@ -491,6 +503,8 @@ def draft_kb(d, lang, multi=False):
         kb.append([btn(T("remove", lang), f"d:{i}:cancel")])
         return kb
     kb.append([btn(f"💳 {T('pay', lang)} {draft_total(d)} {T('som', lang)}", f"d:{i}:pay")])
+    if is_owner(d.get("chat_id")):
+        kb.append([btn(T("free_btn", lang), f"d:{i}:free")])
     kb.append([btn(T("cancel", lang), f"d:{i}:cancel")])
     return kb
 
@@ -589,8 +603,11 @@ def cart_text(ds, lang):
 
 def cart_kb(ds, lang):
     total = sum(draft_total(d) for d in ds)
-    return [[btn(f"💳 {T('pay_all', lang)} — {total} {T('som', lang)}", "c:0:pay")],
-            [btn(T("clear", lang), "c:0:clear")]]
+    kb = [[btn(f"💳 {T('pay_all', lang)} — {total} {T('som', lang)}", "c:0:pay")]]
+    if ds and is_owner(ds[0].get("chat_id")):
+        kb.append([btn(T("free_btn", lang), "c:0:free")])
+    kb.append([btn(T("clear", lang), "c:0:clear")])
+    return kb
 
 
 def refresh_cart(chat_id, lang, to_bottom=False):
@@ -733,6 +750,14 @@ def on_callback(cq):
         with chat_lock(chat_id):
             if action == "pay":
                 return pay_all(cq, chat_id, msg_id, lang)
+            if action == "free" and is_owner(chat_id):
+                ds = open_drafts(chat_id)
+                if not ds:
+                    return tg("answerCallbackQuery", callback_query_id=cq["id"], text=T("stale", lang))
+                print_free(chat_id, ds, lang)
+                cart_msg(chat_id, None, clear=True)
+                edit(chat_id, msg_id, cart_text(ds, lang))
+                return tg("answerCallbackQuery", callback_query_id=cq["id"])
             if action == "clear":
                 for d in open_drafts(chat_id):
                     H["remove"](d["file_path"])
@@ -782,6 +807,11 @@ def on_callback(cq):
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action == "pay":
         return pay(cq, d, chat_id, msg_id, lang)
+    elif action == "free" and is_owner(chat_id):
+        print_free(chat_id, [d], lang)
+        with chat_lock(chat_id):
+            refresh_cart(chat_id, lang)
+        return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action == "noop":
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action == "range":
@@ -807,6 +837,30 @@ def on_callback(cq):
         if len(ds) >= 2:
             refresh_cart(chat_id, lang)
     tg("answerCallbackQuery", callback_query_id=cq["id"], text=answer)
+
+
+def print_free(chat_id, ds, lang="ru"):
+    """Владелец: файлы сразу уходят в очередь печати, сумма 0, без оплаты."""
+    group_id, token = uuid.uuid4().hex, secrets.token_urlsafe(16)
+    ids = []
+    conn = H["db"]()
+    for d in ds:
+        cur = conn.execute(
+            "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
+            "paid_at, group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (d["file_name"], d["file_path"], "color" if d["color"] and H["color_ok"](d["terminal"]) else "bw",
+             d["pages"], d["copies"], 0, "free", "new", H["now"](), H["now"](), group_id, d["terminal"], "print",
+             token, d["sides"], str(chat_id), d.get("page_range")))
+        ids.append(cur.lastrowid)
+        conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (cur.lastrowid, d["id"]))
+    conn.commit()
+    conn.close()
+    for d, oid in zip(ds, ids):
+        if d.get("msg_id"):
+            edit(chat_id, d["msg_id"], draft_text(d, lang) + "\n\n" +
+                 T("free_ok", lang, id=oid, term=esc(d["terminal"])))
+    return ids
 
 
 def pay(cq, d, chat_id, msg_id, lang="ru"):
