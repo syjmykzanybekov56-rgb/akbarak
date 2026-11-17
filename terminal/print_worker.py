@@ -9,8 +9,8 @@
      значение WORKER_KEY из Railway (если ключ на сервере ещё не задан — файл не нужен).
   3. Для печати DOC/DOCX/TXT нужен Microsoft Word или бесплатный LibreOffice.
   4. Двусторонняя печать и брошюры: на сервере включите DUPLEX_ENABLED=1.
-     Если принтер не умеет печатать с двух сторон сам — MANUAL_DUPLEX = True
-     (печатаются лицевые стороны, вы переворачиваете пачку и жмёте Enter).
+     Умеет ли принтер печатать с двух сторон сам, программа узнаёт у Windows. Если не умеет —
+     печатаются лицевые стороны, вы переворачиваете пачку и жмёте Enter.
 """
 
 import logging
@@ -50,6 +50,7 @@ def refresh_printer():
     if name and name != PRINTER_NAME:
         log.info("Принтер по умолчанию сменился: %s → %s", PRINTER_NAME, name)
         PRINTER_NAME = name
+        log.info("Двусторонняя печать: %s", "вручную" if manual_duplex() else "автоматически — принтер сам")
 def _find_sumatra():
     """SumatraPDF ищем рядом с программой и в обычных местах установки — путь не зависит от имени пользователя."""
     here = os.path.dirname(os.path.abspath(__file__))
@@ -67,15 +68,16 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-12 v14 прочистка дюз из админки"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-17 v15 авто-дуплекс Canon"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
-# Двусторонняя печать на принтере БЕЗ автоматического дуплекса (сейчас Pantum M6500W).
-# True  — принтер печатает лицевые стороны, программа ждёт, вы переворачиваете пачку,
-#         кладёте её обратно в лоток и нажимаете Enter в этом окне — печатаются обороты.
-# False — принтер сам печатает с двух сторон (когда купите принтер с дуплексом).
-MANUAL_DUPLEX = True
+# Двусторонняя печать. Программа сама спрашивает у Windows, умеет ли принтер печатать
+# с двух сторон (Canon G5080 — умеет, Pantum M6500W — нет):
+#   умеет   → принтер сам переворачивает лист (двусторонняя и брошюра печатаются сразу);
+#   не умеет → печатаются лицевые стороны, вы переворачиваете пачку и жмёте Enter.
+# Принудительно: переменная окружения AKBARAK_MANUAL_DUPLEX=1 (ручной) или =0 (автоматический).
+MANUAL_DUPLEX = None          # None — определить автоматически
 # Настройки ручного переворота — подбираются тестовой печатью (akbarak_test_8.pdf):
 BACK_REVERSE = True          # печатать обороты в обратном порядке
 BACK_ROTATE_DUPLEX = 0       # повернуть оборот на 180°, если он вверх ногами (0 или 180)
@@ -162,6 +164,30 @@ def printer_is_color():
         return bool(win32print.DeviceCapabilities(PRINTER_NAME, port, 32))   # DC_COLORDEVICE
     except Exception:
         return None
+
+
+def printer_has_duplex():
+    """True — принтер сам печатает с двух сторон, False — нет, None — не удалось узнать."""
+    try:
+        import win32print
+        h = win32print.OpenPrinter(PRINTER_NAME)
+        try:
+            port = win32print.GetPrinter(h, 2)["pPortName"]
+        finally:
+            win32print.ClosePrinter(h)
+        return bool(win32print.DeviceCapabilities(PRINTER_NAME, port, 7))    # DC_DUPLEX
+    except Exception:
+        return None
+
+
+def manual_duplex():
+    """Нужно ли переворачивать листы вручную для двусторонней печати и брошюры."""
+    env = os.getenv("AKBARAK_MANUAL_DUPLEX")
+    if env in ("0", "1"):
+        return env == "1"
+    if MANUAL_DUPLEX is not None:
+        return MANUAL_DUPLEX
+    return printer_has_duplex() is not True
 
 
 CMD_RESULT = None
@@ -841,10 +867,10 @@ def handle_print(oid, order):
                 booklet = make_booklet(printable, order.get("page_range"))
             except Exception as e:
                 return f"не удалось собрать брошюру: {e}"
-            if MANUAL_DUPLEX:
+            if manual_duplex():
                 return print_manual_duplex(oid, booklet, None, copies, color, True)
             return print_file(booklet, copies, None, color, "booklet")
-        if sides == "duplex" and MANUAL_DUPLEX:
+        if sides == "duplex" and manual_duplex():
             return print_manual_duplex(oid, printable, order.get("page_range"), copies, color, False)
         return print_file(printable, copies, order.get("page_range"), color, sides)
     finally:
@@ -929,6 +955,7 @@ def main():
     log.info("Ключ терминала: %s", "задан" if WORKER_KEY else "не задан")
     c = printer_is_color()
     log.info("Цветной принтер: %s", {True: "да", False: "НЕТ — цветная печать на этом терминале скрыта", None: "не удалось узнать"}[c])
+    log.info("Двусторонняя печать: %s", "вручную (переворачивать пачку)" if manual_duplex() else "автоматически — принтер сам")
 
     if WORKER_KEY:
         threading.Thread(target=mkassa_relay_loop, daemon=True).start()
@@ -939,9 +966,9 @@ def main():
     last_beat, last_status = 0, None
     while True:
         try:
+            refresh_printer()                 # сменили принтер по умолчанию — подхватываем сразу
             status = printer_status()
             if time.time() - last_beat > HEARTBEAT_INTERVAL or status != last_status:
-                refresh_printer()
                 send_heartbeat(status)
                 last_beat, last_status = time.time(), status
 
