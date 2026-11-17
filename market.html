@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>АкБарак Маркет — конспекты, методички и заказы для студентов</title>
+<meta name="description" content="АкБарак Маркет: студенты Бишкека продают свои конспекты, лекции и методички, заказывают конспект лекции и консультации. Оплата МБанком, печать на терминале АкБарак.">
+<link rel="canonical" href="https://akbarak.vercel.app/market.html">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="АкБарак Маркет — конспекты и методички для студентов">
+<meta property="og:description" content="Покупай и продавай конспекты, лекции и методички. Заказывай конспект лекции. Оплата МБанком.">
+<meta property="og:image" content="https://akbarak.vercel.app/icons/og-image.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: тетрадный лист на тёмно-синем — каталог как стопка карточек-листов, золото только на действиях */
+:root{
+  --navy:#14283D; --navy-deep:#0E1D2E; --gold:#E2A93B; --paper:#FFFFFF; --ink:#14283D;
+  --mist:#9AABBF; --rule:#DCE3EC; --muted:#5D6B7D; --ok:#2E9E6A; --warn:#C9832A; --bad:#C2453D;
+  --font-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --font-body:"Golos Text","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--navy);color:#fff;font-family:var(--font-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
+.wrap{width:min(1160px,100% - 32px);margin-inline:auto}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;letter-spacing:-.01em}
+
+.top{display:flex;align-items:center;gap:18px;padding:18px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px;text-decoration:none;margin-right:auto}
+.brand b{font-family:var(--font-display);font-weight:800;font-size:22px}
+.brand b span{color:var(--gold)}
+.brand i{font-style:normal;font-family:var(--font-display);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mist)}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.06);padding:4px;border-radius:12px;overflow-x:auto}
+.tab{border:0;background:none;padding:9px 14px;border-radius:9px;font-weight:600;font-size:15px;color:var(--mist);cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--paper);color:var(--ink)}
+.who{display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--gold);border-radius:11px;padding:10px 18px;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none;background:none;color:#fff;transition:transform .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn.gold{background:var(--gold);color:var(--navy)}
+.btn.sm{padding:7px 12px;font-size:14px;border-width:1.5px}
+.btn.ink{border-color:var(--ink);color:var(--ink)}
+.btn.ink.fill{background:var(--ink);color:#fff}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
+
+.hero{padding:26px 0 30px;display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:end}
+.hero h1{font-size:clamp(28px,4.4vw,50px);line-height:1.05;font-weight:800}
+.hero h1 em{font-style:normal;color:var(--gold)}
+.hero p{color:#D3DCE6;max-width:46ch;margin-top:14px}
+.hero ul{list-style:none;display:grid;gap:8px;font-size:15px;color:#D3DCE6}
+.hero li b{color:#fff}
+@media (max-width:780px){.hero{grid-template-columns:1fr}}
+
+.view{display:none;padding-bottom:60px}
+.view.on{display:block}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.bar input,.bar select{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:11px;padding:10px 14px;min-width:0}
+.bar input{flex:1 1 240px}
+.bar select option{color:#000}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.card{position:relative;background:var(--paper);color:var(--ink);border-radius:8px;padding:18px 18px 16px 30px;cursor:pointer;display:flex;flex-direction:column;gap:8px;min-height:190px;
+  background-image:repeating-linear-gradient(#fff 0 27px,#EEF2F7 27px 28px)}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:18px;background:radial-gradient(circle at 9px 50%,var(--navy) 0 4px,transparent 4.5px) 0 0/18px 22px repeat-y}
+.card::after{content:"";position:absolute;right:0;top:0;width:34px;height:34px;background:linear-gradient(225deg,var(--navy) 0 50%,var(--gold) 50%);border-bottom-left-radius:6px}
+.card:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(0,0,0,.3)}
+.chip{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:6px;background:#FFF3DC;color:#8A5A0C}
+.card h3{font-size:17px;line-height:1.25;font-weight:700;padding-right:26px}
+.meta{font-size:14px;color:var(--muted)}
+.card .row{display:flex;justify-content:space-between;align-items:baseline;margin-top:auto}
+.price{font-family:var(--font-display);font-weight:800;font-size:22px;font-variant-numeric:tabular-nums}
+.price small{font-family:var(--font-body);font-size:13px;color:var(--muted);font-weight:600}
+.stars{color:var(--warn);font-size:14px}
+.empty{color:var(--mist);padding:40px 0;text-align:center}
+
+.sheet{background:var(--paper);color:var(--ink);border-radius:8px;padding:26px;margin-bottom:18px}
+.sheet h2{font-size:22px;margin-bottom:14px}
+.sheet h3{font-size:17px;margin:18px 0 10px}
+.form{display:grid;gap:12px;max-width:640px}
+.form label{display:grid;gap:5px;font-weight:600;font-size:14px}
+.form input,.form select,.form textarea{border:1.5px solid var(--rule);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink);font-weight:400}
+.form textarea{min-height:90px;resize:vertical}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.form .two{grid-template-columns:1fr}}
+.check{display:flex!important;grid-template-columns:none!important;gap:10px;align-items:flex-start;font-weight:500!important}
+.check input{margin-top:4px;width:18px;height:18px}
+.rules{font-size:14px;color:var(--muted);background:#F5F7FA;border-radius:10px;padding:12px 14px;line-height:1.55}
+.rules b{color:var(--ink)}
+
+.task{background:var(--paper);color:var(--ink);border-radius:8px;padding:18px;display:grid;gap:6px}
+.task .row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.status{font-size:12px;font-weight:700;padding:4px 9px;border-radius:6px;background:#EEF2F7;color:var(--ink)}
+.status.done{background:#DFF4EA;color:#1C6B47}.status.submitted{background:#FFF3DC;color:#8A5A0C}.status.cancelled{background:#F8E1DF;color:#8D2E28}
+.list{display:grid;gap:12px}
+.line{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-bottom:1px dashed var(--rule)}
+.line:last-child{border-bottom:0}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.bal{display:flex;gap:28px;flex-wrap:wrap}
+.bal div b{display:block;font-family:var(--font-display);font-size:26px;font-variant-numeric:tabular-nums}
+.bal div span{font-size:14px;color:var(--muted)}
+
+.modal{position:fixed;inset:0;background:rgba(6,14,24,.72);display:none;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto;z-index:20}
+.modal.on{display:flex}
+.box{background:var(--paper);color:var(--ink);border-radius:12px;width:min(720px,100%);padding:24px;position:relative}
+.box .x{position:absolute;right:12px;top:10px;border:0;background:none;font-size:26px;cursor:pointer;color:var(--muted)}
+.box h2{font-size:22px;margin:4px 30px 10px 0}
+.pv{display:flex;gap:10px;overflow-x:auto;padding:6px 0 12px}
+.pv img{height:320px;border-radius:6px;border:1px solid var(--rule);flex:0 0 auto;filter:blur(0)}
+.pv .nopv{padding:30px;border:1.5px dashed var(--rule);border-radius:8px;color:var(--muted);font-size:14px}
+.desc{white-space:pre-wrap;color:#33445A;margin:10px 0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;border:1px solid rgba(255,255,255,.2);padding:12px 18px;border-radius:12px;font-weight:600;z-index:40;display:none;max-width:90vw}
+.toast.on{display:block}
+footer{color:var(--mist);font-size:14px;padding:30px 0 40px;display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="wrap top">
+  <a class="brand" href="/" aria-label="АкБарак — главная"><b><span>Ак</span>Барак</b><i>Маркет</i></a>
+  <nav class="tabs" role="tablist" aria-label="Разделы">
+    <button class="tab on" data-v="catalog" role="tab">Материалы</button>
+    <button class="tab" data-v="tasks" role="tab">Заказы</button>
+    <button class="tab" data-v="sell" role="tab">Продать / заказать</button>
+    <button class="tab" data-v="my" role="tab">Мой кабинет</button>
+  </nav>
+  <div class="who" id="who"><button class="btn sm gold" id="loginBtn" type="button">Войти через Telegram</button></div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Конспекты, лекции и методички <em>от студентов — студентам</em></h1>
+      <p>Покупай готовые материалы по предметам и распечатай их на терминале АкБарак. Продавай свои конспекты. Закажи конспект лекции или консультацию у старшекурсника.</p>
+    </div>
+    <ul>
+      <li>🔐 <b>Вход через Telegram</b> — без паролей и SMS</li>
+      <li>💳 <b>Оплата МБанком</b> — деньги продавцу после покупки</li>
+      <li>🖨 <b>Печать в один клик</b> на терминале АкБарак</li>
+    </ul>
+  </section>
+
+  <!-- ── Каталог ── -->
+  <section class="view on" id="v-catalog" aria-label="Материалы">
+    <div class="bar">
+      <input id="q" type="search" placeholder="Поиск: анатомия, ЭКГ, фармакология…" aria-label="Поиск">
+      <select id="fkind" aria-label="Тип"><option value="">Все типы</option></select>
+      <select id="fcourse" aria-label="Курс"><option value="">Все курсы</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+    </div>
+    <div class="grid" id="items"></div>
+  </section>
+
+  <!-- ── Заказы ── -->
+  <section class="view" id="v-tasks" aria-label="Заказы">
+    <div class="bar" style="justify-content:space-between;align-items:center">
+      <p style="color:#D3DCE6;max-width:60ch">Заказчик уже оплатил заказ. Возьми его, выполни и сдай — деньги придут на твой баланс, когда заказчик примет работу.</p>
+      <button class="btn gold" type="button" onclick="show('sell');document.getElementById('taskForm').scrollIntoView()">+ Создать заказ</button>
+    </div>
+    <div class="list" id="tasks"></div>
+  </section>
+
+  <!-- ── Продать / заказать ── -->
+  <section class="view" id="v-sell" aria-label="Продать или заказать">
+    <div class="sheet">
+      <h2>Продать свой материал</h2>
+      <form class="form" id="sellForm">
+        <div class="two">
+          <label>Тип<select name="kind" id="skind" required></select></label>
+          <label>Цена, сом<input name="price" type="number" min="0" max="50000" value="100" required></label>
+        </div>
+        <label>Название<input name="title" maxlength="120" required placeholder="Анатомия: кости черепа, 1 курс"></label>
+        <div class="two">
+          <label>Предмет<input name="subject" maxlength="80" placeholder="Анатомия"></label>
+          <label>Курс<select name="course"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+        </div>
+        <label>Описание<textarea name="description" maxlength="1500" placeholder="Что внутри, по какому учебнику, сколько тем…"></textarea></label>
+        <label>Файл (PDF или DOCX)<input name="file" type="file" accept=".pdf,.docx" required></label>
+        <p class="rules" id="feeNote"></p>
+        <label class="check"><input type="checkbox" name="agree" value="1" required> Это мой материал (или я имею право его продавать), и он не нарушает правила площадки.</label>
+        <button class="btn ink fill" type="submit">Выставить на продажу</button>
+      </form>
+    </div>
+
+    <div class="sheet" id="taskForm">
+      <h2>Создать заказ</h2>
+      <form class="form" id="newTask">
+        <div class="two">
+          <label>Тип<select name="kind" id="tkind" required></select></label>
+          <label>Цена, сом<input name="price" type="number" min="50" max="50000" value="300" required></label>
+        </div>
+        <label>Что нужно<input name="title" maxlength="120" required placeholder="Законспектировать семинар по ЭКГ в частном центре"></label>
+        <div class="two">
+          <label>Когда<input name="when" maxlength="80" placeholder="20 ноября, 14:00"></label>
+          <label>Где<input name="place" maxlength="120" placeholder="Адрес или онлайн"></label>
+        </div>
+        <label>Подробности<textarea name="description" maxlength="1500" placeholder="Что именно записать, в каком виде сдать (фото, PDF, текст)…"></textarea></label>
+        <p class="rules">Оплата сразу при создании заказа. Деньги получит исполнитель только после того, как вы примете работу. Пока заказ никто не взял, его можно отменить — деньги вернём.</p>
+        <label class="check"><input type="checkbox" name="agree" value="1" required> Я согласен с правилами площадки.</label>
+        <button class="btn ink fill" type="submit">Оплатить и опубликовать</button>
+      </form>
+    </div>
+
+    <div class="sheet">
+      <h2>Правила площадки</h2>
+      <div class="rules">
+        <p><b>Можно:</b> свои конспекты и лекции, методички, подборки тестов для самопроверки; заказы «жожошка» — сходить на лекцию или семинар частной организации и законспектировать для заказчика; консультации — помочь разобраться в теме.</p>
+        <p style="margin-top:8px"><b>Нельзя:</b> работы, которые сдают от чужого имени (истории болезни, рефераты, СРС, курсовые «под ключ»); любые данные пациентов; видео и аудио платных курсов без разрешения организатора; чужие материалы без права на продажу. Такие объявления удаляем, повторно — блокируем аккаунт.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Кабинет ── -->
+  <section class="view" id="v-my" aria-label="Мой кабинет">
+    <div id="myOut" class="sheet"><h2>Мой кабинет</h2><p>Войдите через Telegram, чтобы видеть покупки, продажи и заказы.</p><p style="margin-top:12px"><button class="btn ink fill" type="button" onclick="login()">Войти через Telegram</button></p></div>
+    <div id="myIn" hidden></div>
+  </section>
+</main>
+
+<footer class="wrap"><span>© 2026 АкБарак Маркет · Бишкек</span><span><a href="/">Сайт АкБарак</a> · <a href="/app.html">Печать</a> · <a href="https://t.me/PrintKGMA_bot">Telegram-бот</a></span></footer>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="box" id="mbox"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const SERVER = "https://akbarak-production.up.railway.app";
+let TOKEN = null, ME = null, KINDS = {}, TKINDS = {}, FEE = 10, ITEMS = [];
+try{ TOKEN = localStorage.getItem('mk-token'); }catch(e){}
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(t, ms=3200){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('on'), ms); }
+async function api(path, opts={}){
+  opts.headers = Object.assign({}, opts.headers||{}, TOKEN ? {Authorization:'Bearer '+TOKEN} : {});
+  if(opts.json){ opts.body = JSON.stringify(opts.json); opts.headers['Content-Type']='application/json'; opts.method = opts.method || 'POST'; }
+  const r = await fetch(SERVER+path, opts);
+  const d = await r.json().catch(()=>({}));
+  if(r.status === 401 && d.login){ setToken(null); login(); throw new Error('login'); }
+  if(!r.ok) throw new Error(d.error || 'Ошибка сервера');
+  return d;
+}
+function setToken(t){ TOKEN=t; try{ t ? localStorage.setItem('mk-token',t) : localStorage.removeItem('mk-token'); }catch(e){} }
+
+/* ── вкладки ── */
+function show(v){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('on', s.id==='v-'+v));
+  if(location.hash !== '#'+v) history.replaceState(null,'','#'+v);
+  if(v==='tasks') loadTasks();
+  if(v==='my') loadMe();
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>show(b.dataset.v));
+
+/* ── вход ── */
+function renderWho(){
+  $('who').innerHTML = ME
+    ? `<span style="color:var(--mist);font-size:14px">👤 ${esc(ME.name)}</span><button class="btn sm" type="button" onclick="logout()">Выйти</button>`
+    : `<button class="btn sm gold" type="button" onclick="login()">Войти через Telegram</button>`;
+}
+async function login(){
+  let d; try{ d = await api('/mk/login/start', {method:'POST'}); }catch(e){ return toast(e.message); }
+  openModal(`<button class="x" onclick="closeModal()" aria-label="Закрыть">×</button>
+    <h2>Вход через Telegram</h2>
+    <p style="color:var(--muted)">Нажмите кнопку — откроется бот АкБарак. Нажмите в нём <b>«Старт»</b>, и вы автоматически войдёте на сайт.</p>
+    <p style="margin:18px 0"><a class="btn ink fill" href="${d.bot_url}" target="_blank" rel="noopener">Открыть Telegram и войти</a></p>
+    <p style="color:var(--muted);font-size:14px" id="lw">Ждём подтверждения в Telegram…</p>`);
+  const t0 = Date.now();
+  (async function poll(){
+    if(!$('modal').classList.contains('on') || Date.now()-t0 > 600000) return;
+    try{
+      const r = await fetch(SERVER+'/mk/login/check?code='+encodeURIComponent(d.code)).then(r=>r.json());
+      if(r.ok){ setToken(r.token); ME=r.user; renderWho(); closeModal(); toast('Вы вошли, '+r.user.name+' 👋'); route(); return; }
+    }catch(e){}
+    setTimeout(poll, 2000);
+  })();
+}
+async function logout(){ try{ await api('/mk/logout',{method:'POST'}); }catch(e){} setToken(null); ME=null; renderWho(); show('catalog'); }
+
+/* ── модалка ── */
+function openModal(html){ $('mbox').innerHTML=html; $('modal').classList.add('on'); }
+function closeModal(){ $('modal').classList.remove('on'); }
+$('modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+
+/* ── каталог ── */
+const stars = r => r ? '★'.repeat(Math.round(r)) + '☆'.repeat(5-Math.round(r)) : '';
+async function loadItems(){
+  const p = new URLSearchParams({kind:$('fkind').value, course:$('fcourse').value, q:$('q').value.trim()});
+  let d; try{ d = await api('/mk/items?'+p); }catch(e){ $('items').innerHTML=`<p class="empty">${esc(e.message)}</p>`; return; }
+  KINDS=d.kinds; TKINDS=d.task_kinds; FEE=d.fee_pct; ITEMS=d.items; fillKinds();
+  $('items').innerHTML = d.items.length ? d.items.map(i=>`
+    <article class="card" tabindex="0" role="button" onclick="openItem(${i.id})" onkeydown="if(event.key==='Enter')openItem(${i.id})">
+      <span class="chip">${esc(i.kind_name)}${i.course?' · '+esc(i.course)+' курс':''}</span>
+      <h3>${esc(i.title)}</h3>
+      <div class="meta">${esc(i.subject||'')}${i.subject?' · ':''}${i.pages} стр. · ${esc(i.file_ext.toUpperCase())}</div>
+      <div class="meta">${i.rating?`<span class="stars">${stars(i.rating)}</span> ${i.rating} (${i.rating_n}) · `:''}${i.sales} покуп.</div>
+      <div class="row"><span class="price">${i.price ? i.price+' <small>сом</small>' : 'Бесплатно'}</span>${i.bought?'<span class="status done">куплено</span>':''}</div>
+    </article>`).join('') : '<p class="empty">Пока ничего не найдено. Станьте первым — выставьте свой конспект во вкладке «Продать».</p>';
+}
+function fillKinds(){
+  if(!$('fkind').dataset.f){ $('fkind').innerHTML='<option value="">Все типы</option>'+Object.entries(KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join(''); $('fkind').dataset.f=1; }
+  $('skind').innerHTML = Object.entries(KINDS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  $('tkind').innerHTML = Object.entries(TKINDS).map(([k,v])=>`<option value="${k}">${v}${k==='zhozhoshka'?' — конспект лекции частной организации':''}</option>`).join('');
+  $('feeNote').textContent = `Вы получаете цену минус комиссию площадки ${FEE}%. Деньги копятся на балансе в кабинете, выплату делаем на МБанк.`;
+}
+let qT; $('q').oninput=()=>{clearTimeout(qT); qT=setTimeout(loadItems,300)}; $('fkind').onchange=loadItems; $('fcourse').onchange=loadItems;
+
+function openItem(id){
+  const i = ITEMS.find(x=>x.id===id); if(!i) return;
+  const pv = i.previews ? Array.from({length:i.previews},(_,n)=>`<img src="${SERVER}/mk/items/${i.id}/preview/${n+1}" alt="Страница ${n+1}" loading="lazy">`).join('')
+                        : '<div class="nopv">Предпросмотр есть только у PDF</div>';
+  openModal(`<button class="x" onclick="closeModal()" aria-label="Закрыть">×</button>
+    <span class="chip">${esc(i.kind_name)}${i.course?' · '+esc(i.course)+' курс':''}</span>
+    <h2>${esc(i.title)}</h2>
+    <div class="meta">${esc(i.subject||'')} · ${i.pages} стр. · автор: ${esc(i.seller||'')}</div>
+    <div class="pv">${pv}</div>
+    ${i.previews && i.pages>i.previews ? `<p class="meta">Показаны первые ${i.previews} из ${i.pages} страниц</p>`:''}
+    <p class="desc">${esc(i.description||'')}</p>
+    <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px">
+      <span class="price">${i.price ? i.price+' <small>сом</small>' : 'Бесплатно'}</span>
+      ${i.mine ? '<span class="status">это ваш материал</span>' : i.bought ? '<button class="btn ink fill" onclick="closeModal();show(\'my\')">Открыть в покупках</button>'
+               : `<button class="btn ink fill" id="buyBtn" onclick="buy(${i.id})">${i.price?'Купить за '+i.price+' сом':'Получить бесплатно'}</button>`}
+    </div>`);
+}
+async function buy(id){
+  if(!TOKEN) return login();
+  $('buyBtn').disabled = true;
+  try{
+    const d = await api(`/mk/items/${id}/buy`, {method:'POST'});
+    if(d.checkout_url){ try{ localStorage.setItem('mk-pay', d.pay_id); }catch(e){} location.href = d.checkout_url; return; }
+    closeModal(); toast(d.free ? 'Добавлено в покупки ✅' : 'Уже в ваших покупках'); show('my');
+  }catch(e){ if(e.message!=='login') toast(e.message); $('buyBtn') && ($('buyBtn').disabled=false); }
+}
+
+/* ── продать ── */
+$('sellForm').onsubmit = async e=>{
+  e.preventDefault(); if(!TOKEN) return login();
+  const b = e.target.querySelector('button[type=submit]'); b.disabled=true; b.textContent='Загружаем…';
+  try{ await api('/mk/items', {method:'POST', body:new FormData(e.target)}); e.target.reset(); toast('Материал выставлен ✅'); loadItems(); show('my'); }
+  catch(err){ if(err.message!=='login') toast(err.message); }
+  b.disabled=false; b.textContent='Выставить на продажу';
+};
+
+/* ── заказы ── */
+$('newTask').onsubmit = async e=>{
+  e.preventDefault(); if(!TOKEN) return login();
+  const f = Object.fromEntries(new FormData(e.target));
+  const b = e.target.querySelector('button[type=submit]'); b.disabled=true;
+  try{ const d = await api('/mk/tasks', {json:f}); try{ localStorage.setItem('mk-pay', d.pay_id); }catch(e){} location.href = d.checkout_url; }
+  catch(err){ if(err.message!=='login') toast(err.message); b.disabled=false; }
+};
+function taskCard(t, mine){
+  const st = `<span class="status ${t.status}">${esc(t.status_name)}</span>`;
+  let acts = '';
+  if(!mine && t.status==='open') acts = `<button class="btn sm ink fill" onclick="take(${t.id})">Взять за ${t.earn} сом</button>`;
+  if(mine && t.role==='customer'){
+    if(t.status==='open') acts += `<button class="btn sm ink" onclick="tAct(${t.id},'cancel','Отменить заказ? Деньги вернём.')">Отменить</button>`;
+    if(t.status==='submitted') acts += `<button class="btn sm ink fill" onclick="tAct(${t.id},'accept','Принять работу? Деньги уйдут исполнителю.')">Принять работу</button>`;
+    if(['taken','submitted'].includes(t.status)) acts += `<button class="btn sm ink" onclick="dispute(${t.id})">Проблема</button>`;
+  }
+  if(mine && t.role==='executor' && ['taken','submitted'].includes(t.status)) acts += `<button class="btn sm ink fill" onclick="submitTask(${t.id})">${t.status==='submitted'?'Сдать заново':'Сдать работу'}</button>`;
+  const res = mine && (t.result_text || t.has_file) ? `<div class="rules" style="margin-top:6px">${t.result_text?esc(t.result_text):''}${t.has_file?` <a href="#" onclick="dl('/mk/tasks/${t.id}/result');return false">📎 скачать файл</a>`:''}</div>` : '';
+  return `<article class="task">
+    <div class="row"><span class="chip">${esc(t.kind_name)}</span>${mine?st:''}</div>
+    <h3 style="font-size:17px">${esc(t.title)}</h3>
+    ${t.when_text||t.place?`<div class="meta">🗓 ${esc(t.when_text||'—')} · 📍 ${esc(t.place||'—')}</div>`:''}
+    ${t.description?`<p class="desc" style="margin:2px 0">${esc(t.description)}</p>`:''}
+    ${res}
+    <div class="row"><span class="price">${t.price} <small>сом</small></span><span class="acts">${acts}</span></div>
+  </article>`;
+}
+async function loadTasks(){
+  let d; try{ d = await api('/mk/tasks'); }catch(e){ return; }
+  TKINDS=d.kinds;
+  const list = d.tasks.filter(t=>!t.role);
+  $('tasks').innerHTML = list.length ? list.map(t=>taskCard(t,false)).join('') : '<p class="empty">Открытых заказов пока нет.</p>';
+}
+async function take(id){
+  if(!TOKEN) return login();
+  try{ await api(`/mk/tasks/${id}/take`, {method:'POST'}); toast('Заказ ваш ✅ Контакт заказчика пришёл в Telegram'); show('my'); }
+  catch(e){ if(e.message!=='login') toast(e.message); loadTasks(); }
+}
+function confirmBox(text, onYes){
+  openModal(`<h2 style="font-size:18px">${esc(text)}</h2><div class="acts" style="margin-top:16px"><button class="btn ink fill" id="yes">Да</button><button class="btn ink" onclick="closeModal()">Нет</button></div>`);
+  $('yes').onclick = ()=>{ closeModal(); onYes(); };
+}
+function tAct(id, act, q){ confirmBox(q, async ()=>{ try{ await api(`/mk/tasks/${id}/${act}`, {method:'POST'}); toast('Готово ✅'); loadMe(); }catch(e){ toast(e.message); } }); }
+function dispute(id){
+  openModal(`<button class="x" onclick="closeModal()">×</button><h2>Что случилось?</h2><form class="form" id="dForm"><textarea name="text" required placeholder="Опишите проблему — владелец площадки свяжется с вами в Telegram"></textarea><button class="btn ink fill">Отправить</button></form>`);
+  $('dForm').onsubmit = async e=>{ e.preventDefault(); try{ await api(`/mk/tasks/${id}/dispute`, {json:Object.fromEntries(new FormData(e.target))}); closeModal(); toast('Отправлено владельцу площадки'); }catch(err){ toast(err.message); } };
+}
+function submitTask(id){
+  openModal(`<button class="x" onclick="closeModal()">×</button><h2>Сдать работу</h2>
+    <form class="form" id="sForm"><label>Комментарий / текст конспекта<textarea name="text"></textarea></label>
+    <label>Файл (PDF, DOCX, фото, ZIP)<input type="file" name="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.txt,.zip"></label>
+    <button class="btn ink fill">Сдать</button></form>`);
+  $('sForm').onsubmit = async e=>{ e.preventDefault(); try{ await api(`/mk/tasks/${id}/submit`, {method:'POST', body:new FormData(e.target)}); closeModal(); toast('Сдано ✅ Заказчик получил уведомление'); loadMe(); }catch(err){ toast(err.message); } };
+}
+
+/* ── кабинет ── */
+async function dl(path){
+  try{
+    const r = await fetch(SERVER+path, {headers:{Authorization:'Bearer '+TOKEN}});
+    if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || 'Не удалось скачать');
+    const name = decodeURIComponent((r.headers.get('Content-Disposition')||'').match(/filename\*?=(?:UTF-8'')?"?([^";]+)/i)?.[1] || 'file');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  }catch(e){ toast(e.message); }
+}
+function printItem(pid){
+  openModal(`<button class="x" onclick="closeModal()">×</button><h2>Распечатать на терминале</h2>
+    <form class="form" id="pForm"><div class="two"><label>Печать<select name="color"><option value="bw">Ч/Б</option><option value="color">Цвет</option></select></label>
+    <label>Копий<input type="number" name="copies" min="1" max="20" value="1"></label></div>
+    <label>Стороны<select name="sides"><option value="single">С одной стороны</option><option value="duplex">С двух сторон</option><option value="booklet">Брошюра</option></select></label>
+    <button class="btn ink fill">Перейти к оплате печати</button></form>`);
+  $('pForm').onsubmit = async e=>{ e.preventDefault();
+    try{ const d = await api(`/mk/purchases/${pid}/print`, {json:Object.fromEntries(new FormData(e.target))});
+      location.href = `/app.html?order=${d.order_id}&token=${encodeURIComponent(d.token)}`; }catch(err){ toast(err.message); } };
+}
+async function rate(pid, r){ try{ await api(`/mk/purchases/${pid}/rate`, {json:{rating:r}}); toast('Спасибо за оценку ⭐'); loadMe(); }catch(e){ toast(e.message); } }
+function delItem(id){ confirmBox('Снять материал с продажи?', async ()=>{ try{ await api('/mk/items/'+id, {method:'DELETE'}); loadMe(); loadItems(); }catch(e){ toast(e.message); } }); }
+async function loadMe(){
+  if(!TOKEN){ $('myOut').hidden=false; $('myIn').hidden=true; return; }
+  let d; try{ d = await api('/mk/me'); }catch(e){ return; }
+  ME = d.user; renderWho(); $('myOut').hidden=true; $('myIn').hidden=false;
+  const b = d.bought.map(i=>`<div class="line"><div><b>${esc(i.title)}</b><div class="meta">${esc(i.kind_name)} · ${i.pages} стр. · ${esc(i.seller||'')}</div>
+      <div class="stars" aria-label="Оценка">${[1,2,3,4,5].map(n=>`<button style="border:0;background:none;cursor:pointer;font-size:18px;color:${(i.my_rating||0)>=n?'var(--warn)':'#C9D2DD'}" onclick="rate(${i.purchase_id},${n})" aria-label="${n} из 5">★</button>`).join('')}</div></div>
+      <div class="acts"><button class="btn sm ink" onclick="dl('/mk/download/${i.purchase_id}')">Скачать</button><button class="btn sm ink fill" onclick="printItem(${i.purchase_id})">🖨 Распечатать</button></div></div>`).join('') || '<p class="meta">Пока нет покупок.</p>';
+  const s = d.items.map(i=>`<div class="line"><div><b>${esc(i.title)}</b><div class="meta">${i.price} сом · продано: ${i.sales}${i.rating?` · ★ ${i.rating}`:''}${i.status==='hidden'?' · <b style="color:var(--bad)">скрыт модератором</b>':''}</div></div>
+      <div class="acts"><button class="btn sm ink" onclick="dl('/mk/download_my/${i.id}')">Файл</button><button class="btn sm ink" onclick="delItem(${i.id})">Снять</button></div></div>`).join('') || '<p class="meta">Вы ещё ничего не продаёте.</p>';
+  const tc = d.tasks.filter(t=>t.role==='customer'), te = d.tasks.filter(t=>t.role==='executor');
+  $('myIn').innerHTML = `
+    <div class="sheet"><h2>👤 ${esc(ME.name)}</h2>
+      <div class="bal"><div><b>${ME.balance} сом</b><span>на балансе (к выплате)</span></div><div><b>${ME.paid_out} сом</b><span>уже выплачено</span></div></div>
+      <p class="meta" style="margin-top:10px">Выплату на МБанк делает владелец площадки; чтобы получить деньги, напишите в Telegram-бот или на 0773 731 212. Комиссия площадки — ${d.fee_pct}%.</p></div>
+    <div class="sheet"><h2>Мои покупки</h2>${b}</div>
+    <div class="sheet"><h2>Мои заказы</h2>${tc.length?'<div class="list">'+tc.map(t=>taskCard(t,true)).join('')+'</div>':'<p class="meta">Вы ещё ничего не заказывали.</p>'}</div>
+    <div class="sheet"><h2>Я исполнитель</h2>${te.length?'<div class="list">'+te.map(t=>taskCard(t,true)).join('')+'</div>':'<p class="meta">Возьмите заказ во вкладке «Заказы».</p>'}</div>
+    <div class="sheet"><h2>Мои материалы на продаже</h2>${s}</div>`;
+}
+
+/* ── возврат после оплаты ── */
+async function checkPendingPay(){
+  let pid = null; try{ pid = localStorage.getItem('mk-pay'); }catch(e){}
+  if(!pid || !TOKEN) return;
+  for(let i=0;i<10;i++){
+    try{ const d = await api('/mk/pay/'+pid); if(d.status==='paid'){ try{ localStorage.removeItem('mk-pay'); }catch(e){} toast('Оплата прошла ✅'); loadMe(); loadItems(); return; } }catch(e){ return; }
+    await new Promise(r=>setTimeout(r,3000));
+  }
+}
+
+function route(){ const v=(location.hash||'#catalog').slice(1); show(['catalog','tasks','sell','my'].includes(v)?v:'catalog'); }
+window.addEventListener('hashchange', route);
+(async function init(){
+  renderWho();
+  if(TOKEN){ try{ const d = await api('/mk/me'); ME=d.user; renderWho(); }catch(e){} }
+  await loadItems();
+  route();
+  checkPendingPay();
+})();
+</script>
+</body>
+</html>

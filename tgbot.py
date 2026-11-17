@@ -977,6 +977,8 @@ def on_update(u):
     if text.startswith("/start lang_") and text[12:14] in LANGS:
         set_lang(chat_id, text[12:14])
     lang = get_lang(chat_id, (m.get("from") or {}).get("language_code"))
+    if text.startswith("/start mk_") and H.get("market_login"):     # вход на сайт АкБарак Маркет
+        return send(chat_id, H["market_login"](chat_id, text[10:].strip(), m.get("from")))
     if "document" in m:
         doc = m["document"]
         return on_file(chat_id, doc["file_id"], doc.get("file_name") or "file", doc.get("file_size"), lang=lang)

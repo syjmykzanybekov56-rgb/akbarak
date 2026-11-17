@@ -906,6 +906,8 @@ def gopay_webhook():
                             (payment_id,)).fetchall()
         if not rows:
             conn.close()
+            if status in ("paid", "committed") and market.on_paid(payment_id=payment_id, amount=data.get("amount")):
+                return jsonify({"success": True})              # оплата в АкБарак Маркете
             return jsonify({"error": "Заказ для этого платежа не найден"}), 404
 
         ids = [r["id"] for r in rows]
@@ -944,6 +946,8 @@ def _mkassa_apply(tx):
     oid = mkassa.order_id_of(tx)
     if not oid:
         return False
+    if market.is_market_payment(oid):                 # оплата в АкБарак Маркете
+        return market.on_paid(pay_no=oid, amount=mkassa.amount_som(tx))
     conn = db()
     try:
         row = conn.execute("SELECT group_id FROM orders WHERE id=?", (oid,)).fetchone()
@@ -1819,6 +1823,25 @@ tgbot.register(app, {
     "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
     "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok, "color_ok": color_ok,
 })
+
+
+# АкБарак Маркет — конспекты, методички, заказы (market.py)
+import market  # noqa: E402
+
+
+def _sync_market(payment_id):
+    if PAY is mkassa and payment_id:
+        _mkassa_sync_tx(payment_id)
+
+
+market.register(app, {
+    "db": db, "now": now, "ago": ago, "FILES_DIR": FILES_DIR, "PAY": PAY, "PAY_FALLBACK": gopay, "notify": notify,
+    "tg_send": tgbot.send, "pdf_page_count": pdf_page_count, "docx_page_count": docx_page_count,
+    "SITE_URL": SITE_URL, "BOT_USERNAME": os.getenv("TG_BOT_USERNAME", "PrintKGMA_bot"), "admin_ok": _admin_key_ok,
+    "order_total": order_total, "color_ok": color_ok, "DUPLEX_ENABLED": DUPLEX_ENABLED,
+    "DEFAULT_TERMINAL": DEFAULT_TERMINAL, "sync_market": _sync_market,
+})
+tgbot.H["market_login"] = market.tg_login
 
 
 if os.getenv("DISABLE_BACKGROUND") != "1":
