@@ -1814,6 +1814,7 @@ import tgbot  # noqa: E402
 tgbot.register(app, {
     "db": db, "FILES_DIR": FILES_DIR, "now": now, "ago": ago, "remove": _remove,
     "order_total": order_total, "pdf_page_count": pdf_page_count, "docx_page_count": docx_page_count,
+    "parse_range": parse_range,
     "txt_page_count": txt_page_count, "gopay": PAY, "gopay_fallback": gopay, "sync_payment": sync_payment, "PRICES": PRICES, "SIDES": SIDES,
     "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
     "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok, "color_ok": color_ok,

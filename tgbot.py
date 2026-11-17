@@ -68,6 +68,63 @@ def esc(s):
     return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+PREVIEW_MAX = 10   # сколько страниц показывать альбомом
+
+
+def render_pages(path, idxs, width=900):
+    """PNG-картинки страниц PDF (номера с 0). Пустой список — не получилось."""
+    try:
+        import io
+        import pypdfium2 as pdfium
+        pdf = pdfium.PdfDocument(path)
+        out = []
+        for i in idxs:
+            if i >= len(pdf):
+                break
+            page = pdf[i]
+            scale = width / page.get_width()
+            img = page.render(scale=scale).to_pil().convert("RGB")
+            buf = io.BytesIO()
+            img.save(buf, "JPEG", quality=80)
+            out.append(buf.getvalue())
+        pdf.close()
+        return out
+    except Exception as e:
+        log.warning("preview: %s", e)
+        return []
+
+
+def send_photos(chat_id, images, caption=None, kb=None):
+    """Одна картинка — sendPhoto (можно с кнопкой), несколько — альбом."""
+    if not TOKEN or not images:
+        return None
+    try:
+        if len(images) == 1:
+            data = {"chat_id": chat_id}
+            if caption:
+                data["caption"] = caption
+            if kb:
+                import json
+                data["reply_markup"] = json.dumps({"inline_keyboard": kb})
+            r = requests.post(f"{API}/sendPhoto", data=data, files={"photo": ("p.jpg", images[0], "image/jpeg")},
+                              timeout=60)
+        else:
+            import json
+            media = [{"type": "photo", "media": f"attach://p{i}"} for i in range(len(images))]
+            if caption:
+                media[0]["caption"] = caption
+            files = {f"p{i}": (f"p{i}.jpg", b, "image/jpeg") for i, b in enumerate(images)}
+            r = requests.post(f"{API}/sendMediaGroup", data={"chat_id": chat_id, "media": json.dumps(media)},
+                              files=files, timeout=90)
+        j = r.json()
+        if not j.get("ok"):
+            log.warning("TG photo: %s", j.get("description"))
+        return j.get("result")
+    except Exception as e:
+        log.error("TG photo: %s", e)
+        return None
+
+
 def btn(text, data=None, url=None, web_app=None):
     b = {"text": text}
     if web_app:
@@ -229,6 +286,24 @@ TX = {
     "remove": ("🗑 Убрать файл", "🗑 Файлды алып салуу", "🗑 Remove file"),
     "in_cart": ("🧺 В корзине — оплата одна, внизу", "🧺 Себетте — төлөм бир, ылдыйда", "🧺 In the cart — one payment, below"),
     "files_n": ("Файлов", "Файлдар", "Files"),
+    "range_btn_all": ("📑 Страницы: все", "📑 Барактар: баары", "📑 Pages: all"),
+    "range_btn": ("📑 Страницы: {r}", "📑 Барактар: {r}", "📑 Pages: {r}"),
+    "range_all": ("Все страницы", "Бардык барактар", "All pages"),
+    "range_ask": ("📑 Напиши, какие страницы печатать.\nНапример: <b>1-3</b> или <b>2,5,7</b> или <b>1-4,8</b>\n"
+                  "Всего в файле <b>{n}</b> стр.",
+                  "📑 Кайсы барактарды басуу керек, жаз.\nМисалы: <b>1-3</b> же <b>2,5,7</b> же <b>1-4,8</b>\n"
+                  "Файлда бардыгы <b>{n}</b> бет.",
+                  "📑 Type which pages to print.\nFor example: <b>1-3</b> or <b>2,5,7</b> or <b>1-4,8</b>\n"
+                  "The file has <b>{n}</b> pages."),
+    "range_bad": ("Не понял диапазон 🙈 Напиши так: <b>1-3</b> или <b>2,5,7</b> (страницы от 1 до {n}).",
+                  "Диапазонду түшүнгөн жокмун 🙈 Мындай жаз: <b>1-3</b> же <b>2,5,7</b> (1ден {n}ге чейин).",
+                  "I didn't get that range 🙈 Type it like <b>1-3</b> or <b>2,5,7</b> (pages 1 to {n})."),
+    "range_ok": ("✅ Печатаю страницы: {r}", "✅ Бул барактарды басам: {r}", "✅ Printing pages: {r}"),
+    "range_line": ("📑 Страницы: <b>{r}</b> ({p} из {n})", "📑 Барактар: <b>{r}</b> ({n} ичинен {p})",
+                   "📑 Pages: <b>{r}</b> ({p} of {n})"),
+    "preview_cap": ("👁 Предпросмотр: стр. 1 из {n}", "👁 Алдын ала көрүү: {n} беттин 1-би", "👁 Preview: page 1 of {n}"),
+    "preview_all": ("👁 Показать все страницы", "👁 Бардык беттерди көрсөтүү", "👁 Show all pages"),
+    "preview_more": ("Показаны первые {k} из {n} стр.", "{n} беттин алгачкы {k} бети көрсөтүлдү", "Showing the first {k} of {n} pages"),
     "check": ("🔄 Я оплатил — проверить", "🔄 Төлөдүм — текшерүү", "🔄 I've paid — check"),
     "not_found": ("Заказ не найден", "Буйрутма табылган жок", "Order not found"),
     "not_paid": ("Оплата ещё не пришла. Если оплатил — подожди минуту.", "Төлөм али келе элек. Төлөсөң — бир мүнөт күт.",
@@ -371,9 +446,13 @@ def hello(lang):
 def draft_text(d, lang):
     line = "┄" * 18
     mode = T("color" if d["color"] else "bw", lang) + " · " + T(d["sides"], lang)
+    if d.get("page_range"):
+        pages_line = T("range_line", lang, r=esc(d["page_range"]), p=d["pages"], n=d.get("real_pages") or d["pages"])
+    else:
+        pages_line = f"📑 {T('pages', lang)}: <b>{d['pages']}</b>"
     return (f"🧾 <b>{T('receipt', lang)} · АкБарак</b>\n{line}\n"
             f"📄 <b>{esc(d['file_name'])}</b>\n\n"
-            f"📑 {T('pages', lang)}: <b>{d['pages']}</b>\n"
+            f"{pages_line}\n"
             f"{'🎨' if d['color'] else '⚫'} {T('print', lang)}: <b>{mode}</b>\n"
             f"🔁 {T('copies', lang)}: <b>{d['copies']}</b>\n"
             f"📍 {T('terminal', lang)}: <b>{esc(d['terminal'])}</b>\n"
@@ -394,6 +473,13 @@ def draft_kb(d, lang, multi=False):
         kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw"),
                    btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color")])
     kb.append([btn("−", f"d:{i}:minus"), btn(f"🔁 {d['copies']}", f"d:{i}:noop"), btn("+", f"d:{i}:plus")])
+    real = d.get("real_pages") or d["pages"]
+    if real > 1:
+        label = T("range_btn", lang, r=d["page_range"]) if d.get("page_range") else T("range_btn_all", lang)
+        row = [btn(label, f"d:{i}:range")]
+        if d.get("page_range"):
+            row.append(btn(T("range_all", lang), f"d:{i}:allpages"))
+        kb.append(row)
     if H["DUPLEX_ENABLED"] and d["pages"] > 1:
         kb.append([btn(("✅ " if d["sides"] == k else "") + T("s_" + k, lang), f"d:{i}:s_{k}")
                    for k in ("single", "duplex", "booklet")])
@@ -428,10 +514,28 @@ def get_draft(draft_id, chat_id):
 
 def save_draft(d):
     conn = H["db"]()
-    conn.execute("UPDATE tg_drafts SET copies=?, color=?, sides=?, terminal=?, msg_id=?, order_id=? WHERE id=?",
-                 (d["copies"], d["color"], d["sides"], d["terminal"], d.get("msg_id"), d.get("order_id"), d["id"]))
+    conn.execute("UPDATE tg_drafts SET copies=?, color=?, sides=?, terminal=?, msg_id=?, order_id=?, pages=?, "
+                 "page_range=? WHERE id=?",
+                 (d["copies"], d["color"], d["sides"], d["terminal"], d.get("msg_id"), d.get("order_id"), d["pages"],
+                  d.get("page_range"), d["id"]))
     conn.commit()
     conn.close()
+
+
+def set_wait(chat_id, draft_id):
+    """Бот ждёт от студента диапазон страниц для этого файла (None — ничего не ждёт)."""
+    conn = H["db"]()
+    conn.execute("INSERT INTO tg_wait (chat_id, draft_id) VALUES (?,?) "
+                 "ON CONFLICT(chat_id) DO UPDATE SET draft_id=excluded.draft_id", (str(chat_id), draft_id))
+    conn.commit()
+    conn.close()
+
+
+def get_wait(chat_id):
+    conn = H["db"]()
+    row = conn.execute("SELECT draft_id FROM tg_wait WHERE chat_id=?", (str(chat_id),)).fetchone()
+    conn.close()
+    return row["draft_id"] if row else None
 
 
 _LOCKS = {}
@@ -473,6 +577,8 @@ def cart_text(ds, lang):
         mode = T("color" if d["color"] else "bw", lang)
         if d["sides"] != "single":
             mode += " · " + T(d["sides"], lang)
+        if d.get("page_range"):
+            mode += " · " + T("pages", lang).lower() + " " + esc(d["page_range"])
         rows.append(f"{n}. 📄 <b>{esc(d['file_name'])}</b>\n"
                     f"     {d['pages']} × {d['copies']} · {mode} — <b>{draft_total(d)} {T('som', lang)}</b>")
     total = sum(draft_total(d) for d in ds)
@@ -560,14 +666,19 @@ def _add_draft(chat_id, path, file_name, pages, color, wait, lang):
     before = open_drafts(chat_id)
     conn = H["db"]()
     cur = conn.execute(
-        "INSERT INTO tg_drafts (chat_id, file_path, file_name, pages, copies, color, sides, terminal, created_at) "
-        "VALUES (?,?,?,?,?,?,?,?,?)",
-        (str(chat_id), path, file_name[:120], pages, 1, color, "single", H["DEFAULT_TERMINAL"], H["now"]()))
+        "INSERT INTO tg_drafts (chat_id, file_path, file_name, pages, copies, color, sides, terminal, created_at, "
+        "real_pages) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (str(chat_id), path, file_name[:120], pages, 1, color, "single", H["DEFAULT_TERMINAL"], H["now"](), pages))
     conn.commit()
     d = dict(conn.execute("SELECT * FROM tg_drafts WHERE id=?", (cur.lastrowid,)).fetchone())
     conn.close()
     if wait:
         tg("deleteMessage", chat_id=chat_id, message_id=wait["message_id"])
+    if path.lower().endswith(".pdf"):                 # предпросмотр первой страницы
+        img = render_pages(path, [0])
+        if img:
+            kb = [[btn(T("preview_all", lang), f"d:{d['id']}:preview")]] if pages > 1 else None
+            send_photos(chat_id, img, T("preview_cap", lang, n=pages), kb)
     multi = len(before) >= 1
     m = send(chat_id, draft_text(d, lang), draft_kb(d, lang, multi))
     if m:
@@ -673,6 +784,21 @@ def on_callback(cq):
         return pay(cq, d, chat_id, msg_id, lang)
     elif action == "noop":
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
+    elif action == "range":
+        set_wait(chat_id, d["id"])
+        tg("answerCallbackQuery", callback_query_id=cq["id"])
+        return send(chat_id, T("range_ask", lang, n=d.get("real_pages") or d["pages"]))
+    elif action == "allpages":
+        d["page_range"] = None
+        d["pages"] = d.get("real_pages") or d["pages"]
+    elif action == "preview":
+        tg("answerCallbackQuery", callback_query_id=cq["id"])
+        tg("sendChatAction", chat_id=chat_id, action="upload_photo")
+        n = d.get("real_pages") or d["pages"]
+        imgs = render_pages(d["file_path"], list(range(min(n, PREVIEW_MAX))), width=700)
+        if imgs:
+            send_photos(chat_id, imgs, T("preview_more", lang, k=len(imgs), n=n) if n > len(imgs) else None)
+        return
 
     save_draft(d)
     with chat_lock(chat_id):
@@ -694,9 +820,11 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
     conn = H["db"]()
     cur = conn.execute(
         "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
-        "group_id, terminal_id, order_type, access_token, sides, tg_chat_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (d["file_name"], d["file_path"], "color" if d["color"] else "bw", d["pages"], d["copies"], total, "gopay",
-         "pending_payment", H["now"](), uuid.uuid4().hex, d["terminal"], "print", token, d["sides"], str(chat_id)))
+         "pending_payment", H["now"](), uuid.uuid4().hex, d["terminal"], "print", token, d["sides"], str(chat_id),
+         d.get("page_range")))
     order_id = cur.lastrowid
     conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (order_id, d["id"]))
     conn.commit()
@@ -752,9 +880,11 @@ def pay_all(cq, chat_id, msg_id, lang="ru"):
         total += t
         cur = conn.execute(
             "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
-            "group_id, terminal_id, order_type, access_token, sides, tg_chat_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (d["file_name"], d["file_path"], "color" if d["color"] else "bw", d["pages"], d["copies"], t, "gopay",
-             "pending_payment", H["now"](), group_id, d["terminal"], "print", token, d["sides"], str(chat_id)))
+             "pending_payment", H["now"](), group_id, d["terminal"], "print", token, d["sides"], str(chat_id),
+             d.get("page_range")))
         ids.append(cur.lastrowid)
         conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (cur.lastrowid, d["id"]))
     conn.commit()
@@ -790,6 +920,37 @@ def pay_all(cq, chat_id, msg_id, lang="ru"):
     tg("answerCallbackQuery", callback_query_id=cq["id"])
 
 
+def apply_range(chat_id, draft_id, text, lang):
+    d = get_draft(draft_id, chat_id)
+    if not d or d.get("order_id"):
+        return send(chat_id, T("stale", lang))
+    real = d.get("real_pages") or d["pages"]
+    sel = H["parse_range"](text.replace(" ", "").replace("–", "-").replace("—", "-"), real)
+    if not sel:
+        set_wait(chat_id, draft_id)                    # ждём ещё раз
+        return send(chat_id, T("range_bad", lang, n=real))
+    # компактная запись: 1,2,3,5 → 1-3,5
+    parts, start, prev = [], sel[0], sel[0]
+    for p in sel[1:] + [None]:
+        if p is not None and p == prev + 1:
+            prev = p
+            continue
+        parts.append(str(start) if start == prev else f"{start}-{prev}")
+        if p is not None:
+            start = prev = p
+    rng = ",".join(parts)
+    d["page_range"] = None if len(sel) == real else rng
+    d["pages"] = len(sel)
+    save_draft(d)
+    with chat_lock(chat_id):
+        ds = open_drafts(chat_id)
+        if d.get("msg_id"):
+            edit(chat_id, d["msg_id"], draft_text(d, lang), draft_kb(d, lang, len(ds) >= 2))
+        if len(ds) >= 2:
+            refresh_cart(chat_id, lang)
+    send(chat_id, T("range_ok", lang, r=esc(d["page_range"] or T("range_all", lang))))
+
+
 # ─────────────────────── Команды ───────────────────────
 
 def my_orders(chat_id, lang="ru"):
@@ -823,6 +984,11 @@ def on_update(u):
         ph = m["photo"][-1]                             # самое большое
         return on_file(chat_id, ph["file_id"], f"photo_{m.get('message_id')}.jpg", ph.get("file_size"), True, lang=lang)
     act = kb_action(text)
+    wait_id = get_wait(chat_id)
+    if wait_id:
+        set_wait(chat_id, None)
+        if text and not text.startswith("/") and not act:
+            return apply_range(chat_id, wait_id, text, lang)
     if text.startswith("/orders") or act == "kb_orders":
         return my_orders(chat_id, lang)
     if text.startswith("/help") or act == "kb_send":
@@ -893,6 +1059,12 @@ def register(app, helpers):
         terminal TEXT, created_at TEXT, order_id INTEGER)""")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_users (chat_id TEXT PRIMARY KEY, lang TEXT)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_carts (chat_id TEXT PRIMARY KEY, msg_id INTEGER)")
+    conn.execute("CREATE TABLE IF NOT EXISTS tg_wait (chat_id TEXT PRIMARY KEY, draft_id INTEGER)")
+    for col in ("page_range TEXT", "real_pages INTEGER"):
+        try:
+            conn.execute(f"ALTER TABLE tg_drafts ADD COLUMN {col}")
+        except Exception:
+            pass
     try:
         conn.execute("ALTER TABLE orders ADD COLUMN tg_chat_id TEXT")
     except Exception:
