@@ -1083,9 +1083,17 @@ def payment_status(order_id):
 
 def touch_terminal(terminal_id, printer_status=None):
     conn = db()
-    old = conn.execute("SELECT offline_alerted FROM terminals WHERE id=?", (terminal_id,)).fetchone()
+    old = conn.execute("SELECT offline_alerted, printer_status FROM terminals WHERE id=?", (terminal_id,)).fetchone()
     if old and old["offline_alerted"]:
         notify(f"✅ Терминал {terminal_id} снова на связи")
+    # Принтер сломался / починился — сразу пишем владельцу в Telegram
+    if old and printer_status and printer_status != (old["printer_status"] or "ok"):
+        if printer_status == "ok":
+            notify(f"✅ Терминал {terminal_id}: принтер снова готов, заказы печатаются")
+        else:
+            icon = "📄" if ("бумаг" in printer_status) else "⚠️"
+            notify(f"{icon} Терминал {terminal_id}: {printer_status}!\n"
+                   "Пока это не исправить, оплаченные заказы ждут в очереди.")
     conn.execute(
         "INSERT INTO terminals (id, last_seen, printer_status, offline_alerted) VALUES (?,?,?,0) "
         "ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen, offline_alerted=0, "
