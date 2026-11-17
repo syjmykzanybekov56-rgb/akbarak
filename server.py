@@ -1113,12 +1113,20 @@ def pending():
     """Очередь на печать. Каждый опрос = «терминал жив»."""
     terminal = request.args.get("terminal") or DEFAULT_TERMINAL
     touch_terminal(terminal)
-    conn = db()
-    rows = conn.execute(
-        f"SELECT {PUBLIC_COLS} FROM orders WHERE status='new' "
-        "AND (terminal_id=? OR terminal_id IS NULL) ORDER BY id", (terminal,)).fetchall()
-    conn.close()
-    return jsonify({"orders": [dict(r) for r in rows]})
+    try:   # long-poll: новый терминал ждёт до 20 с и получает заказ в ту же секунду, как он появился
+        wait = max(0.0, min(20.0, float(request.args.get("wait", 0))))
+    except ValueError:
+        wait = 0.0
+    deadline = time.time() + wait
+    while True:
+        conn = db()
+        rows = conn.execute(
+            f"SELECT {PUBLIC_COLS} FROM orders WHERE status='new' "
+            "AND (terminal_id=? OR terminal_id IS NULL) ORDER BY id", (terminal,)).fetchall()
+        conn.close()
+        if rows or time.time() >= deadline:
+            return jsonify({"orders": [dict(r) for r in rows]})
+        time.sleep(0.4)
 
 
 @app.route("/file/<int:order_id>", methods=["GET"])

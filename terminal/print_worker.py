@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-17 v17 «автономно» не мешает печати"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-18 v18 заказ берётся мгновенно"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -134,8 +134,9 @@ def api(method, path, **kw):
         return None
 
 
-def get_new_orders():
-    resp = api("GET", "/pending", params={"terminal": TERMINAL_ID})
+def get_new_orders(wait=0):
+    """wait>0 — сервер держит запрос до wait секунд и отвечает сразу, как появился заказ."""
+    resp = api("GET", "/pending", params={"terminal": TERMINAL_ID, "wait": wait}, timeout=wait + 15)
     if resp is not None and resp.status_code == 200:
         return resp.json().get("orders", [])
     return []
@@ -1013,11 +1014,22 @@ def main():
                 log.warning("Принтер не готов: %s", status)
                 get_new_orders()  # отмечаемся на сервере, что терминал жив
             else:
-                for order in get_new_orders():
+                t_poll = time.time()
+                orders = get_new_orders(wait=20)      # ждём заказ на сервере, без пауз
+                if not orders and time.time() - t_poll < 2:
+                    time.sleep(CHECK_INTERVAL)        # сервер не ждал (нет сети / старый сервер) — не долбим его
+                for order in orders:
+                    t0 = time.time()
                     process(order)
+                    log.info("Заказ #%s обработан за %.0f с", order.get("id"), time.time() - t0)
+                if orders:
+                    continue                          # сразу смотрим, нет ли следующего
         except Exception as e:
             log.exception("Непредвиденная ошибка: %s", e)
-        time.sleep(CHECK_INTERVAL)
+            time.sleep(CHECK_INTERVAL)
+            continue
+        if status != "ok":
+            time.sleep(CHECK_INTERVAL)
 
 
 if __name__ == "__main__":
