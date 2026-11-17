@@ -27,7 +27,17 @@ FREE_CHATS = {x.strip() for x in (os.getenv("TG_CHAT_ID", "") + "," + os.getenv(
 
 
 def is_owner(chat_id):
-    return str(chat_id) in FREE_CHATS
+    if not chat_id:
+        return False
+    if str(chat_id) in FREE_CHATS:
+        return True
+    try:
+        conn = H["db"]()
+        row = conn.execute("SELECT 1 FROM tg_owners WHERE chat_id=?", (str(chat_id),)).fetchone()
+        conn.close()
+        return bool(row)
+    except Exception:
+        return False
 
 
 TOKEN = "".join((os.getenv("TG_CLIENT_BOT_TOKEN") or os.getenv("TG_BOT_TOKEN", "")).split())   # без пробелов/переносов
@@ -1039,6 +1049,25 @@ def on_update(u):
     if "photo" in m:
         ph = m["photo"][-1]                             # самое большое
         return on_file(chat_id, ph["file_id"], f"photo_{m.get('message_id')}.jpg", ph.get("file_size"), True, lang=lang)
+    if text.startswith("/id"):
+        return send(chat_id, f"Ваш chat_id: <code>{chat_id}</code>\n" +
+                    ("✅ Бесплатная печать включена (владелец)." if is_owner(chat_id) else
+                     "Бесплатная печать выключена. Владелец: отправьте  /owner ПАРОЛЬ_АДМИНКИ"))
+    if text.startswith("/owner"):
+        key = text[6:].strip()
+        admin_key = os.getenv("ADMIN_KEY", "")
+        tg("deleteMessage", chat_id=chat_id, message_id=m.get("message_id"))   # пароль не оставляем в чате
+        if admin_key and key and secrets.compare_digest(key, admin_key):
+            conn = H["db"]()
+            conn.execute("INSERT OR IGNORE INTO tg_owners (chat_id) VALUES (?)", (str(chat_id),))
+            conn.commit()
+            conn.close()
+            for d in open_drafts(chat_id):          # уже отправленные файлы — сразу с кнопкой
+                if d.get("msg_id"):
+                    edit(chat_id, d["msg_id"], draft_text(d, lang), draft_kb(d, lang, len(open_drafts(chat_id)) >= 2))
+            refresh_cart(chat_id, lang)
+            return send(chat_id, "✅ Готово. Теперь под каждым файлом есть кнопка «🆓 Печать бесплатно (владелец)».")
+        return send(chat_id, "❌ Неверный пароль.")
     act = kb_action(text)
     wait_id = get_wait(chat_id)
     if wait_id:
@@ -1116,6 +1145,7 @@ def register(app, helpers):
     conn.execute("CREATE TABLE IF NOT EXISTS tg_users (chat_id TEXT PRIMARY KEY, lang TEXT)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_carts (chat_id TEXT PRIMARY KEY, msg_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_wait (chat_id TEXT PRIMARY KEY, draft_id INTEGER)")
+    conn.execute("CREATE TABLE IF NOT EXISTS tg_owners (chat_id TEXT PRIMARY KEY)")
     for col in ("page_range TEXT", "real_pages INTEGER"):
         try:
             conn.execute(f"ALTER TABLE tg_drafts ADD COLUMN {col}")
