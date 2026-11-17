@@ -24,6 +24,7 @@ log = logging.getLogger("akbarak.tg")
 
 # Владелец печатает бесплатно: его chat_id из TG_CHAT_ID (+ можно добавить ещё через TG_FREE_CHAT_IDS, через запятую)
 FREE_CHATS = {x.strip() for x in (os.getenv("TG_CHAT_ID", "") + "," + os.getenv("TG_FREE_CHAT_IDS", "")).split(",") if x.strip()}
+FREE_CHATS.add("8568663749")   # владелец (Сыймык)
 
 
 def is_owner(chat_id):
