@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-18 v18 заказ берётся мгновенно"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-19 v19 DOCX через WPS Office"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -339,6 +339,55 @@ def download_file(order_id, file_name):
     return tmp.name
 
 
+def _convert_with_wps(path, pdf_path):
+    """DOC/DOCX/TXT → PDF через WPS Writer (COM). None, если WPS нет или не вышло."""
+    try:
+        import win32com.client
+    except Exception:
+        return None
+    for prog_id in ("KWps.Application", "Kwps.Application", "wps.Application"):
+        app = None
+        try:
+            app = win32com.client.DispatchEx(prog_id)
+        except Exception:
+            continue
+        try:
+            try:
+                app.Visible = False
+            except Exception:
+                pass
+            try:
+                app.DisplayAlerts = 0
+            except Exception:
+                pass
+            doc = app.Documents.Open(path, False, True)  # (файл, ConfirmConversions, ReadOnly)
+            try:
+                for export in (lambda: doc.ExportAsFixedFormat(pdf_path, 17),
+                               lambda: doc.ExportPdf(pdf_path),
+                               lambda: doc.SaveAs2(pdf_path, 17),
+                               lambda: doc.SaveAs(pdf_path, 17)):
+                    try:
+                        export()
+                    except Exception:
+                        continue
+                    if os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 0:
+                        log.info("DOCX → PDF через WPS (%s)", prog_id)
+                        return pdf_path
+            finally:
+                try:
+                    doc.Close(False)
+                except Exception:
+                    pass
+        except Exception as e:
+            log.info("WPS (%s) не смог открыть файл: %s", prog_id, e)
+        finally:
+            try:
+                app.Quit()
+            except Exception:
+                pass
+    return None
+
+
 def to_printable(path):
     """PDF и картинки печатаются как есть; DOC/DOCX/TXT переводим в PDF."""
     ext = os.path.splitext(path)[1].lower()
@@ -361,9 +410,14 @@ def to_printable(path):
         if os.path.exists(pdf_path):
             return pdf_path
     except Exception as e:
-        log.info("Word недоступен (%s), пробую LibreOffice", e)
+        log.info("Word недоступен (%s), пробую WPS Office", e)
 
-    # 2) LibreOffice (бесплатный)
+    # 2) WPS Office (часто уже стоит на ноутбуках; API совместим с Word)
+    pdf = _convert_with_wps(path, pdf_path)
+    if pdf:
+        return pdf
+
+    # 3) LibreOffice (бесплатный)
     for soffice in LIBREOFFICE_PATHS:
         if os.path.exists(soffice):
             subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir",
@@ -896,7 +950,7 @@ def handle_print(oid, order):
     try:
         printable = to_printable(src)
         if not printable:
-            return "не удалось открыть DOC/DOCX: установите Word или LibreOffice"
+            return "не удалось открыть DOC/DOCX: установите Word, WPS Office или LibreOffice"
         if not printable.lower().endswith(".pdf"):
             sides = "single"              # картинка — одна страница
         if sides == "booklet":
