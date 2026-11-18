@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-19 v19 DOCX через WPS Office"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-19 v20 фото — задний лоток, A4 — кассета"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -179,6 +179,65 @@ def printer_has_duplex():
         return bool(win32print.DeviceCapabilities(PRINTER_NAME, port, 7))    # DC_DUPLEX
     except Exception:
         return None
+
+
+# ── Лотки: обычная A4 — нижняя кассета, фотобумага — задний лоток ──────────
+# Слова, по которым узнаём лоток в списке драйвера (английский и русский драйвер Canon).
+PLAIN_BIN_WORDS = ("cassette", "кассет")
+PHOTO_BIN_WORDS = ("rear", "задн", "тыл")
+# Можно задать вручную точным именем лотка: AKBARAK_PLAIN_BIN / AKBARAK_PHOTO_BIN.
+# Отдельный «фото-принтер» в Windows (копия того же Canon с настройками
+# «Задний лоток + глянцевая фотобумага») находится сам по слову «фото»/«photo»
+# в имени, или задаётся точно: AKBARAK_PHOTO_PRINTER.
+
+
+def printer_bins(name):
+    """Названия лотков принтера, как их отдаёт драйвер."""
+    try:
+        import win32print
+        h = win32print.OpenPrinter(name)
+        try:
+            port = win32print.GetPrinter(h, 2)["pPortName"]
+        finally:
+            win32print.ClosePrinter(h)
+        return [str(b).strip("\x00 ") for b in (win32print.DeviceCapabilities(name, port, 12) or [])]  # DC_BINNAMES
+    except Exception:
+        return []
+
+
+def pick_bin(name, words, env_key):
+    forced = os.getenv(env_key)
+    if forced:
+        return forced
+    for b in printer_bins(name):
+        if any(w in b.lower() for w in words):
+            return b
+    return None
+
+
+def photo_printer():
+    """Отдельно настроенный в Windows принтер для фото, если он есть."""
+    forced = os.getenv("AKBARAK_PHOTO_PRINTER")
+    if forced:
+        return forced
+    try:
+        import win32print
+        flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+        for p in win32print.EnumPrinters(flags, None, 2):
+            n = p["pPrinterName"]
+            if n != PRINTER_NAME and ("фото" in n.lower() or "photo" in n.lower()):
+                return n
+    except Exception:
+        pass
+    return None
+
+
+def photo_target():
+    """(принтер, лоток) для фото: отдельный фото-принтер или задний лоток основного."""
+    p = photo_printer()
+    if p:
+        return p, pick_bin(p, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN")
+    return PRINTER_NAME, pick_bin(PRINTER_NAME, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN")
 
 
 def manual_duplex():
@@ -582,8 +641,9 @@ def expand_copies(pdf_path, copies, page_range=None, even=False):
     return out
 
 
-def print_file(path, copies=1, page_range=None, color=False, sides="single"):
+def print_file(path, copies=1, page_range=None, color=False, sides="single", printer=None, tray=None, fit=False):
     """Возвращает None при успехе или текст ошибки.
+    printer/tray — куда печатать; по умолчанию основной принтер и кассета с обычной A4.
     sides: single — с одной стороны; duplex — переворот по длинному краю;
     booklet — уже собранная брошюра, переворот по короткому краю.
     Копии печатаем сами: SumatraPDF и некоторые драйверы игнорируют copies
@@ -598,19 +658,26 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single"):
             except Exception as e:
                 return f"не удалось подготовить копии: {e}"
             try:
-                return print_file(many, 1, None, color, sides)
+                return print_file(many, 1, None, color, sides, printer, tray, fit)
             finally:
                 _remove(many)
         for n in range(copies):                    # картинка: отдельное задание на каждую копию
-            err = print_file(path, 1, page_range, color, sides)
+            err = print_file(path, 1, page_range, color, sides, printer, tray, fit)
             if err:
                 return f"копия {n + 1} из {copies}: {err}"
         return None
+    printer = printer or PRINTER_NAME
+    if tray is None and printer == PRINTER_NAME:
+        tray = pick_bin(printer, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN")
     settings = f"copies=1,{'color' if color else 'monochrome'}"
     settings += {"duplex": ",duplexlong", "booklet": ",duplexshort"}.get(sides, ",simplex")
+    if tray and "," not in tray:
+        settings += f",bin={tray}"
+    if fit:
+        settings += ",fit"
     if page_range:
         settings += f",{page_range}"
-    cmd = [SUMATRA, "-print-to", PRINTER_NAME, "-print-settings", settings, "-silent", path]
+    cmd = [SUMATRA, "-print-to", printer, "-print-settings", settings, "-silent", path]
     for attempt in (1, 2):
         log.info("Печать (попытка %s): %s", attempt, " ".join(cmd))
         try:
@@ -623,7 +690,7 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single"):
         time.sleep(3)
     st = printer_status()
     why = f" Windows сообщает: {st}." if st != "ok" else ""
-    return (f"Windows не принял задание на принтер «{PRINTER_NAME}» (SumatraPDF, код {result.returncode}).{why} "
+    return (f"Windows не принял задание на принтер «{printer}» (SumatraPDF, код {result.returncode}).{why} "
             "Проверьте: принтер включён, в Windows «Готов», пробная страница печатается.")
 
 
@@ -951,6 +1018,11 @@ def handle_print(oid, order):
         printable = to_printable(src)
         if not printable:
             return "не удалось открыть DOC/DOCX: установите Word, WPS Office или LibreOffice"
+        if order.get("order_type") == "photo":
+            printer, tray = photo_target()
+            log.info("Заказ #%s: фото %s → «%s», лоток: %s", oid, order.get("photo_format"),
+                     printer, tray or "по настройкам принтера")
+            return print_file(printable, copies, None, True, "single", printer, tray or "", fit=True)
         if not printable.lower().endswith(".pdf"):
             sides = "single"              # картинка — одна страница
         if sides == "booklet":
@@ -1043,6 +1115,10 @@ def mkassa_relay_loop():
 def main():
     log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
+    log.info("Лотки принтера: %s", ", ".join(printer_bins(PRINTER_NAME)) or "не удалось узнать")
+    log.info("Обычная A4 → лоток: %s", pick_bin(PRINTER_NAME, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN") or "по настройкам принтера")
+    _pp, _pb = photo_target()
+    log.info("Фото → принтер «%s», лоток: %s", _pp, _pb or "по настройкам принтера")
     log.info("Ключ терминала: %s", "задан" if WORKER_KEY else "не задан")
     c = printer_is_color()
     log.info("Цветной принтер: %s", {True: "да", False: "НЕТ — цветная печать на этом терминале скрыта", None: "не удалось узнать"}[c])
