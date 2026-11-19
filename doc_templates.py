@@ -12,9 +12,11 @@ import os
 import re
 
 from docx import Document
+from docx.enum.table import WD_ROW_HEIGHT_RULE
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Pt
+from docx.shared import Cm, Mm, Pt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(HERE, "templates.json"), encoding="utf-8") as f:
@@ -79,11 +81,74 @@ def _font(run, size, bold=False):
     run._element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
 
 
+def _set_borders(el, tag, **sides):
+    """Границы таблицы: sides = {"top": (val, sz8), ...}; sz — в восьмых пункта."""
+    pr = el.tblPr
+    box = OxmlElement(tag)
+    for side in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        val, sz = sides.get(side, ("nil", 0))
+        e = OxmlElement("w:" + side)
+        e.set(qn("w:val"), val)
+        if val != "nil":
+            e.set(qn("w:sz"), str(sz))
+            e.set(qn("w:space"), "0")
+            e.set(qn("w:color"), "000000")
+        box.append(e)
+    pr.append(box)
+
+
+def build_zebra(values, path):
+    """«Зебра»: жирные линии на весь лист A4 — кладут под чистый лист, чтобы писать ровно."""
+    step = int(values.get("zebra_step") or 8)                 # мм между линиями
+    margin = values.get("zebra_margin", "1") == "1"
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_height, sec.page_width = Cm(29.7), Cm(21)
+    sec.left_margin = sec.right_margin = Cm(1)
+    sec.top_margin = sec.bottom_margin = Cm(1.2)
+    sec.header_distance = sec.footer_distance = Cm(0.3)
+    rows = int(268 // step)                                    # ~27 см полезной высоты, с запасом
+    widths = [Cm(2.5), Cm(16.5)] if margin else [Cm(19)]
+    table = doc.add_table(rows=rows, cols=len(widths))
+    table.autofit = False
+    layout = OxmlElement("w:tblLayout")
+    layout.set(qn("w:type"), "fixed")
+    table._tbl.tblPr.append(layout)
+    for col, w in zip(table.columns, widths):
+        col.width = w
+    line = ("single", 18)                                      # 2,25 пт — видно сквозь лист
+    _set_borders(table._tbl, "w:tblBorders", top=line, bottom=line, insideH=line,
+                 insideV=line if margin else ("nil", 0))
+    for row in table.rows:
+        row.height = Mm(step)
+        row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+        for cell, w in zip(row.cells, widths):
+            cell.width = w
+            p = cell.paragraphs[0]
+            p.paragraph_format.space_before = p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.line_spacing = 1
+            _font(p.add_run(""), 1)
+    # пустой абзац после таблицы — делаем крошечным, чтобы не появился второй лист
+    last = doc.paragraphs[-1] if doc.paragraphs else doc.add_paragraph()
+    last.paragraph_format.space_before = last.paragraph_format.space_after = Pt(0)
+    _font(last.add_run(""), 1)
+    pPr = last._p.get_or_add_pPr()
+    rpr = OxmlElement("w:rPr")
+    sz = OxmlElement("w:sz")
+    sz.set(qn("w:val"), "2")
+    rpr.append(sz)
+    pPr.append(rpr)
+    doc.save(path)
+
+
 def build_docx(template_id, raw_values, path):
     tpl = TEMPLATES.get(template_id)
     if not tpl:
         raise TemplateError("Неизвестный шаблон")
     values = clean_values(tpl, raw_values)
+    if any(b.get("type") == "zebra" for b in tpl["blocks"]):
+        build_zebra(values, path)
+        return tpl["title"]
 
     doc = Document()
     sec = doc.sections[0]

@@ -219,6 +219,16 @@ function render(){
     if(b.type === 'logo'){
       return HAS_LOGO ? '<p class="c" style="' + st + '"><img src="/icons/kgma.png" alt="Эмблема КГМА" style="height:calc(var(--u)*' + (b.h || 72) + ')"></p>' : '';
     }
+    if(b.type === 'zebra'){
+      // лист «зебра»: поля 10 мм, линии через zebra_step мм (1 мм = 595/210 единиц)
+      const mm = 595 / 210, step = +(v.zebra_step || 8), margin = (v.zebra_margin || '1') === '1';
+      const rows = Math.floor(268 / step), h = rows * step;
+      const u = n => 'calc(var(--u)*' + (n * mm).toFixed(2) + ')';
+      const lines = 'repeating-linear-gradient(to bottom,#000 0,#000 ' + u(0.8) + ',transparent ' + u(0.8) + ',transparent ' + u(step) + ')';
+      const vline = margin ? 'linear-gradient(to right,transparent ' + u(25) + ',#000 ' + u(25) + ',#000 ' + u(25.8) + ',transparent ' + u(25.8) + '),' : '';
+      return '<div style="position:absolute;left:' + u(10 - 30) + ';top:' + u(12 - 20.1) + ';width:' + u(190) + ';height:' + u(h + 0.8) +
+        ';background:' + vline + lines + '"></div>';
+    }
     if(b.type === 'sign'){
       const [d] = fill('{date}', v, true), [s] = fill('{fio_short}', v, true);
       return '<p class="sign" style="' + st + '"><span>' + d + '</span><span>____________&nbsp; ' + s + '</span></p>';
