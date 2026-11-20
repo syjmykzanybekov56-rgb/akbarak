@@ -153,8 +153,8 @@ if (-not (Test-Path $adExe)) {
 }
 $AnyId = ''
 if (Test-Path $adExe) {
-    $AnyId = (cmd /c "`"$adExe`" --get-id" 2>$null | Out-String).Trim()
-    Ok "установлен, ID: $AnyId"
+    $AnyId = (& $adExe --get-id 2>$null | Out-String).Trim()
+    if ($AnyId) { Ok "установлен, ID: $AnyId" } else { Ok 'установлен (ID видно, если открыть AnyDesk)' }
 } else { Warn 'AnyDesk не установился — скачайте с anydesk.com' }
 
 # ───────────── 8. Питание и автозапуск ─────────────
