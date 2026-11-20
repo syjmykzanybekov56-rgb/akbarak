@@ -81,6 +81,11 @@
       "source": "/about.html",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/setup",
+      "destination": "/terminal/setup.bat",
+      "permanent": false
     }
   ]
 }
