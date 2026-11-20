@@ -87,5 +87,20 @@
       "destination": "/terminal/setup.bat",
       "permanent": false
     }
+  ],
+  "headers": [
+    {
+      "source": "/terminal/setup.bat",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/octet-stream"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"akbarak-setup.bat\""
+        }
+      ]
+    }
   ]
 }
