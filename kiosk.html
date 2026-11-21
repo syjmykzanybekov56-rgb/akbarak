@@ -509,6 +509,7 @@ const SITE     = "https://akbarak.vercel.app";
 const TERMINAL = Q.get('t') || 'kgma-1';
 const IDLE_SEC = Number(Q.get('idle')) || 60;     // заставка через N секунд без касаний
 const SVC_SEC  = 40;                              // экран услуги закрывается сам через N секунд
+let vidBrokenUntil = 0;                           // до этого времени видео в заставке не показываем (оно не играло)
 const DOC_SEC  = 7;                               // сколько держится каждый лист в заставке
 
 const NEWS = [
@@ -1310,7 +1311,7 @@ function docs(){
 let docIdx = 0, docTimer = null, attractOn = false;
 function printDoc(){
   // каждый второй лист заставки — видео-инструкция (без звука), если видео есть
-  if(VIDEOS.length && docIdx % 2 === 1) return attractVideo();
+  if(VIDEOS.length && docIdx % 2 === 1 && Date.now() > vidBrokenUntil) return attractVideo();
   const list = docs(), d = list[docIdx % list.length], sheet = $('docSheet');
   sheet.classList.add('out');
   $('sayH').classList.add('fade'); $('sayP').classList.add('fade');
@@ -1337,10 +1338,19 @@ function attractVideo(){
     feed(sheet);
     docIdx++;
     const el = $('docInk').querySelector('video');
-    const next = () => { if(!attractOn || !el.isConnected) return; printDoc(); docTimer = setInterval(printDoc, DOC_SEC * 1000); };
-    el.addEventListener('ended', next, {once: true});
-    el.addEventListener('error', next, {once: true});
-    el.play().catch(next);
+    // next() должен сработать ОДИН раз: раньше при сбое видео срабатывали и 'error', и play().catch —
+    // запускалось два таймера сразу, листы заставки начинали мелькать и пропускаться.
+    let done = false;
+    const next = (failed) => {
+      if(done) return; done = true; clearTimeout(guard);
+      if(failed === true) vidBrokenUntil = Date.now() + 10 * 60 * 1000;   // видео не играет — 10 минут без видео
+      if(!attractOn || !el.isConnected) return;
+      clearInterval(docTimer); printDoc(); docTimer = setInterval(printDoc, DOC_SEC * 1000);
+    };
+    const guard = setTimeout(() => next(true), 90 * 1000);                // зависло — не держим экран вечно
+    el.addEventListener('ended', () => next(false), {once: true});
+    el.addEventListener('error', () => next(true), {once: true});
+    el.play().catch(() => next(true));
   }, 900);
 }
 function startAttract(){
@@ -1348,7 +1358,7 @@ function startAttract(){
   stopFlow(); cur = {}; attractOn = true; docIdx = 0;
   if(I18N.lang !== 'ru') I18N.set('ru');   // следующий студент начинает с русского
   show('attract'); printDoc();
-  docTimer = setInterval(printDoc, DOC_SEC * 1000);
+  clearInterval(docTimer); docTimer = setInterval(printDoc, DOC_SEC * 1000);
 }
 function stopAttract(){
   attractOn = false; clearInterval(docTimer);
