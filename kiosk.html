@@ -345,8 +345,10 @@
   @keyframes howpulse{50%{transform:scale(1.09);opacity:.45}}
   .howbtn i:after{content:"";border-left:2.2vw solid var(--gold);border-top:1.35vw solid transparent;border-bottom:1.35vw solid transparent;margin-left:.6vw}
   .howbtn.on{display:flex}
-  .vidov{position:fixed;inset:0;z-index:50;background:rgba(9,20,36,.94);display:none;align-items:center;justify-content:center;gap:4vw;padding:5vh 5vw}
+  .vidov{position:fixed;inset:0;z-index:50;background:#091424;display:none;align-items:center;justify-content:center;gap:4vw;padding:5vh 5vw}
   .vidov.on{display:flex}
+  .vidon .view{visibility:hidden}   /* пока идёт видео, экран под ним не рисуется — видео не тормозит */
+  .vidon .view *{animation-play-state:paused!important}
   .vidov .vbox{height:88vh;aspect-ratio:9/16;max-width:46vw;border-radius:1.4vw;overflow:hidden;background:#000;box-shadow:0 2vh 6vh rgba(0,0,0,.5)}
   .vidov .vbox.wide{aspect-ratio:16/9;height:auto;width:58vw;max-width:none}
   .vidov video{width:100%;height:100%;object-fit:contain;background:#000}
@@ -561,7 +563,7 @@ function vidFor(key){ return Math.max(0, VIDEOS.findIndex(v => v.key === key)); 
 function openVid(key){
   if(!VIDEOS.length) return;
   disarmIdle();
-  $('vidOv').classList.add('on');
+  $('vidOv').classList.add('on'); document.body.classList.add('vidon');
   playVid(key ? vidFor(key) : 0);
 }
 function playVid(i){
@@ -577,7 +579,7 @@ function playVid(i){
 }
 function closeVid(){
   const el = $('vidPlayer'); el.pause(); el.removeAttribute('src'); el.load();
-  $('vidOv').classList.remove('on'); vidCur = -1;
+  $('vidOv').classList.remove('on'); document.body.classList.remove('vidon'); vidCur = -1;
   if(view === 'home') armIdle();
 }
 document.addEventListener('DOMContentLoaded', () => {
