@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-19 v20 фото — задний лоток, A4 — кассета"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-21 v21 кратковременные «ошибки» принтера не считаются"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -359,6 +359,27 @@ def clear_work_offline():
         log.warning("Не удалось снять «Работать автономно»: %s (снимите галочку вручную: "
                     "Принтеры и сканеры → принтер → Открыть очередь → меню «Принтер»)", e)
         return False
+
+
+STATUS_HOLD = 45   # секунд: столько проблема должна держаться, чтобы считаться настоящей
+_PROBLEM_SINCE = {"status": None, "t": 0.0}
+
+
+def stable_printer_status():
+    """Как printer_status(), но мигающие ошибки не считаются.
+    Драйвер Canon на пару секунд выставляет «ошибка принтера» (прогрев, проверка чернил,
+    выход из сна) и сразу снимает — из-за этого было «ошибка / готов / ошибка» в окне и в Telegram.
+    Проблема засчитывается, только если держится STATUS_HOLD секунд подряд; «готов» — сразу."""
+    raw = printer_status()
+    if raw == "ok":
+        _PROBLEM_SINCE["status"] = None
+        return "ok"
+    if _PROBLEM_SINCE["status"] != raw:
+        _PROBLEM_SINCE["status"], _PROBLEM_SINCE["t"] = raw, time.time()
+        log.info("Принтер сообщил: %s — проверяю, не кратковременно ли", raw)
+    if time.time() - _PROBLEM_SINCE["t"] < STATUS_HOLD:
+        return "ok"
+    return raw
 
 
 def printer_status():
@@ -1134,7 +1155,7 @@ def main():
     while True:
         try:
             refresh_printer()                 # сменили принтер по умолчанию — подхватываем сразу
-            status = printer_status()
+            status = stable_printer_status()
             if time.time() - last_beat > HEARTBEAT_INTERVAL or status != last_status:
                 send_heartbeat(status)
                 last_beat, last_status = time.time(), status
