@@ -210,6 +210,14 @@ def init_db():
 init_db()
 
 
+def printer_has_color(terminal_id=None):
+    """Принтер терминала цветной (по отчёту программы печати). Не зависит от COLOR_ENABLED."""
+    conn = db()
+    row = conn.execute("SELECT color FROM terminals WHERE id=?", ((terminal_id or DEFAULT_TERMINAL)[:40],)).fetchone()
+    conn.close()
+    return not (row and row["color"] == 0)
+
+
 def color_ok(terminal_id=None):
     """Цвет доступен: включён на сервере и принтер этого терминала не чёрно-белый."""
     if not COLOR_ENABLED:
@@ -751,14 +759,16 @@ def template_order():
         except doc_templates.TemplateError as e:
             return jsonify({"error": str(e)}), 400
 
-        total = PRICES["print_bw"] * copies
+        total = PRICES["print_bw"] * copies          # шаблон — по цене ч/б, даже в цвете
+        # Шаблоны печатаем в цвете (эмблема КГМА), если принтер терминала цветной: краски уходит мало
+        tpl_color = "color" if printer_has_color(terminal) else "bw"
         token = secrets.token_urlsafe(16)
         status = "pending_payment" if is_online_payment(payment) else "new"
         conn = db()
         cur = conn.execute(
             "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, "
             "created_at, group_id, terminal_id, order_type, access_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (f"{title}.docx", file_path, "bw", 1, copies, total, payment, status, now(),
+            (f"{title}.docx", file_path, tpl_color, 1, copies, total, payment, status, now(),
              uuid.uuid4().hex, terminal, "print", token))
         order_id = cur.lastrowid
         conn.commit()
