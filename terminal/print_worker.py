@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v26 LibreOffice ищется в любой папке"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v27 LibreOffice отдельный профиль"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -552,12 +552,27 @@ def to_printable(path):
         return pdf
 
     # 3) LibreOffice (бесплатный)
+    # Отдельный профиль: если LibreOffice уже открыт (или висит окно первого запуска),
+    # без него конвертация молча ничего не делает.
+    prof = os.path.join(HERE, "lo_profile").replace("\\", "/")
     for soffice in find_soffice():
-        if os.path.exists(soffice):
-            subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir",
-                            os.path.dirname(path), path], timeout=120)
+        if not os.path.exists(soffice):
+            continue
+        for attempt in (1, 2):   # самый первый запуск только создаёт профиль — тогда пробуем ещё раз
+            try:
+                r = subprocess.run([soffice, "-env:UserInstallation=file:///" + prof,
+                                    "--headless", "--norestore", "--nologo", "--nodefault",
+                                    "--convert-to", "pdf", "--outdir", os.path.dirname(path), path],
+                                   timeout=180, capture_output=True,
+                                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            except Exception as e:
+                log.warning("LibreOffice (%s) ошибка: %s", soffice, e)
+                break
             if os.path.exists(pdf_path):
+                log.info("DOCX → PDF через LibreOffice")
                 return pdf_path
+            out = (r.stdout + r.stderr).decode("utf-8", "replace").strip()[:300]
+            log.warning("LibreOffice попытка %d: код %s, PDF не появился. %s", attempt, r.returncode, out)
     return None
 
 
