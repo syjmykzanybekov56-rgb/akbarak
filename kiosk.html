@@ -26,8 +26,9 @@
   html,body{height:100%;overflow:hidden;background:var(--desk);color:var(--txt);font-family:var(--body);
     user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-  .view{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease}
-  .view.on{opacity:1;pointer-events:auto}
+  .view{position:fixed;inset:0;opacity:0;pointer-events:none;visibility:hidden;transition:opacity .18s ease,visibility 0s linear .18s}
+  .view.on{opacity:1;pointer-events:auto;visibility:visible;transition:opacity .18s ease}
+  .view:not(.on) *{animation-play-state:paused!important}   /* невидимые экраны не грузят слабую видеокарту */
   .room{background:
       radial-gradient(70vw 60vh at 78% 30%, rgba(226,169,59,.10), transparent 60%),
       radial-gradient(90vw 80vh at 10% 0%, #FFFFFF, transparent 60%),
@@ -127,9 +128,9 @@
   .pic svg.swap{opacity:0;transform:scale(.85)}
   .steps{list-style:none;display:flex;flex-direction:column;gap:1.4vh}
   .steps li{display:grid;grid-template-columns:3.4vw 1fr;align-items:center;gap:1.2vw;padding:1.8vh 1.4vw;border-radius:.8vw;
-    font-weight:700;font-size:1.4vw;line-height:1.35;color:var(--text-dim);transition:all .35s ease;border:1px solid transparent}
+    font-weight:700;font-size:1.4vw;line-height:1.35;color:var(--text-dim);transition:background-color .2s,border-color .2s,color .2s;border:1px solid transparent}
   .steps li b{width:3.4vw;height:3.4vw;border-radius:50%;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:1.35vw;
-    background:rgba(var(--fg),.08);color:var(--txt);transition:all .35s ease}
+    background:rgba(var(--fg),.08);color:var(--txt);transition:background-color .2s,color .2s}
   .steps li.now{background:rgba(var(--fg),.07);border-color:rgba(224,180,76,.45);color:var(--txt)}
   .steps li.now b{background:var(--gold);color:var(--night)}
   .steps li.done b{background:rgba(61,220,132,.2);color:var(--ok)}
@@ -297,7 +298,7 @@
   .room::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
     clip-path:polygon(var(--ct) 0,100% 0,100% 100%,var(--cb) 100%);
     background:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-70 -70 140 140'%3E%3Cg fill='none' stroke='%23E2A93B' stroke-linecap='round' opacity='.5'%3E%3Ccircle r='44' stroke-width='5'/%3E%3Ccircle r='36' stroke-width='2' stroke-opacity='.7'/%3E%3Cg stroke-width='3.6'%3E%3Cpath d='M-34 -11Q0 -20 34 -11M-37 0H37M-34 11Q0 20 34 11M-11 -34Q-20 0 -11 34M0 -37V37M11 -34Q20 0 11 34'/%3E%3C/g%3E%3Cg stroke-width='3' stroke-opacity='.75'%3E%3Cpath d='M48.0 0.0L64.0 0.0'/%3E%3Cpath d='M45.7 14.8L60.9 19.8'/%3E%3Cpath d='M38.8 28.2L51.8 37.6'/%3E%3Cpath d='M28.2 38.8L37.6 51.8'/%3E%3Cpath d='M14.8 45.7L19.8 60.9'/%3E%3Cpath d='M0.0 48.0L0.0 64.0'/%3E%3Cpath d='M-14.8 45.7L-19.8 60.9'/%3E%3Cpath d='M-28.2 38.8L-37.6 51.8'/%3E%3Cpath d='M-38.8 28.2L-51.8 37.6'/%3E%3Cpath d='M-45.7 14.8L-60.9 19.8'/%3E%3Cpath d='M-48.0 0.0L-64.0 0.0'/%3E%3Cpath d='M-45.7 -14.8L-60.9 -19.8'/%3E%3Cpath d='M-38.8 -28.2L-51.8 -37.6'/%3E%3Cpath d='M-28.2 -38.8L-37.6 -51.8'/%3E%3Cpath d='M-14.8 -45.7L-19.8 -60.9'/%3E%3Cpath d='M-0.0 -48.0L-0.0 -64.0'/%3E%3Cpath d='M14.8 -45.7L19.8 -60.9'/%3E%3Cpath d='M28.2 -38.8L37.6 -51.8'/%3E%3Cpath d='M38.8 -28.2L51.8 -37.6'/%3E%3Cpath d='M45.7 -14.8L60.9 -19.8'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") right -11vw bottom -22vh/44vw 44vw no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-70 -70 140 140'%3E%3Cg fill='none' stroke='%23E2A93B' stroke-linecap='round' opacity='.72'%3E%3Ccircle r='44' stroke-width='5'/%3E%3Ccircle r='36' stroke-width='2' stroke-opacity='.7'/%3E%3Cg stroke-width='3.6'%3E%3Cpath d='M-34 -11Q0 -20 34 -11M-37 0H37M-34 11Q0 20 34 11M-11 -34Q-20 0 -11 34M0 -37V37M11 -34Q20 0 11 34'/%3E%3C/g%3E%3Cg stroke-width='3' stroke-opacity='.75'%3E%3Cpath d='M48.0 0.0L64.0 0.0'/%3E%3Cpath d='M45.7 14.8L60.9 19.8'/%3E%3Cpath d='M38.8 28.2L51.8 37.6'/%3E%3Cpath d='M28.2 38.8L37.6 51.8'/%3E%3Cpath d='M14.8 45.7L19.8 60.9'/%3E%3Cpath d='M0.0 48.0L0.0 64.0'/%3E%3Cpath d='M-14.8 45.7L-19.8 60.9'/%3E%3Cpath d='M-28.2 38.8L-37.6 51.8'/%3E%3Cpath d='M-38.8 28.2L-51.8 37.6'/%3E%3Cpath d='M-45.7 14.8L-60.9 19.8'/%3E%3Cpath d='M-48.0 0.0L-64.0 0.0'/%3E%3Cpath d='M-45.7 -14.8L-60.9 -19.8'/%3E%3Cpath d='M-38.8 -28.2L-51.8 -37.6'/%3E%3Cpath d='M-28.2 -38.8L-37.6 -51.8'/%3E%3Cpath d='M-14.8 -45.7L-19.8 -60.9'/%3E%3Cpath d='M-0.0 -48.0L-0.0 -64.0'/%3E%3Cpath d='M14.8 -45.7L19.8 -60.9'/%3E%3Cpath d='M28.2 -38.8L37.6 -51.8'/%3E%3Cpath d='M38.8 -28.2L51.8 -37.6'/%3E%3Cpath d='M45.7 -14.8L60.9 -19.8'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") right -11vw bottom -22vh/44vw 44vw no-repeat,
       radial-gradient(34vw 40vh at 83% 16%, rgba(226,169,59,.22), transparent 70%),
       linear-gradient(160deg,#1C3758,#0B1A2E 75%)}
   .room::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--gold);
@@ -321,8 +322,9 @@
   /* ── видео-инструкции ── */
   .howbtn{display:none;position:absolute;right:6vw;top:50%;transform:translateY(-50%);z-index:2;flex-direction:column;align-items:center;gap:1.4vh;
     color:var(--navy);font-weight:800;font-size:1.25vw;line-height:1.2;text-align:center}
-  .howbtn i{width:7vw;height:7vw;border-radius:50%;background:var(--navy);display:grid;place-items:center;box-shadow:0 0 0 1vw rgba(224,180,76,.28);animation:howpulse 2.4s ease-in-out infinite}
-  @keyframes howpulse{50%{box-shadow:0 0 0 1.8vw rgba(224,180,76,.12)}}
+  .howbtn i{width:7vw;height:7vw;border-radius:50%;background:var(--navy);display:grid;place-items:center;position:relative}
+  .howbtn i::before{content:"";position:absolute;inset:-1vw;border-radius:50%;background:rgba(224,180,76,.28);z-index:-1;will-change:transform,opacity;animation:howpulse 2.4s ease-in-out infinite}
+  @keyframes howpulse{50%{transform:scale(1.09);opacity:.45}}
   .howbtn i:after{content:"";border-left:2.2vw solid var(--gold);border-top:1.35vw solid transparent;border-bottom:1.35vw solid transparent;margin-left:.6vw}
   .howbtn.on{display:flex}
   .vidov{position:fixed;inset:0;z-index:50;background:rgba(9,20,36,.94);display:none;align-items:center;justify-content:center;gap:4vw;padding:5vh 5vw}
