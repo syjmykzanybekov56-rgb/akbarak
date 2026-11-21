@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-21 v24 свернуть/вернуть экран из админки"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-21 v25 экран терминала всегда поверх окон"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -1182,6 +1182,67 @@ def mkassa_relay_loop():
             time.sleep(5)
 
 
+# ─────────────────────── Экран терминала всегда сверху ───────────────────────
+# При печати драйвер (монитор состояния Canon) и другие окна выскакивают поверх экрана,
+# появляется панель задач Windows — студент может свернуть экран. Раз в 2 секунды
+# возвращаем окно киоска наверх. Не трогаем, пока экран свёрнут из админки (kiosk_off.txt).
+
+def _kiosk_window():
+    import win32api, win32con, win32gui, win32process
+    found = []
+
+    def cb(h, _):
+        try:
+            if not win32gui.IsWindowVisible(h) or win32gui.GetClassName(h) != "Chrome_WidgetWin_1":
+                return True
+            if not win32gui.GetWindowText(h):
+                return True
+            # Экран терминала (--kiosk) — окно без заголовка; обычный Chrome (скачать драйвер) не трогаем
+            if win32gui.GetWindowLong(h, win32con.GWL_STYLE) & win32con.WS_CAPTION:
+                return True
+            _, pid = win32process.GetWindowThreadProcessId(h)
+            hp = win32api.OpenProcess(0x0400 | 0x0010, False, pid)
+            try:
+                exe = win32process.GetModuleFileNameEx(hp, 0).lower()
+            finally:
+                win32api.CloseHandle(hp)
+            if exe.endswith(("chrome.exe", "msedge.exe")):
+                found.append(h)
+        except Exception:
+            pass
+        return True
+
+    win32gui.EnumWindows(cb, None)
+    return found[0] if found else None
+
+
+def kiosk_guard_loop():
+    try:
+        import win32con, win32gui, win32com.client
+    except ImportError:
+        return
+    last_focus = 0.0
+    while True:
+        time.sleep(2)
+        try:
+            if os.path.exists(KIOSK_OFF_FLAG):
+                continue
+            h = _kiosk_window()
+            if not h:
+                continue
+            if win32gui.IsIconic(h):
+                win32gui.ShowWindow(h, win32con.SW_RESTORE)
+                log.info("Экран терминала был свёрнут — вернул")
+            win32gui.SetWindowPos(h, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                                  win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE)
+            if win32gui.GetForegroundWindow() != h and time.time() - last_focus > 8:
+                last_focus = time.time()
+                win32com.client.Dispatch("WScript.Shell").SendKeys("%")   # Windows разрешает сменить фокус
+                win32gui.SetForegroundWindow(h)
+        except Exception as e:
+            log.debug("kiosk guard: %s", e)
+
+
 def main():
     log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
@@ -1199,6 +1260,9 @@ def main():
         log.info("Канал оплаты МБанк: включён")
     else:
         log.info("Канал оплаты МБанк: выключен (нет worker_key.txt)")
+
+    threading.Thread(target=kiosk_guard_loop, daemon=True).start()
+    log.info("Защита экрана: окно терминала держится поверх всех окон")
 
     last_beat, last_status = 0, None
     while True:
