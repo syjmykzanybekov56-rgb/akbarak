@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-21 v21 кратковременные «ошибки» принтера не считаются"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-21 v22 обычные листы всегда A4 из кассеты"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -688,9 +688,15 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single", pri
                 return f"копия {n + 1} из {copies}: {err}"
         return None
     printer = printer or PRINTER_NAME
-    if tray is None and printer == PRINTER_NAME:
+    plain = tray is None and printer == PRINTER_NAME     # обычный лист из кассеты (не фото)
+    if plain:
         tray = pick_bin(printer, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN")
     settings = f"copies=1,{'color' if color else 'monochrome'}"
+    if plain:
+        # Кассета Canon берёт только обычную бумагу A4/A5/B5/Letter. Если у файла нестандартный
+        # размер страницы, драйвер выбирал «бумагу не для кассеты» и печать вставала с ошибкой
+        # «Была выбрана бумага, которую нельзя подавать из кассеты». Всегда печатаем на A4.
+        settings += ",paper=A4"
     settings += {"duplex": ",duplexlong", "booklet": ",duplexshort"}.get(sides, ",simplex")
     if tray and "," not in tray:
         settings += f",bin={tray}"
