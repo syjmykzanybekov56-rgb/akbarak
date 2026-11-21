@@ -93,6 +93,8 @@ PRICES = {
 }
 # Двусторонняя печать и брошюра — цена за ЛИСТ (обе стороны). Поменяйте здесь.
 SHEET_PRICES = {"bw": 8, "color": 18}
+# Брошюра — цена за ЛИСТ (4 страницы: по 2 с каждой стороны, сгиб пополам)
+BOOKLET_PRICES = {"bw": 10, "color": 18}
 SIDES = ("single", "duplex", "booklet")   # односторонняя / двусторонняя / брошюра
 PHOTO_PRICES = [  # (подстрока в названии формата, цена)
     ("паспорт", 50),
@@ -408,17 +410,17 @@ def order_total(order_type, print_type, sides, pages, copies):
     """Единственное место, где считается цена печати документа.
     single  — каждая страница по цене PRICES;
     duplex  — по 2 страницы на лист по цене SHEET_PRICES, нечётная последняя — как одна страница;
-    booklet — по 4 страницы на лист (2 на каждой стороне, сгиб пополам), цена листа SHEET_PRICES."""
+    booklet — по 4 страницы на лист (2 на каждой стороне, сгиб пополам), цена листа BOOKLET_PRICES."""
     pages = max(1, int(pages or 1))
     copies = max(1, int(copies or 1))
     kind = order_type if order_type in ("copy", "scan") else "print"
     if kind != "print" or sides not in ("duplex", "booklet"):
         return PRICES[f"{kind}_{print_type}"] * pages * copies
-    sheet = SHEET_PRICES[print_type]
     if sides == "duplex":
+        sheet = SHEET_PRICES[print_type]
         per_copy = (pages // 2) * sheet + (pages % 2) * PRICES[f"print_{print_type}"]
     else:
-        per_copy = -(-pages // 4) * sheet   # округление вверх
+        per_copy = -(-pages // 4) * BOOKLET_PRICES[print_type]   # округление вверх
     return per_copy * copies
 
 
@@ -441,7 +443,8 @@ def index():
 def config():
     """Что сейчас умеет терминал — сайт прячет недоступные режимы."""
     return jsonify({"color": color_ok(request.args.get("t")), "duplex": DUPLEX_ENABLED,
-                    "prices": PRICES, "sheet_prices": SHEET_PRICES})
+                    "prices": PRICES, "sheet_prices": SHEET_PRICES,
+                    "booklet_prices": BOOKLET_PRICES})
 
 
 @app.errorhandler(413)

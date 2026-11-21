@@ -1002,6 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 let state = {price:5, type:'bw', copies:1, pages:1, sides:'single'};
 let SHEET = {bw:8, color:18};   // цена листа при двусторонней печати и брошюре (сервер пришлёт свои)
+let BOOKLET = {bw:10, color:18}; // цена листа брошюры (4 страницы на лист), сервер пришлёт свою
 let cstate = {price:6, ccopies:1, cpages:1};
 let sstate = {price:6, spages:1};
 let photoState = {format:'', price:0};
@@ -1607,12 +1608,13 @@ function setSides(btn, sides){
 function priceFor(pages){
   const page = state.price, sheet = SHEET[state.type];
   if(state.sides === 'duplex') return Math.floor(pages/2)*sheet + (pages%2)*page;
-  if(state.sides === 'booklet') return Math.ceil(pages/4)*sheet;
+  if(state.sides === 'booklet') return Math.ceil(pages/4)*BOOKLET[state.type];
   return pages*page;
 }
 // Сервер говорит, что сейчас умеет терминал: показываем двустороннюю печать, только если она есть
 fetch(SERVER+'/config?t='+encodeURIComponent(new URLSearchParams(location.search).get('t')||'')).then(r=>r.json()).then(c=>{
   if(c.sheet_prices) SHEET = c.sheet_prices;
+  if(c.booklet_prices) BOOKLET = c.booklet_prices;
   if(c.duplex) document.getElementById('sides-row').style.display='';
 }).catch(()=>{});
 function setPill(btn){
