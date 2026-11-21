@@ -63,7 +63,7 @@ $Key = [Microsoft.VisualBasic.Interaction]::InputBox(
 $Key = ($Key -replace '\s', '')
 
 $ans = [System.Windows.Forms.MessageBox]::Show(
-    "Запускать экран АкБарак на весь экран при включении терминала?`n`nВНИМАНИЕ: выйти из этого режима можно только кнопками Alt+F4 — нужна клавиатура или AnyDesk с паролем.`n`nЕсли сомневаетесь — нажмите «Нет», включить можно потом, запустив установку ещё раз.",
+    "Запускать экран АкБарак на весь экран при включении терминала?`n`nЭкран закрыть нельзя — он сам откроется снова. Свернуть его для настройки: админка → терминал → «Свернуть экран».`n`nЕсли сомневаетесь — нажмите «Нет», включить можно потом, запустив установку ещё раз.",
     'АкБарак — автозапуск экрана', 'YesNo', 'Question', 'Button2')
 $KioskAuto = ($ans -eq 'Yes')
 
@@ -177,12 +177,24 @@ function Make-Link($path, $target, $style) {
 }
 Make-Link (Join-Path $startup 'АкБарак печать.lnk') "$Dir\start_worker.bat" 7
 Make-Link (Join-Path $desktop 'АкБарак печать.lnk') "$Dir\start_worker.bat" 1
-Make-Link (Join-Path $desktop 'АкБарак экран.lnk') "$Dir\start_kiosk.bat" 1
+Make-Link (Join-Path $desktop 'АкБарак экран.lnk') "$Dir\start_kiosk.bat" 7
 Ok 'авто-печать запускается при включении; ярлыки на рабочем столе'
 $kioskLink = Join-Path $startup 'АкБарак экран.lnk'
-if ($KioskAuto) { Make-Link $kioskLink "$Dir\start_kiosk.bat" 1; Ok 'экран запускается при включении' }
+if ($KioskAuto) { Make-Link $kioskLink "$Dir\start_kiosk.bat" 7; Ok 'экран запускается при включении' }
 elseif (Test-Path $kioskLink) { Remove-Item $kioskLink -Force; Ok 'автозапуск экрана выключен' }
 else { Ok 'экран при включении не запускается (ярлык «АкБарак экран» на рабочем столе)' }
+
+# ───────────── Защита: студент не выйдет с экрана на рабочий стол ─────────────
+function Set-Reg($path, $name, $val) {
+    if (-not (Test-Path $path)) { New-Item -Path $path -Force | Out-Null }
+    New-ItemProperty -Path $path -Name $name -Value $val -PropertyType DWord -Force | Out-Null
+}
+try {
+    Set-Reg 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\EdgeUI' 'AllowEdgeSwipe' 0                 # свайпы от краёв экрана
+    Set-Reg 'HKCU:\Software\Policies\Microsoft\Windows\Explorer' 'DisableNotificationCenter' 1   # центр уведомлений
+    Set-Reg 'HKCU:\Software\Microsoft\Windows\CurrentVersion\PushNotifications' 'ToastEnabled' 0   # всплывающие уведомления поверх экрана
+    Ok 'свайпы от краёв и уведомления отключены (после перезагрузки)'
+} catch { Warn "Не удалось включить защиту от выхода: $($_.Exception.Message)" }
 
 # Запускаем авто-печать прямо сейчас (с обновлённым PATH, чтобы нашёлся новый Python)
 Refresh-Path

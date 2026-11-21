@@ -399,6 +399,7 @@ function drawTerms(){
       <button class="btn ghost" data-paper="${H(t.id)}">📄 Загрузил бумагу</button>
       <button class="btn ghost" data-ink="${H(t.id)}" data-kind="${t.color===0?'toner':'ink'}">💧 ${t.color===0?'Заменил картридж':'Заправил чернила'}</button>
       ${t.color!==0?`<button class="btn ghost" data-cmd="nozzle" data-t="${H(t.id)}">🔎 Проверка дюз</button><button class="btn ghost" data-cmd="clean" data-t="${H(t.id)}">🧽 Прочистка дюз</button>`:''}
+      <button class="btn ghost" data-cmd="kiosk_off" data-t="${H(t.id)}">🔓 Свернуть экран</button><button class="btn ghost" data-cmd="kiosk_on" data-t="${H(t.id)}">🔒 Вернуть экран</button>
       <a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="text-decoration:none">Экран ↗</a>
     </div></div>`).join('');
   $('terms').querySelectorAll('[data-paper]').forEach(b=>b.onclick=async()=>{
@@ -410,7 +411,9 @@ function drawTerms(){
     try{ await api('/admin/api/supplies/'+encodeURIComponent(b.dataset.ink),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ink:true})}); toast('Записал'); refresh(); }catch(e){ toast(e.message,true); }
   });
   $('terms').querySelectorAll('[data-cmd]').forEach(b=>b.onclick=async()=>{
-    const what=b.dataset.cmd==='clean'?'прочистку дюз (≈1 мин, расходует немного чернил)':'проверку дюз (напечатает тестовый шаблон)';
+    const what={clean:'прочистку дюз (≈1 мин, расходует немного чернил)',nozzle:'проверку дюз (напечатает тестовый шаблон)',
+      kiosk_off:'сворачивание экрана: экран закроется, откроется рабочий стол Windows для настройки (студенты в это время не смогут заказать с экрана)',
+      kiosk_on:'возврат экрана: экран терминала снова откроется на весь экран'}[b.dataset.cmd]||b.dataset.cmd;
     if(!confirm('Запустить '+what+' на '+b.dataset.t+'?')) return;
     try{ await api('/admin/api/cmd/'+encodeURIComponent(b.dataset.t),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:b.dataset.cmd})}); toast('Команда отправлена, терминал выполнит её в течение минуты'); refresh(); }catch(e){ toast(e.message,true); }
   });

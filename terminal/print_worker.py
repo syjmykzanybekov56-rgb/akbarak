@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-21 v23 отдельный сканер — в приоритете"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-21 v24 свернуть/вернуть экран из админки"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -266,8 +266,34 @@ def send_heartbeat(status):
         cmd = resp.json().get("cmd")
     except Exception:
         cmd = None
-    if cmd:
+    if cmd in ("kiosk_off", "kiosk_on"):
+        CMD_RESULT = kiosk_control(cmd)
+    elif cmd:
         CMD_RESULT = printer_service(cmd)
+
+
+KIOSK_OFF_FLAG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kiosk_off.txt")
+
+
+def kiosk_control(cmd):
+    """Свернуть/вернуть экран терминала по кнопке в админке.
+    start_kiosk.bat сам перезапускает экран, если его закрыть (студент не выйдет на рабочий стол),
+    но пока лежит kiosk_off.txt — не перезапускает."""
+    try:
+        if cmd == "kiosk_off":
+            with open(KIOSK_OFF_FLAG, "w", encoding="utf-8") as f:
+                f.write("Экран свёрнут из админки. Удалите этот файл или нажмите «Вернуть экран».\n")
+            for exe in ("chrome.exe", "msedge.exe"):
+                subprocess.run(["taskkill", "/IM", exe, "/F"], capture_output=True)
+            log.info("Экран терминала свёрнут из админки")
+            return "✅ экран свёрнут — открыт рабочий стол"
+        if os.path.exists(KIOSK_OFF_FLAG):
+            os.remove(KIOSK_OFF_FLAG)
+        log.info("Экран терминала возвращён из админки")
+        return "✅ экран вернётся в течение 5 секунд"
+    except Exception as e:
+        log.warning("Команда экрана %s не выполнена: %s", cmd, e)
+        return f"❌ не получилось: {e}"
 
 
 # ─────────────────────── Обслуживание Epson: проверка и прочистка дюз ───────────────────────

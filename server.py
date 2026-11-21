@@ -1305,7 +1305,8 @@ def admin_supplies(terminal_id):
     return jsonify({"success": True})
 
 
-PRINTER_CMDS = {"nozzle": "проверка дюз", "clean": "прочистка дюз"}
+PRINTER_CMDS = {"nozzle": "проверка дюз", "clean": "прочистка дюз",
+                "kiosk_off": "свернуть экран терминала", "kiosk_on": "вернуть экран терминала"}
 
 
 @app.route("/admin/api/cmd/<terminal_id>", methods=["POST"])
