@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-21 v22 обычные листы всегда A4 из кассеты"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-21 v23 отдельный сканер — в приоритете"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -781,8 +781,25 @@ def _scan_once(order_id, dpi, color=False, sheet=1):
                 except Exception:
                     name = ""
                 infos.append((name, info))
+        # Порядок: 1) сканер из scanner.txt / AKBARAK_SCANNER (часть названия);
+        # 2) отдельный сканер (не той марки, что принтер) — его ставят специально, в нишу терминала;
+        # 3) сканер, встроенный в принтер.
+        want = (os.environ.get("AKBARAK_SCANNER") or "").strip().lower()
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "scanner.txt"), encoding="utf-8") as f:
+                want = f.read().strip().lower() or want
+        except OSError:
+            pass
         brand = (PRINTER_NAME.split() or [""])[0].lower()
-        infos.sort(key=lambda t: 0 if brand and brand in t[0].lower() else 1)
+
+        def rank(t):
+            n = t[0].lower()
+            if want and want in n:
+                return 0
+            return 2 if brand and brand in n else 1
+        infos.sort(key=rank)
+        if sheet == 1:
+            log.info("Сканеры в Windows: %s", ", ".join(n or "без имени" for n, _ in infos) or "нет")
         scanner = None
         for name, info in infos:
             try:
