@@ -1168,10 +1168,11 @@ def done(order_id):
     conn = db()
     row = conn.execute("SELECT file_path, status FROM orders WHERE id=?", (order_id,)).fetchone()
     if row and row["status"] in ("new", "printing"):
-        conn.execute("UPDATE orders SET status='printed', printed_at=?, file_path=NULL WHERE id=?",
-                     (now(), order_id))
+        # Файл НЕ удаляем сразу: Windows могла «принять» задание, а лист не вышел (ошибка принтера) —
+        # тогда «Повторить» в админке напечатает его снова без повторной оплаты.
+        # Файлы старше FILE_TTL_HOURS удаляет maintenance().
+        conn.execute("UPDATE orders SET status='printed', printed_at=? WHERE id=?", (now(), order_id))
         conn.commit()
-        _remove(row["file_path"])
         tgbot.order_event(order_id, "printed")
     conn.close()
     return jsonify({"success": True})

@@ -974,7 +974,8 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
 </div>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+// если библиотека предпросмотра PDF не загрузилась (медленный или фильтрующий интернет) — сайт всё равно работает
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 const SERVER = "https://akbarak-production.up.railway.app";
 
