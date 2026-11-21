@@ -34,8 +34,12 @@ class TemplateError(ValueError):
     pass
 
 
-def clean_values(tpl, raw):
-    """Проверяет поля шаблона. Возвращает словарь значений или бросает TemplateError."""
+def clean_values(tpl, raw, blank_form=False):
+    """Проверяет поля шаблона. Возвращает словарь значений или бросает TemplateError.
+    blank_form — пустой бланк с терминала: ничего не подставляем, даже пол и списки,
+    на месте каждого поля будет линия (а «студента/студентки» — оба варианта)."""
+    if blank_form:
+        return {key: "" for key in tpl["fields"]}
     values = {}
     for key in tpl["fields"]:
         spec = FIELDS[key]
@@ -64,6 +68,8 @@ def fill(text, values):
         nonlocal empty
         key, male, female = m.group(1), m.group(2), m.group(3)
         if male is not None:  # {sex:вариант м|вариант ж}
+            if not values.get(key):          # пустой бланк: пол не выбран — пишем оба варианта
+                return f"{male}/{female}" if male != female else male
             return female if values.get(key) == "f" else male
         val = values.get(key, "")
         if not val:
@@ -141,12 +147,13 @@ def build_zebra(values, path):
     doc.save(path)
 
 
-def build_docx(template_id, raw_values, path):
+def build_docx(template_id, raw_values, path, blank_form=False):
     tpl = TEMPLATES.get(template_id)
     if not tpl:
         raise TemplateError("Неизвестный шаблон")
-    values = clean_values(tpl, raw_values)
-    if any(b.get("type") == "zebra" for b in tpl["blocks"]):
+    is_zebra = any(b.get("type") == "zebra" for b in tpl["blocks"])
+    values = clean_values(tpl, raw_values, blank_form and not is_zebra)
+    if is_zebra:
         build_zebra(values, path)
         return tpl["title"]
 

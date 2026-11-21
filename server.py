@@ -746,7 +746,8 @@ def template_order():
         terminal = (data.get("terminal") or DEFAULT_TERMINAL)[:40]
         file_path = os.path.join(FILES_DIR, f"{uuid.uuid4().hex}.docx")
         try:
-            title = doc_templates.build_docx(str(data.get("template", "")), data.get("values") or {}, file_path)
+            title = doc_templates.build_docx(str(data.get("template", "")), data.get("values") or {}, file_path,
+                                              blank_form=bool(data.get("blank")))
         except doc_templates.TemplateError as e:
             return jsonify({"error": str(e)}), 400
 

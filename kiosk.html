@@ -319,6 +319,24 @@
   .tgline b{font-size:1.05vw;color:#14283D;font-family:var(--disp)}
   .pic{color:#fff}
   .logo svg{filter:drop-shadow(0 0 .08vw rgba(20,40,61,.7))}
+  /* ── шаблоны: список бланков и предпросмотр пустого бланка ── */
+  .tpllist{display:grid;grid-template-columns:1fr 1fr;gap:1.4vh 1.2vw;max-height:52vh;overflow:auto;padding-right:.4vw}
+  .tplbtn{display:flex;align-items:center;gap:1vw;text-align:left;padding:1.8vh 1.2vw;border-radius:.8vw;background:var(--paper);
+    box-shadow:0 .2vh 0 #D3DAE3,0 .8vh 2vh rgba(20,40,61,.08)}
+  .tplbtn:active{transform:scale(.98)}
+  .tplbtn svg{width:2.6vw;height:2.6vw;flex:none;color:var(--gold-d)}
+  .tplbtn b{display:block;font-family:var(--disp);font-weight:700;font-size:1.15vw;color:var(--txt);line-height:1.2}
+  .tplbtn small{display:block;font-size:.85vw;color:var(--text-dim);margin-top:.4vh;line-height:1.3}
+  .tplpv{position:absolute;inset:0;font-family:"Times New Roman",Times,serif;font-size:1.1vh;line-height:1.2;color:#111;overflow:hidden}
+  .tplpv p{margin:0;word-break:break-word}
+  .svchead.long{flex-direction:column;gap:1vh} .svchead.long h1{font-size:3.4vw}
+  .tplpv .a-hdr{margin-left:46%!important}
+  .tplpv .a-c{text-align:center} .tplpv .a-l{text-align:left} .tplpv .a-j{text-align:justify;line-height:1.6}
+  .tplpv .ind{text-indent:2.5em}
+  .tplpv .sg{display:flex;justify-content:space-between;margin-top:1.6em}
+  .tplpv .lg{display:block;height:5em;margin:0 auto .6em}
+  .tplpv .bt{position:absolute;left:0;right:0;bottom:0}
+  .tplpv .zeb{position:absolute;inset:0;background:repeating-linear-gradient(#fff 0 1.9em,#222 1.9em calc(1.9em + 1.5px))}
   /* ── видео-инструкции ── */
   .howbtn{display:none;position:absolute;right:6vw;top:50%;transform:translateY(-50%);z-index:2;flex-direction:column;align-items:center;gap:1.4vh;
     color:var(--navy);font-weight:800;font-size:1.25vw;line-height:1.2;text-align:center}
@@ -787,18 +805,95 @@ function printOnPhone(){
 }
 
 /* Шаблоны документов: заполняются в телефоне */
-function docsScreen(){
-  stopFlow();
-  const steps = [["i-phone", "Наведи камеру телефона на код справа"],
-                 ["i-doc",   "Выбери шаблон и заполни поля — лист видно сразу"],
-                 ["i-out",   "Оплати 5 сом — документ выйдет здесь"]];
-  pane(BACK + head('Шаблоны', '5 сом за лист') +
-       '<p class="lead2" style="margin-bottom:3vh">Заявление на отработку, объяснительная, пересдача, справка, титульный лист для СРС и реферата, история болезни.</p>' +
-       stepsHtml(steps));
-  runSteps(steps);
-  paper('<h3 style="--i:0">Сканируй<br>и заполни</h3><div class="q" id="qrDocs" style="--i:1"></div><small style="--i:2">Оформим по правилам и распечатаем</small>');
+/* Шаблоны: пустой бланк печатается прямо здесь (впишешь ручкой),
+   заполненный своими данными — с телефона по QR. */
+let TPL = null;
+async function loadTpl(){
+  if(TPL) return TPL;
+  TPL = await (await fetch(SITE + '/templates.json', {cache: 'no-store'})).json();
+  return TPL;
+}
+function docsPhoneQr(){
+  paper('<h3 style="--i:0">Со своими<br>данными?</h3><div class="q" id="qrDocs" style="--i:1"></div><small style="--i:2">Сканируй — заполни бланк в телефоне,<br>он распечатается здесь уже заполненным</small>');
   qr($('qrDocs'), SITE + '/templates.html?t=' + encodeURIComponent(TERMINAL) + L(), 512);
+}
+async function docsScreen(){
+  stopFlow();
+  cur = {type: 'template'};
+  const price = (CFG.prices || {}).print_bw || 5;
+  pane(BACK + head('Шаблоны', price + ' сом за лист') +
+       '<p class="lead2" style="margin-bottom:3vh">Выбери бланк — распечатаем его с пустыми строками, впишешь данные ручкой. ' +
+       'Хочешь сразу со своими данными — сканируй код справа и заполни в телефоне.</p>' +
+       '<div class="tpllist" id="tplList"><div class="wait"><div class="spin"></div>Загружаем бланки…</div></div>');
+  docsPhoneQr();
   setTimer(SVC_SEC + 20, 'Вернёмся на главный экран через %s с', goHome);
+  try{
+    const d = await loadTpl();
+    if(!$('tplList')) return;
+    $('tplList').innerHTML = d.templates.map(t =>
+      '<button class="tplbtn" onclick="docBlank(\'' + esc(t.id) + '\')"><svg><use href="#i-doc"/></svg><span><b>' + esc(t.title) + '</b>' +
+      '<small>' + esc(t.desc || '') + '</small></span></button>').join('');
+  }catch(e){
+    if($('tplList')) $('tplList').innerHTML = '<p class="lead2">Не удалось загрузить бланки. Сканируй код справа — заполни в телефоне.</p>';
+  }
+}
+/* Предпросмотр пустого бланка — как на напечатанном листе: на месте полей линии */
+function tplLine(key){
+  const f = (TPL.fields || {})[key] || {};
+  return Array(f.blank_lines || 1).fill('_'.repeat(f.blank || 20)).join(' ');
+}
+function tplText(t){
+  return esc(t.replace(/\{(\w+)(?::([^{}|]*)\|([^{}]*))?\}/g, (m, k, a, b) => a !== undefined ? (a === b ? a : a + '/' + b) : tplLine(k)));
+}
+function tplPreview(tpl){
+  let h = '', bottom = '';
+  for(const b of tpl.blocks){
+    if(b.type === 'zebra'){ h += '<div class="zeb"></div>'; continue; }
+    if(b.type === 'logo'){ h += '<img class="lg" src="' + SITE + '/icons/kgma.png" alt="">'; continue; }
+    if(b.type === 'sign'){ h += '<p class="sg"><span>' + tplLine('date') + '</span><span>____________ ' + tplLine('fio_short') + '</span></p>'; continue; }
+    let t = tplText(b.t || ''); if(b.u) t = t.toUpperCase();
+    if(b.label) t = '<b>' + esc(b.label) + '</b> ' + t;
+    const st = 'margin-top:' + ((b.before || 0) / 14) + 'em;margin-bottom:' + ((b.after || 0) / 14) + 'em;font-size:' + ((b.s || 14) / 14) + 'em' + (b.b ? ';font-weight:700' : '');
+    const p = '<p class="a-' + (b.a || 'j') + (b.ind ? ' ind' : '') + '" style="' + st + '">' + t + '</p>';
+    if(b.pos === 'bottom') bottom += p; else h += p;
+  }
+  return '<div class="tplpv">' + h + (bottom ? '<div class="bt">' + bottom + '</div>' : '') + '</div>';
+}
+async function docBlank(id){
+  stopFlow();
+  const d = await loadTpl().catch(() => null);
+  const tpl = d && d.templates.find(t => t.id === id);
+  if(!tpl) return docsScreen();
+  const unit = (CFG.prices || {}).print_bw || 5;
+  cur = {type: 'template', tpl: id, copies: 1};
+  pane('<button class="back" onclick="docsScreen()"><svg><use href="#i-back"/></svg>Все бланки</button>' + head(tpl.title, unit + ' сом за лист') +
+    '<p class="lead2">Пустой бланк: на месте данных — строки, впишешь ручкой.</p>' +
+    '<div class="opts" style="margin-top:3vh"><div><div class="opt-l">Сколько листов</div><div class="stepper">' +
+      '<button id="cMinus" onclick="tplCopies(-1)">−</button><output id="cVal">1</output><button id="cPlus" onclick="tplCopies(1)">+</button></div></div>' +
+      '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
+    '<div class="acts"><button class="btn main" id="payBtn" onclick="tplPay()"></button></div>' +
+    '<div class="lnks"><button class="switch" onclick="docsPhoneQr()">Заполнить своими данными в телефоне</button></div>');
+  cur.draw = () => {
+    $('cVal').textContent = cur.copies; $('cMinus').disabled = cur.copies <= 1; $('cPlus').disabled = cur.copies >= 10;
+    $('sumVal').innerHTML = unit * cur.copies + '<small>сом</small>';
+    $('payBtn').textContent = 'Распечатать за ' + unit * cur.copies + ' сом';
+  };
+  const hd = document.querySelector('.svchead'); if(hd) hd.classList.add('long');
+  cur.draw();
+  paper(tplPreview(tpl), '');
+  setTimer(SVC_SEC + 40, 'Вернёмся на главный экран через %s с', goHome);
+}
+function tplCopies(delta){ cur.copies = Math.max(1, Math.min(10, cur.copies + delta)); cur.draw(); }
+async function tplPay(){
+  $('payBtn').disabled = true;
+  try{
+    const d = await api('/template_order', {template: cur.tpl, values: {}, blank: true, copies: cur.copies, payment: 'gopay', terminal: TERMINAL});
+    cur.orderId = d.order_id; cur.token = d.token; cur.total = d.total; cur.type = 'print';
+    payOrder();
+  }catch(e){
+    $('payBtn').disabled = false;
+    $('payBtn').insertAdjacentHTML('afterend', '<span class="wait" style="margin:0;color:#B3262E">' + esc(e.message) + '</span>');
+  }
 }
 
 /* Заказ пришёл на экран: копии и оплата */
