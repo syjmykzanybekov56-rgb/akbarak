@@ -68,7 +68,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-21 v25 экран терминала всегда поверх окон"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v26 LibreOffice ищется в любой папке"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -91,6 +91,34 @@ LIBREOFFICE_PATHS = [
 ]
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def find_soffice():
+    """Все найденные soffice.exe: стандартные папки, любые «LibreOffice*» в Program Files,
+    путь из реестра (App Paths) и портативная версия рядом с программой."""
+    import glob
+    found = list(LIBREOFFICE_PATHS)
+    for pf in (os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+               os.environ.get("LOCALAPPDATA", ""), HERE, r"C:\akbarak"):
+        if pf:
+            found += glob.glob(os.path.join(pf, "LibreOffice*", "program", "soffice.exe"))
+            found += glob.glob(os.path.join(pf, "LibreOffice*", "App", "libreoffice", "program", "soffice.exe"))
+    try:
+        import winreg
+        for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+            try:
+                with winreg.OpenKey(root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\soffice.exe") as k:
+                    found.append(winreg.QueryValue(k, None))
+            except OSError:
+                pass
+    except ImportError:
+        pass
+    out = []
+    for f in found:
+        f = (f or "").strip('"')
+        if f and f not in out and os.path.exists(f):
+            out.append(f)
+    return out
 
 
 def _load_key():
@@ -524,7 +552,7 @@ def to_printable(path):
         return pdf
 
     # 3) LibreOffice (бесплатный)
-    for soffice in LIBREOFFICE_PATHS:
+    for soffice in find_soffice():
         if os.path.exists(soffice):
             subprocess.run([soffice, "--headless", "--convert-to", "pdf", "--outdir",
                             os.path.dirname(path), path], timeout=120)
@@ -1246,6 +1274,8 @@ def kiosk_guard_loop():
 def main():
     log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
+    _so = find_soffice()
+    log.info("LibreOffice (печать Word): %s", _so[0] if _so else "НЕ НАЙДЕН — DOC/DOCX печататься не будут")
     log.info("Лотки принтера: %s", ", ".join(printer_bins(PRINTER_NAME)) or "не удалось узнать")
     log.info("Обычная A4 → лоток: %s", pick_bin(PRINTER_NAME, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN") or "по настройкам принтера")
     _pp, _pb = photo_target()
