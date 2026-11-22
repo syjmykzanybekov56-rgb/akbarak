@@ -269,13 +269,17 @@ TX = {
     "price_color": ("🎨 Печать цвет — <b>{c} сом</b>/стр\n", "🎨 Түстүү басуу — <b>{c} сом</b>/бет\n",
                     "🎨 Colour print — <b>{c} som</b>/page\n"),
     "receipt": ("ЧЕК", "ЧЕК", "RECEIPT"),
+    "pg": ("стр.", "бет", "p."),
+    "all_pages": ("📑 Все страницы", "📑 Бардык беттер", "📑 All pages"),
+    "docs_btn": ("🪪 Документы · {p}", "🪪 Документке · {p}", "🪪 ID · {p}"),
+    "free_short": ("🆓 Бесплатно", "🆓 Акысыз", "🆓 Free"),
+    "cancel_short": ("✖ Отмена", "✖ Жокко чыгаруу", "✖ Cancel"),
     "ph_as": ("Как печатать картинку?", "Сүрөттү кантип басуу керек?", "How to print the picture?"),
     "ph_doc": ("📄 Документ A4", "📄 Документ A4", "📄 A4 document"),
     "ph_10x15": ("🖼 Фото 10×15", "🖼 Сүрөт 10×15", "🖼 Photo 10×15"),
     "ph_passport": ("🪪 Фото на документы", "🪪 Документке сүрөт", "🪪 ID photo"),
     "ph_line_10x15": ("🖼 Фото 10×15 · глянцевая бумага", "🖼 Сүрөт 10×15 · жылтырак кагаз", "🖼 Photo 10×15 · glossy paper"),
-    "ph_line_doc": ("🪪 Фото на документы {s} · {n} шт на листе", "🪪 Документке сүрөт {s} · баракта {n} даана",
-                    "🪪 ID photo {s} · {n} per sheet"),
+    "ph_line_doc": ("🪪 Фото на документы {s} · {n} шт", "🪪 Документке сүрөт {s} · {n} даана", "🪪 ID photos {s} · {n} pcs"),
     "ph_pick_doc": ("🪪 Фото на документы (50 сом) — выберите размер:", "🪪 Документке сүрөт (50 сом) — өлчөмдү тандаңыз:",
                     "🪪 ID photo (50 som) — choose a size:"),
     "ph_hint": ("<i>Лицо по центру, светлый фон — обрежем сами.</i>", "<i>Жүз ортодо, ачык фон — өзүбүз кесебиз.</i>",
@@ -347,7 +351,7 @@ TX = {
     "clear": ("🗑 Очистить корзину", "🗑 Себетти тазалоо", "🗑 Clear cart"),
     "cleared": ("🗑 Корзина очищена", "🗑 Себет тазаланды", "🗑 Cart cleared"),
     "remove": ("🗑 Убрать файл", "🗑 Файлды алып салуу", "🗑 Remove file"),
-    "in_cart": ("🧺 В корзине — оплата одна, внизу", "🧺 Себетте — төлөм бир, ылдыйда", "🧺 In the cart — one payment, below"),
+    "in_cart": ("🧺 В корзине · оплата внизу", "🧺 Себетте · төлөм ылдыйда", "🧺 In cart · pay below"),
     "files_n": ("Файлов", "Файлдар", "Files"),
     "range_btn_all": ("📑 Страницы: все", "📑 Барактар: баары", "📑 Pages: all"),
     "range_btn": ("📑 Страницы: {r}", "📑 Барактар: {r}", "📑 Pages: {r}"),
@@ -529,30 +533,24 @@ def ph_line(d, lang):
 
 
 def draft_text(d, lang):
-    line = "┄" * 18
+    """Короткий чек: что, как, где и сколько. Всё остальное — кнопками."""
+    som = T("som", lang)
     if photo_fmt(d):
-        return (f"🧾 <b>{T('receipt', lang)} · АкБарак</b>\n{line}\n"
-                f"📄 <b>{esc(d['file_name'])}</b>\n\n"
-                f"{ph_line(d, lang)}\n"
-                f"🔁 {T('copies', lang)}: <b>{d['copies']}</b>\n"
-                f"📍 {T('terminal', lang)}: <b>{esc(d['terminal'])}</b>\n"
-                f"{line}\n"
-                f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>\n"
-                f"{T('ph_hint', lang) if d['photo'] in DOC_KEYS else ''}")
-    mode = T("color" if d["color"] else "bw", lang) + " · " + T(d["sides"], lang)
-    if d.get("page_range"):
-        pages_line = T("range_line", lang, r=esc(d["page_range"]), p=d["pages"], n=d.get("real_pages") or d["pages"])
-    else:
-        pages_line = f"📑 {T('pages', lang)}: <b>{d['pages']}</b>"
-    return (f"🧾 <b>{T('receipt', lang)} · АкБарак</b>\n{line}\n"
-            f"📄 <b>{esc(d['file_name'])}</b>\n\n"
-            f"{pages_line}\n"
-            f"{'🎨' if d['color'] else '⚫'} {T('print', lang)}: <b>{mode}</b>\n"
-            f"🔁 {T('copies', lang)}: <b>{d['copies']}</b>\n"
-            f"📍 {T('terminal', lang)}: <b>{esc(d['terminal'])}</b>\n"
-            f"{line}\n"
-            f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>\n"
-            f"<i>{T('pages_x', lang, p=d['pages'], c=d['copies'])}</i>")
+        return (f"🖼 <b>{esc(d['file_name'])}</b>\n"
+                f"{ph_line(d, lang)} · × {d['copies']}\n"
+                f"📍 {esc(d['terminal'])}\n\n"
+                f"💰 <b>{T('total', lang)}: {draft_total(d)} {som}</b>"
+                + (f"\n{T('ph_hint', lang)}" if d['photo'] in DOC_KEYS else ""))
+    parts = [f"{d['pages']} {T('pg', lang)}" if not d.get("page_range")
+             else f"{T('pg', lang)} {esc(d['page_range'])} ({d['pages']})",
+             ("🎨 " + T("COLOR", lang)) if d["color"] else ("⚫ " + T("BW", lang))]
+    if d["sides"] != "single":
+        parts.append(T("s_" + d["sides"], lang))
+    parts.append(f"× {d['copies']}")
+    return (f"📄 <b>{esc(d['file_name'])}</b>\n"
+            f"{' · '.join(parts)}\n"
+            f"📍 {esc(d['terminal'])}\n\n"
+            f"💰 <b>{T('total', lang)}: {draft_total(d)} {som}</b>")
 
 
 def draft_total(d):
@@ -562,48 +560,48 @@ def draft_total(d):
 
 
 def draft_kb(d, lang, multi=False):
-    """multi=True — файлов несколько: оплата одна, в корзине внизу."""
+    """multi=True — файлов несколько: оплата одна, в корзине внизу.
+    Не больше 6 рядов: формат/цвет, стороны или размер фото, копии, страницы+терминал, оплата, бесплатно/отмена."""
     i = d["id"]
     kb = []
+    som = T("som", lang)
+    sel = lambda on, text: ("✓ " + text) if on else text
+    cur = d.get("photo") or ""
     if is_image(d) and H["color_ok"](d["terminal"]):
-        cur = d.get("photo") or ""
-        kb.append([btn(("✅ " if not cur else "") + T("ph_doc", lang), f"d:{i}:ph_", style="primary" if not cur else None)])
-        kb.append([btn(("✅ " if cur == "10x15" else "") + T("ph_10x15", lang) +
-                       f" · {H['photo_price'](PHOTO_FORMATS['10x15'])} {T('som', lang)}", f"d:{i}:ph_10x15",
-                       style="primary" if cur == "10x15" else None)])
-        kb.append([btn(T("ph_passport", lang) + f" · {H['photo_price'](PHOTO_FORMATS['passport'])} "
-                       f"{T('som', lang)} ↓", off=True)])
-        kb.append([btn(("✅ " if cur == k else "") + DOC_LABEL[k][0], f"d:{i}:ph_{k}",
-                       style="primary" if cur == k else None) for k in DOC_KEYS])
+        kb.append([btn(sel(not cur, "📄 A4"), f"d:{i}:ph_", style="primary" if not cur else None),
+                   btn(sel(cur == "10x15", f"🖼 10×15 · {H['photo_price'](PHOTO_FORMATS['10x15'])}"), f"d:{i}:ph_10x15",
+                       style="primary" if cur == "10x15" else None),
+                   btn(sel(cur in DOC_KEYS, T("docs_btn", lang, p=H['photo_price'](PHOTO_FORMATS['passport']))),
+                       f"d:{i}:ph_docs", style="primary" if cur in DOC_KEYS else None)])
+        if cur in DOC_KEYS:
+            kb.append([btn(sel(cur == k, DOC_LABEL[k][0]), f"d:{i}:ph_{k}", style="primary" if cur == k else None)
+                       for k in DOC_KEYS])
     if H["color_ok"](d["terminal"]) and not photo_fmt(d):
-        kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw",
-                       style="primary" if not d["color"] else None),
-                   btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color",
-                       style="primary" if d["color"] else None)])
-    kb.append([btn("−", f"d:{i}:minus", off=d["copies"] <= 1), btn(f"🔁 {d['copies']}", off=True),
+        kb.append([btn(sel(not d["color"], "⚫ " + T("BW", lang)), f"d:{i}:bw", style="primary" if not d["color"] else None),
+                   btn(sel(d["color"], "🎨 " + T("COLOR", lang)), f"d:{i}:color", style="primary" if d["color"] else None)])
+    if H["DUPLEX_ENABLED"] and d["pages"] > 1 and not photo_fmt(d):
+        kb.append([btn(sel(d["sides"] == k, T("s_" + k, lang)), f"d:{i}:s_{k}", style="primary" if d["sides"] == k else None)
+                   for k in ("single", "duplex", "booklet")])
+    kb.append([btn("−", f"d:{i}:minus", off=d["copies"] <= 1), btn(f"× {d['copies']}", off=True),
                btn("+", f"d:{i}:plus", off=d["copies"] >= 20)])
+    row = []
     real = d.get("real_pages") or d["pages"]
     if real > 1 and not photo_fmt(d):
-        label = T("range_btn", lang, r=d["page_range"]) if d.get("page_range") else T("range_btn_all", lang)
-        row = [btn(label, f"d:{i}:range")]
-        if d.get("page_range"):
-            row.append(btn(T("range_all", lang), f"d:{i}:allpages"))
+        row.append(btn(("📑 " + d["page_range"]) if d.get("page_range") else T("all_pages", lang),
+                       f"d:{i}:{'allpages' if d.get('page_range') else 'range'}"))
+    if len(terminal_ids()) > 1:
+        row.append(btn(f"📍 {d['terminal']}", f"d:{i}:term"))
+    if row:
         kb.append(row)
-    if H["DUPLEX_ENABLED"] and d["pages"] > 1:
-        kb.append([btn(("✅ " if d["sides"] == k else "") + T("s_" + k, lang), f"d:{i}:s_{k}",
-                       style="primary" if d["sides"] == k else None)
-                   for k in ("single", "duplex", "booklet")])
-    terms = terminal_ids()
-    if len(terms) > 1:
-        kb.append([btn(f"📍 {T('terminal', lang)}: {d['terminal']} ({T('change', lang)})", f"d:{i}:term")])
     if multi:
-        kb.append([btn(T("in_cart", lang), off=True)])
-        kb.append([btn(T("remove", lang), f"d:{i}:cancel", style="danger")])
+        kb.append([btn(T("in_cart", lang), off=True), btn("✖", f"d:{i}:cancel", style="danger")])
         return kb
-    kb.append([btn(f"💳 {T('pay', lang)} {draft_total(d)} {T('som', lang)}", f"d:{i}:pay", style="success")])
+    kb.append([btn(f"💳 {T('pay', lang)} · {draft_total(d)} {som}", f"d:{i}:pay", style="success")])
     if is_owner(d.get("chat_id")):
-        kb.append([btn(T("free_btn", lang), f"d:{i}:free", style="primary")])
-    kb.append([btn(T("cancel", lang), f"d:{i}:cancel", style="danger")])
+        kb.append([btn(T("free_short", lang), f"d:{i}:free", style="primary"),
+                   btn(T("cancel_short", lang), f"d:{i}:cancel", style="danger")])
+    else:
+        kb.append([btn(T("cancel_short", lang), f"d:{i}:cancel", style="danger")])
     return kb
 
 
@@ -933,6 +931,8 @@ def on_callback(cq):
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action.startswith("ph_") and is_image(d):
         k = action[3:]
+        if k == "docs":
+            k = d.get("photo") if d.get("photo") in DOC_KEYS else "d30x40"
         if k in PHOTO_FORMATS and H["color_ok"](d["terminal"]):
             d["photo"], d["color"], d["sides"] = k, 1, "single"
         else:
