@@ -11,6 +11,15 @@
   4. Двусторонняя печать и брошюры: на сервере включите DUPLEX_ENABLED=1.
      Умеет ли принтер печатать с двух сторон сам, программа узнаёт у Windows. Если не умеет —
      печатаются лицевые стороны, вы переворачиваете пачку и жмёте Enter.
+  5. Фото (10×15 и паспортное) печатаются на глянцевой фотобумаге из ЗАДНЕГО лотка.
+     Для этого в Windows нужен второй принтер «АкБарак Фото» — копия того же Canon.
+     Программа сама пробует его создать при запуске (нужны права администратора).
+     Если не создался: Параметры → Принтеры → Добавить принтер → «Нужный принтер отсутствует» →
+     «Добавить локальный принтер» → порт как у Canon (USB001…) → драйвер Canon G5080 →
+     «Использовать уже установленный драйвер» → имя: АкБарак Фото.
+     Затем у «АкБарак Фото» → Настройка печати: Источник — Задний лоток, Размер — 10x15 (4"x6"),
+     Тип носителя — глянцевая фотобумага (Photo Paper Plus Glossy II), Без полей — включить. OK.
+     Для 15×21 можно сделать третий принтер с «A5» в имени (А5, тот же задний лоток).
 """
 
 import logging
@@ -68,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v27 LibreOffice отдельный профиль"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v28 фото 10×15 с заднего лотка"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -243,29 +252,193 @@ def pick_bin(name, words, env_key):
     return None
 
 
-def photo_printer():
-    """Отдельно настроенный в Windows принтер для фото, если он есть."""
-    forced = os.getenv("AKBARAK_PHOTO_PRINTER")
-    if forced:
-        return forced
+PHOTO_PRINTER_DEFAULT_NAME = "АкБарак Фото"
+A5_WORDS = ("a5", "15x21", "15×21")
+
+
+def _all_printers():
     try:
         import win32print
         flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
-        for p in win32print.EnumPrinters(flags, None, 2):
-            n = p["pPrinterName"]
-            if n != PRINTER_NAME and ("фото" in n.lower() or "photo" in n.lower()):
-                return n
+        return [p["pPrinterName"] for p in win32print.EnumPrinters(flags, None, 2)]
     except Exception:
-        pass
+        return []
+
+
+def photo_printer(a5=False):
+    """Отдельно настроенный в Windows принтер для фото, если он есть.
+    a5=False — принтер для 10×15 (в имени «фото»/«photo»);
+    a5=True  — принтер для 15×21 (в имени ещё и «A5» или «15x21»)."""
+    forced = os.getenv("AKBARAK_PHOTO_PRINTER_A5" if a5 else "AKBARAK_PHOTO_PRINTER")
+    if forced:
+        return forced
+    for n in _all_printers():
+        low = n.lower()
+        if n == PRINTER_NAME or not ("фото" in low or "photo" in low):
+            continue
+        if any(w in low for w in A5_WORDS) == a5:
+            return n
     return None
 
 
-def photo_target():
-    """(принтер, лоток) для фото: отдельный фото-принтер или задний лоток основного."""
-    p = photo_printer()
-    if p:
-        return p, pick_bin(p, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN")
-    return PRINTER_NAME, pick_bin(PRINTER_NAME, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN")
+def photo_kind(fmt):
+    """Формат из заказа → passport / 10x15 / 15x21."""
+    f = (fmt or "").lower().replace("×", "x").replace(" ", "")
+    if "паспорт" in f or "3.5x4.5" in f or "35x45" in f:
+        return "passport"
+    if "15x21" in f:
+        return "15x21"
+    return "10x15"
+
+
+def photo_target(kind="10x15"):
+    """(принтер, лоток, бумага) для фото.
+    Лучше всего — отдельный принтер «АкБарак Фото» (копия Canon) с настройками
+    «Задний лоток + 10×15 + глянцевая фотобумага + без полей».
+    бумага — что передать SumatraPDF (None — как настроено в самом принтере)."""
+    if kind == "15x21":
+        p = photo_printer(a5=True)
+        if p:
+            return p, pick_bin(p, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN"), None
+        p = photo_printer() or PRINTER_NAME
+        return p, pick_bin(p, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN"), "A5"
+    p = photo_printer() or PRINTER_NAME
+    return p, pick_bin(p, PHOTO_BIN_WORDS, "AKBARAK_PHOTO_BIN"), None
+
+
+# Коды Windows для DeviceCapabilities / DEVMODE
+DC_BINS, DC_PAPERS, DC_BINNAMES, DC_PAPERNAMES = 6, 2, 12, 16
+DC_MEDIATYPENAMES, DC_MEDIATYPES = 34, 35
+DM_ORIENTATION, DM_PAPERSIZE, DM_DEFAULTSOURCE, DM_MEDIATYPE = 0x1, 0x2, 0x200, 0x2000000
+PAPER_10x15_WORDS = ("10x15", "10×15", "4x6", "4\"x6", "4 x 6", "102x152", "101.6x152.4")
+GLOSSY_WORDS = ("glossy", "глянц")
+
+
+def _caps(name, port, code):
+    import win32print
+    try:
+        return list(win32print.DeviceCapabilities(name, port, code) or [])
+    except Exception:
+        return []
+
+
+def photo_paper_name(name):
+    """Какой размер бумаги стоит по умолчанию у принтера (для проверки фото-принтера)."""
+    try:
+        import win32print
+        h = win32print.OpenPrinter(name)
+        try:
+            info = win32print.GetPrinter(h, 2)
+        finally:
+            win32print.ClosePrinter(h)
+        dm, port = info["pDevMode"], info["pPortName"]
+        papers = _caps(name, port, DC_PAPERS)
+        names = [str(n).strip("\x00 ") for n in _caps(name, port, DC_PAPERNAMES)]
+        if dm.PaperSize in papers and len(names) == len(papers):
+            return names[papers.index(dm.PaperSize)]
+        return getattr(dm, "FormName", "") or str(dm.PaperSize)
+    except Exception:
+        return ""
+
+
+def is_10x15(paper):
+    p = (paper or "").lower().replace(" ", "")
+    return any(w.replace(" ", "") in p for w in PAPER_10x15_WORDS)
+
+
+def setup_photo_defaults(name):
+    """Ставит принтеру name по умолчанию: задний лоток, 10×15, глянцевая фотобумага, книжная.
+    Драйвер Canon может что-то не принять — тогда это делается руками один раз."""
+    import win32print
+    done = []
+    try:
+        h = win32print.OpenPrinter(name, {"DesiredAccess": win32print.PRINTER_ALL_ACCESS})
+    except Exception as e:
+        return f"нет прав менять настройки принтера ({e})"
+    try:
+        info = win32print.GetPrinter(h, 2)
+        dm, port = info["pDevMode"], info["pPortName"]
+        papers = _caps(name, port, DC_PAPERS)
+        pnames = [str(n).strip("\x00 ") for n in _caps(name, port, DC_PAPERNAMES)]
+        for code, n in zip(papers, pnames):
+            if is_10x15(n):
+                dm.PaperSize = code; dm.Fields |= DM_PAPERSIZE; done.append(f"бумага «{n}»"); break
+        bins = _caps(name, port, DC_BINS)
+        bnames = [str(n).strip("\x00 ") for n in _caps(name, port, DC_BINNAMES)]
+        for code, n in zip(bins, bnames):
+            if any(w in n.lower() for w in PHOTO_BIN_WORDS):
+                dm.DefaultSource = code; dm.Fields |= DM_DEFAULTSOURCE; done.append(f"лоток «{n}»"); break
+        media = _caps(name, port, DC_MEDIATYPES)
+        mnames = [str(n).strip("\x00 ") for n in _caps(name, port, DC_MEDIATYPENAMES)]
+        best = None
+        for code, n in zip(media, mnames):
+            if any(w in n.lower() for w in GLOSSY_WORDS):
+                best = best or (code, n)
+                if "plus" in n.lower() or "плюс" in n.lower():   # Photo Paper Plus Glossy II — самая близкая к 240 г/м²
+                    best = (code, n); break
+        if best:
+            dm.MediaType = best[0]; dm.Fields |= DM_MEDIATYPE; done.append(f"тип «{best[1]}»")
+        dm.Orientation = 1; dm.Fields |= DM_ORIENTATION
+        try:
+            win32print.DocumentProperties(0, h, name, dm, dm, 2 | 8)   # DM_OUT_BUFFER | DM_IN_BUFFER
+        except Exception:
+            pass
+        info["pDevMode"] = dm
+        win32print.SetPrinter(h, 2, info, 0)
+        return "поставлено: " + (", ".join(done) or "ничего (драйвер не отдал список)")
+    except Exception as e:
+        return f"не получилось: {e}"
+    finally:
+        win32print.ClosePrinter(h)
+
+
+def ensure_photo_printer():
+    """Если отдельного фото-принтера нет — создаём «АкБарак Фото» (тот же Canon, тот же USB)
+    и пробуем сразу выставить ему фото-настройки. Нужны права администратора."""
+    if photo_printer() or os.getenv("AKBARAK_NO_PHOTO_PRINTER") == "1":
+        return
+    try:
+        import win32print
+        h = win32print.OpenPrinter(PRINTER_NAME)
+        try:
+            base = win32print.GetPrinter(h, 2)
+        finally:
+            win32print.ClosePrinter(h)
+        win32print.ClosePrinter(win32print.AddPrinter(None, 2, {
+            "pPrinterName": PHOTO_PRINTER_DEFAULT_NAME, "pDriverName": base["pDriverName"],
+            "pPortName": base["pPortName"], "pPrintProcessor": base["pPrintProcessor"] or "winprint",
+            "pDatatype": base["pDatatype"] or "RAW", "Attributes": base["Attributes"]}))
+        log.info("Создан принтер «%s» для фото (копия «%s»)", PHOTO_PRINTER_DEFAULT_NAME, PRINTER_NAME)
+        log.info("Фото-настройки: %s", setup_photo_defaults(PHOTO_PRINTER_DEFAULT_NAME))
+    except Exception as e:
+        log.warning("Не удалось создать фото-принтер автоматически (%s). Создайте его вручную — "
+                    "инструкция в начале print_worker.py", e)
+
+
+def prepare_photo(src, kind, oid):
+    """Готовит картинку ровно под лист: 10×15 (102×152 мм) или 15×21 (A5), книжная, 300 dpi.
+    Паспортное — лист 10×15 с 6 фото 3.5×4.5 и линиями реза (photo_sheet.py).
+    Обычное фото обрезается по краям под пропорцию листа, как в фотосалоне."""
+    if src.lower().endswith(".pdf"):
+        return src
+    from PIL import Image, ImageOps
+    out = os.path.join(tempfile.gettempdir(), f"akbarak_photo_{oid}.jpg")
+    if kind == "passport":
+        from photo_sheet import make_sheet
+        make_sheet(src, out, size="35x45", order_id=oid)
+        img = Image.open(out).convert("RGB")
+        if img.width > img.height:
+            img = img.rotate(90, expand=True)
+        img.save(out, "JPEG", quality=95, dpi=(300, 300))
+        return out
+    w_mm, h_mm = (148, 210) if kind == "15x21" else (102, 152)
+    img = ImageOps.exif_transpose(Image.open(src)).convert("RGB")
+    if img.width > img.height:                         # горизонтальное фото — поворачиваем под лист
+        img = img.rotate(90, expand=True)
+    px = lambda v: round(v / 25.4 * 300)
+    img = ImageOps.fit(img, (px(w_mm), px(h_mm)), Image.LANCZOS, centering=(0.5, 0.45))
+    img.save(out, "JPEG", quality=95, dpi=(300, 300))
+    return out
 
 
 def manual_duplex():
@@ -731,7 +904,8 @@ def expand_copies(pdf_path, copies, page_range=None, even=False):
     return out
 
 
-def print_file(path, copies=1, page_range=None, color=False, sides="single", printer=None, tray=None, fit=False):
+def print_file(path, copies=1, page_range=None, color=False, sides="single", printer=None, tray=None, fit=False,
+               paper=None):
     """Возвращает None при успехе или текст ошибки.
     printer/tray — куда печатать; по умолчанию основной принтер и кассета с обычной A4.
     sides: single — с одной стороны; duplex — переворот по длинному краю;
@@ -748,11 +922,11 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single", pri
             except Exception as e:
                 return f"не удалось подготовить копии: {e}"
             try:
-                return print_file(many, 1, None, color, sides, printer, tray, fit)
+                return print_file(many, 1, None, color, sides, printer, tray, fit, paper)
             finally:
                 _remove(many)
         for n in range(copies):                    # картинка: отдельное задание на каждую копию
-            err = print_file(path, 1, page_range, color, sides, printer, tray, fit)
+            err = print_file(path, 1, page_range, color, sides, printer, tray, fit, paper)
             if err:
                 return f"копия {n + 1} из {copies}: {err}"
         return None
@@ -766,6 +940,8 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single", pri
         # размер страницы, драйвер выбирал «бумагу не для кассеты» и печать вставала с ошибкой
         # «Была выбрана бумага, которую нельзя подавать из кассеты». Всегда печатаем на A4.
         settings += ",paper=A4"
+    elif paper:
+        settings += f",paper={paper}"
     settings += {"duplex": ",duplexlong", "booklet": ",duplexshort"}.get(sides, ",simplex")
     if tray and "," not in tray:
         settings += f",bin={tray}"
@@ -1132,10 +1308,20 @@ def handle_print(oid, order):
         if not printable:
             return "не удалось открыть DOC/DOCX: установите Word, WPS Office или LibreOffice"
         if order.get("order_type") == "photo":
-            printer, tray = photo_target()
-            log.info("Заказ #%s: фото %s → «%s», лоток: %s", oid, order.get("photo_format"),
-                     printer, tray or "по настройкам принтера")
-            return print_file(printable, copies, None, True, "single", printer, tray or "", fit=True)
+            kind = photo_kind(order.get("photo_format"))
+            printer, tray, paper = photo_target(kind)
+            try:
+                ready = prepare_photo(printable, kind, oid)
+            except Exception as e:
+                log.warning("Заказ #%s: не удалось подготовить фото (%s), печатаю как есть", oid, e)
+                ready = printable
+            log.info("Заказ #%s: фото %s (%s) → «%s», лоток: %s, бумага: %s", oid, order.get("photo_format"),
+                     kind, printer, tray or "по настройкам принтера", paper or "по настройкам принтера")
+            try:
+                return print_file(ready, copies, None, True, "single", printer, tray or "", fit=True, paper=paper)
+            finally:
+                if ready != printable:
+                    _remove(ready)
         if not printable.lower().endswith(".pdf"):
             sides = "single"              # картинка — одна страница
         if sides == "booklet":
@@ -1293,8 +1479,21 @@ def main():
     log.info("LibreOffice (печать Word): %s", _so[0] if _so else "НЕ НАЙДЕН — DOC/DOCX печататься не будут")
     log.info("Лотки принтера: %s", ", ".join(printer_bins(PRINTER_NAME)) or "не удалось узнать")
     log.info("Обычная A4 → лоток: %s", pick_bin(PRINTER_NAME, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN") or "по настройкам принтера")
-    _pp, _pb = photo_target()
-    log.info("Фото → принтер «%s», лоток: %s", _pp, _pb or "по настройкам принтера")
+    ensure_photo_printer()
+    _pp, _pb, _ = photo_target()
+    log.info("Фото 10×15 → принтер «%s», лоток: %s", _pp, _pb or "по настройкам принтера")
+    if _pp == PRINTER_NAME:
+        log.warning("⚠ Отдельного фото-принтера нет — фото пойдут с настройками обычной бумаги A4. "
+                    "Создайте «%s» (инструкция в начале print_worker.py).", PHOTO_PRINTER_DEFAULT_NAME)
+    else:
+        _paper = photo_paper_name(_pp)
+        if is_10x15(_paper):
+            log.info("Фото-принтер: бумага по умолчанию «%s» ✓", _paper)
+        else:
+            log.warning("⚠ У «%s» по умолчанию бумага «%s», а нужна 10×15 — поправьте в «Настройке печати»",
+                        _pp, _paper or "?")
+    _a5 = photo_printer(a5=True)
+    log.info("Фото 15×21 → %s", f"принтер «{_a5}»" if _a5 else f"«{_pp}» с бумагой A5")
     log.info("Ключ терминала: %s", "задан" if WORKER_KEY else "не задан")
     c = printer_is_color()
     log.info("Цветной принтер: %s", {True: "да", False: "НЕТ — цветная печать на этом терминале скрыта", None: "не удалось узнать"}[c])
