@@ -345,6 +345,26 @@
   @keyframes howpulse{50%{transform:scale(1.09);opacity:.45}}
   .howbtn i:after{content:"";border-left:2.2vw solid var(--gold);border-top:1.35vw solid transparent;border-bottom:1.35vw solid transparent;margin-left:.6vw}
   .howbtn.on{display:flex}
+  .askbtn{display:flex;align-items:center;gap:.9vw;background:var(--paper);border:0;border-radius:2vw;padding:1.1vh 1.6vw 1.1vh 1vh;
+    box-shadow:0 .2vh 0 #D3DAE3,0 1vh 2.4vh rgba(20,40,61,.10);font:inherit;color:var(--text-dim);text-align:left;cursor:pointer}
+  .askbtn .qm{width:4.4vh;height:4.4vh;border-radius:50%;background:var(--gold);color:#fff;display:grid;place-items:center;font-size:2.6vh;font-weight:800;flex:none}
+  .askbtn b{display:block;color:var(--navy);font-size:1.25vw}
+  .askbtn span:last-child{font-weight:600;font-size:.85vw;line-height:1.35}
+  .count{white-space:nowrap;order:1} .count b{font-size:1.5vw} .foot .news{order:2;margin-right:20vw} .foot .franchise{order:3}
+  .helpov{position:fixed;inset:0;z-index:55;background:rgba(9,20,36,.82);display:none;align-items:center;justify-content:center}
+  .helpov.on{display:flex}
+  .helpbox{background:#fff;border-radius:1.6vw;padding:5vh 4vw;text-align:center;color:#14283D;max-width:80vw}
+  .helpbox h2{font-size:3vw;margin:0 0 1vh}
+  .helpbox p{font-size:1.3vw;color:#55657D;margin:0 0 4vh}
+  .helpqrs{display:flex;gap:3vw;justify-content:center;margin-bottom:4vh}
+  .hq{display:flex;flex-direction:column;align-items:center;gap:1vh}
+  .hq .q{width:14vw;height:14vw;padding:.8vw;border-radius:1vw;background:#fff;box-shadow:0 0 0 2px #E3E8EF}
+  .hq .q canvas,.hq .q img{width:100%!important;height:100%!important}
+  .hq b{font-size:1.5vw;display:flex;align-items:center;gap:.6vw}
+  .hq b i{width:1.3vw;height:1.3vw;border-radius:.35vw;display:inline-block}
+  .hq span{font-size:1.1vw;color:#55657D;font-weight:600}
+  .helptel{font-size:1.3vw;color:#55657D;margin-bottom:3vh}
+  .helptel b{color:#14283D}
   .vidov{position:fixed;inset:0;z-index:50;background:#091424;display:none;align-items:center;justify-content:center;gap:4vw;padding:5vh 5vw}
   .vidov.on{display:flex}
   .vidon .view{visibility:hidden}   /* пока идёт видео, экран под ним не рисуется — видео не тормозит */
@@ -468,9 +488,9 @@
   </div>
 
   <footer class="foot">
-    <div class="help">Техподдержка <b>0773 731 212</b></div>
+    <button class="help askbtn" onclick="openHelp()"><span class="qm">?</span><span><b>Есть вопросы?</b>Нажми — Telegram, Instagram, WhatsApp</span></button>
     <div class="news"><span class="js-news"></span></div>
-    <div class="count">Сегодня напечатано <b class="js-sheets">0</b> листов</div>
+    <div class="count js-count">Уже напечатано <b class="js-total">…</b> листов</div>
     <div class="franchise"><span><b>Терминал в ваш вуз</b>наведи камеру —<br>условия партнёрства</span><div class="q" id="qrPartner"></div></div>
   </footer>
 </section>
@@ -506,6 +526,21 @@
     <div class="tray"><div class="sheet" id="docSheet"><div class="ink" id="docInk"></div></div></div>
   </div>
 </section>
+
+<!-- ═══════════ ЕСТЬ ВОПРОСЫ ═══════════ -->
+<div class="helpov" id="helpOv" onclick="if(event.target === this) closeHelp()">
+  <div class="helpbox">
+    <h2>Есть вопросы? Напиши нам</h2>
+    <p>Наведи камеру телефона на код — ответим быстро</p>
+    <div class="helpqrs">
+      <div class="hq"><div class="q" id="qrTg"></div><b><i style="background:#2AABEE"></i>Telegram</b><span>@PrintKGMA_bot</span></div>
+      <div class="hq"><div class="q" id="qrIg"></div><b><i style="background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF)"></i>Instagram</b><span>akbarak_kg</span></div>
+      <div class="hq"><div class="q" id="qrWa"></div><b><i style="background:#25D366"></i>WhatsApp</b><span>0773 731 212</span></div>
+    </div>
+    <div class="helptel">Техподдержка: <b>0773 731 212</b></div>
+    <button class="btn main" onclick="closeHelp()">Закрыть</button>
+  </div>
+</div>
 
 <!-- ═══════════ ВИДЕО-ИНСТРУКЦИИ ═══════════ -->
 <div class="vidov" id="vidOv">
@@ -579,6 +614,20 @@ function playVid(i){
   el.muted = false; el.src = v.src; el.currentTime = 0;
   el.play().catch(() => { el.muted = true; el.play().catch(() => {}); });
 }
+const HELP_LINKS = {qrTg: "https://t.me/PrintKGMA_bot", qrIg: "https://instagram.com/akbarak_kg",
+                    qrWa: "https://wa.me/996773731212"};
+let helpTimer = null;
+function openHelp(){
+  disarmIdle();
+  $('helpOv').classList.add('on');
+  for(const id in HELP_LINKS) if(!$(id).firstChild) qr($(id), HELP_LINKS[id], 400);
+  clearTimeout(helpTimer); helpTimer = setTimeout(closeHelp, 60000);
+}
+function closeHelp(){
+  clearTimeout(helpTimer);
+  $('helpOv').classList.remove('on');
+  if(view === 'home') armIdle();
+}
 function closeVid(){
   const el = $('vidPlayer'); el.pause(); el.removeAttribute('src'); el.load();
   $('vidOv').classList.remove('on'); document.body.classList.remove('vidon'); vidCur = -1;
@@ -646,19 +695,21 @@ clock(); setInterval(clock, 10000);
 document.querySelectorAll('.js-news').forEach(e => e.innerHTML = NEWS.map(n => '<i>' + n + '</i>').join('<b>✦</b>'));
 
 /* ─────────── Состояние принтера ─────────── */
-let sheetsToday = 0;
+let sheetsToday = 0, sheetsTotal = 0;
 async function refreshInfo(){
   let cls = 'chip', txt = 'Принтер готов';
   try{
     const r = await fetch(SERVER + '/terminal_info/' + encodeURIComponent(TERMINAL), {cache: 'no-store'});
     const d = await r.json();
     sheetsToday = d.sheets_today || 0;
+    sheetsTotal = d.sheets_total || 0;
     if(!d.online){ cls = 'chip bad'; txt = 'Терминал временно не работает'; }
     else if(!d.printer_ok){ cls = 'chip warn'; txt = 'Принтер: ' + String(d.printer).replace(/^задание ждёт:\s*/, ''); }
   }catch(e){ cls = 'chip bad'; txt = 'Нет связи с интернетом'; }
   document.querySelectorAll('.js-chip').forEach(e => e.className = cls + ' js-chip');
   document.querySelectorAll('.js-chiptxt').forEach(e => e.textContent = txt);
-  document.querySelectorAll('.js-sheets').forEach(e => e.textContent = sheetsToday);
+  document.querySelectorAll('.js-total').forEach(e => e.textContent = sheetsTotal.toLocaleString('ru-RU'));
+  document.querySelectorAll('.js-count').forEach(e => e.style.visibility = sheetsTotal ? '' : 'hidden');
 }
 refreshInfo(); setInterval(refreshInfo, 20000);
 
@@ -1440,9 +1491,9 @@ function docs(){
             '<div class="ad-call" style="--i:5">Заказ: ' + esc(ADS.phone || '') + '</div>'}));
     D.splice(1, 0, ...ads);
   }
-  if(sheetsToday > 0) D.push({h: "Нами уже пользуются", p: "Столько листов студенты напечатали здесь сегодня.",
-    html: '<div class="doc-h" style="--i:0">Сегодня напечатано</div>' + lines(3, 1, [100, 80, 90]) +
-          '<div class="big-n" style="--i:4">' + sheetsToday + '</div><div class="doc-sub" style="--i:5">листов в этом терминале</div>'});
+  if(sheetsTotal > 0) D.push({h: "Нами уже пользуются", p: "Столько листов студенты напечатали в терминалах АкБарак.",
+    html: '<div class="doc-h" style="--i:0">Уже напечатано</div>' + lines(3, 1, [100, 80, 90]) +
+          '<div class="big-n" style="--i:4">' + sheetsTotal.toLocaleString('ru-RU') + '</div><div class="doc-sub" style="--i:5">листов в терминалах АкБарак</div>'});
   return D;
 }
 

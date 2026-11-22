@@ -1212,13 +1212,17 @@ def terminal_info(terminal_id):
             "SELECT COALESCE(SUM(pages * copies), 0) AS sheets, COUNT(*) AS orders FROM orders "
             "WHERE terminal_id=? AND status IN ('printed','done','scan_ready') AND created_at >= ?",
             (terminal_id[:40], day_start)).fetchone()
+        total = conn.execute(
+            "SELECT COALESCE(SUM(pages * copies), 0) AS sheets FROM orders "
+            "WHERE status IN ('printed','done','scan_ready')").fetchone()
     finally:
         conn.close()
     online = bool(term and term["last_seen"] and term["last_seen"] >= ago(minutes=2))
     printer = (term["printer_status"] if term else None) or "ok"
     return jsonify({"online": online, "printer_ok": online and printer == "ok",
                     "printer": printer if online else "терминал не на связи",
-                    "sheets_today": row["sheets"], "orders_today": row["orders"]})
+                    "sheets_today": row["sheets"], "orders_today": row["orders"],
+                    "sheets_total": total["sheets"] + int(os.getenv("SHEETS_BEFORE_SITE", "0"))})
 
 
 # ─────────────────────── Расходники: бумага, чернила/тонер ───────────────────────
