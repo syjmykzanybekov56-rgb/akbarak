@@ -801,8 +801,12 @@ def _add_draft(chat_id, path, file_name, pages, color, wait, lang):
     multi = len(before) >= 1
     m = None
     if not multi and use_widget(chat_id):            # интерактивная карточка (HTML-виджет), пока для владельца
+        LAST_ERROR["text"] = ""
         m = tg("sendWidget", chat_id=chat_id, html=tg_widget.html(lang), caption=f"🧾 {d['file_name']}"[:200],
-               chat_data=widget_state(d, lang))
+               chat_data=widget_state(d, lang), allow_queries=True)
+        if not m and is_owner(chat_id):              # тест у владельца — сразу показываем, что ответил Telegram
+            send(chat_id, "⚠️ Виджет не отправился: <code>" + esc(LAST_ERROR["text"] or "нет ответа") +
+                 "</code>\nПоказываю обычный чек.")
         if m:
             conn = H["db"]()
             conn.execute("UPDATE tg_drafts SET widget=1 WHERE id=?", (d["id"],))
