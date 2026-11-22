@@ -77,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v31 фото на документы: поиск лица и обрезка по стандарту"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v32 фото: контраст и насыщенность для печати"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -445,6 +445,11 @@ def prepare_photo(src, kind, oid):
         img = img.rotate(90, expand=True)
     px = lambda v: round(v / 25.4 * 300)
     img = ImageOps.fit(img, (px(w_mm), px(h_mm)), Image.LANCZOS, centering=(0.5, 0.45))
+    try:
+        from photo_sheet import print_boost
+        img = print_boost(img)
+    except Exception as e:
+        log.warning("Не удалось усилить цвета фото: %s", e)
     img.save(out, "JPEG", quality=95, dpi=(300, 300))
     return out
 

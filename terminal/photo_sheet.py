@@ -10,7 +10,9 @@
 
 from datetime import datetime
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+import os
+
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 DPI = 300
 SHEET_MM = (152, 102)              # 10×15 (точнее 4×6″) — лист в горизонтальной ориентации
@@ -90,6 +92,24 @@ def _font(px, bold=False):
 HEAD = {(35, 45): (0.75, 0.07), (30, 40): (0.70, 0.08), (25, 35): (0.68, 0.08), (50, 50): (0.60, 0.10)}
 
 
+def print_boost(img):
+    """Струйная печать на глянце выходит бледнее, чем фото на экране телефона: поднимаем
+    контраст и насыщенность и чуть затемняем полутона. Сила — AKBARAK_PHOTO_BOOST (0 — выкл., 1 — обычно)."""
+    try:
+        k = float(os.getenv("AKBARAK_PHOTO_BOOST", "1"))
+    except ValueError:
+        k = 1.0
+    if k <= 0:
+        return img
+    img = ImageOps.autocontrast(img, cutoff=0.4)
+    img = ImageEnhance.Contrast(img).enhance(1 + 0.14 * k)
+    img = ImageEnhance.Color(img).enhance(1 + 0.18 * k)
+    g = 1 + 0.10 * k                                     # гамма > 1 — полутона плотнее, белый фон остаётся белым
+    lut = [round(255 * (i / 255) ** g) for i in range(256)]
+    img = img.point(lut * 3)
+    return img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
+
+
 def find_face(img):
     """Самое крупное лицо на фото: (x, y, w, h) или None. Нужен opencv-python-headless."""
     try:
@@ -152,8 +172,7 @@ def crop_to(img, w_mm, h_mm, focus=(0.5, 0.42)):
         y = min(max(round(focus[1] * h - nh / 2), 0), h - nh)
         img = img.crop((0, y, w, y + nh))
     img = img.resize((mm(w_mm), mm(h_mm)), Image.LANCZOS)
-    img = ImageOps.autocontrast(img, cutoff=0.5)                     # чуть живее цвета, как в фотосалоне
-    return img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
+    return print_boost(img)
 
 
 def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=INSTAGRAM_URL, focus=(0.5, 0.42),
