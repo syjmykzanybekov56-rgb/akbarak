@@ -291,6 +291,27 @@
   .prow b{font-family:var(--disp);font-size:3vw;letter-spacing:-.03em}
   .prow b small{font-family:var(--body);font-size:1.1vw;color:#6B7C95;letter-spacing:0;margin-left:.4vw}
   .notice-body{font-weight:700;font-size:1.45vw;line-height:1.55;color:#33445E}
+  /* ── заставка: шутки, крупные цены, живые листы ── */
+  .ink.promo{inset:0;padding:9% 9% 8%;background:#E9B949;color:#14283D;justify-content:center;text-align:center}
+  .ink.promo .pk{font-family:var(--disp);font-weight:800;color:#14283D;font-size:11vw;line-height:.95;letter-spacing:-.05em}
+  .ink.promo .pk small{font-size:3.2vw;letter-spacing:0;margin-left:.4vw}
+  .ink.promo .pu{font-family:var(--disp);font-weight:700;font-size:2.1vw;margin-top:1.4vh}
+  .ink.promo .pn{font-size:1.15vw;color:#4A3A12;font-weight:600;margin-top:3vh;line-height:1.5}
+  .ink.promo .sp{width:60%;height:.35vh;background:#14283D;margin:3vh auto;border-radius:1vh}
+  .ink.joke{justify-content:center;text-align:center}
+  .ink.joke .j1{font-family:var(--disp);font-weight:800;font-size:3.4vw;line-height:1.08;letter-spacing:-.03em;color:var(--navy)}
+  .ink.joke .j2{font-family:var(--disp);font-weight:800;font-size:5.2vw;color:var(--gold-d);margin-top:3vh;letter-spacing:-.04em;
+    transform:rotate(-4deg);display:inline-block}
+  .ink.joke .j3{font-size:1.15vw;color:var(--text-dim);font-weight:700;margin-top:3vh}
+  .ink.joke s{text-decoration-thickness:.5vh;text-decoration-color:#D9534F}
+  .phgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8vw;margin:3vh 0 2vh}
+  .phgrid i{aspect-ratio:3/4;border-radius:.3vw;background:#E9EEF5;position:relative;overflow:hidden;border:1px dashed #B8C2CF}
+  .phgrid i::before{content:"";position:absolute;left:30%;top:20%;width:40%;aspect-ratio:1;border-radius:50%;background:#9AA7B8}
+  .phgrid i::after{content:"";position:absolute;left:15%;top:58%;width:70%;height:60%;border-radius:45% 45% 0 0;background:#9AA7B8}
+  .call .q{position:relative}
+  .call .q::after{content:"";position:absolute;inset:-.8vh;border-radius:.9vw;border:.35vh solid var(--gold);animation:qpulse 2s ease-out infinite}
+  @keyframes qpulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}
+  @media (prefers-reduced-motion: reduce){.call .q::after{animation:none}}
   .big-n{font-family:var(--disp);font-weight:800;font-size:10vw;letter-spacing:-.05em;line-height:1;color:var(--navy);margin:auto 0 1vh}
   .scanbox{position:relative;flex:1;margin-top:1vh;border-radius:.4vw;background:var(--paper-shade);overflow:hidden}
   .scanbox .beam{position:absolute;left:0;right:0;height:1.2vh;background:linear-gradient(180deg,transparent,rgba(224,180,76,.95),transparent);
@@ -625,7 +646,7 @@ const NEWS = [
 ];
 // Объявления академии. Позже будут приходить из админки.
 const NOTICES = [
-  {title: "Объявление деканата", text: "Здесь будут объявления деканата и студсовета: изменения в расписании, сроки сессии, мероприятия и конференции."},
+  // {title: "Объявление деканата", text: "Текст объявления"},   ← впишите, и лист «Новости академии» появится в заставке
 ];
 
 // Что сейчас умеет терминал (сервер /config): цветная копия — только с цветным принтером
@@ -1528,6 +1549,29 @@ qr($('qrAttract'), orderUrl(), 256);
 const lines = (n, from = 0, widths = [100, 94, 98, 88, 96, 72]) =>
   Array.from({length: n}, (_, k) => '<div class="ln" style="--i:' + (from + k) + ';width:' + widths[k % widths.length] + '%"></div>').join('');
 
+/* Шутки и крупные цены для заставки — перемешиваются с обычными листами */
+function jokes(){
+  const P = CFG.prices || {}, pp = P.print_bw || 5;
+  return [
+    {h: "Отработка в 8:00, а дома нет принтера?", p: "Распечатай здесь — по дороге на пару, за минуту.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Без паники.</div><div style="--i:1"><span class="j2">бар ак!</span></div><div class="j3" style="--i:2">белый лист всегда есть</div>'},
+    {h: "Методичку скинули в чат в 23:59", p: "А терминал работает, пока ты спишь. И в выходные тоже.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">24/7</div><div class="sp" style="--i:1"></div><div class="pu" style="--i:2">без выходных и обеда</div>'},
+    {h: "«Принесите в печатном виде»", p: "Самая частая фраза преподавателя. Мы готовы.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">' + pp + '<small>сом</small></div><div class="pu" style="--i:1">за страницу</div><div class="sp" style="--i:2"></div>' +
+           '<div class="pn" style="--i:3">Сумма видна до оплаты.<br>МБанк, О!Деньги и другие банки</div>'},
+    {h: "Флешка осталась дома?", p: "Она больше не нужна: отправь файл с телефона по QR или в Telegram.", cls: 'joke',
+     html: '<div class="j1" style="--i:0"><s>Флешка</s></div><div class="j1" style="--i:1;margin-top:2vh">Телефон ✓</div><div class="j3" style="--i:2">QR или @PrintKGMA_bot</div>'},
+    {h: "Очередь в копицентре на перемене…", p: "…или одна минута здесь. Выбор очевиден.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">1<small>мин</small></div><div class="pu" style="--i:1">и лист у тебя в руках</div><div class="sp" style="--i:2"></div><div class="pn" style="--i:3">без очереди и без флешки</div>'},
+    {h: "Нужно фото 3×4 к завтрашнему дню?", p: "Сфоткайся на телефон у светлой стены — 6 фото на документы за 50 сом.", cls: '',
+     html: '<div class="doc-h" style="--i:0">Фото на документы</div><div class="doc-sub" style="--i:1">3×4 · 3.5×4.5 · 2.5×3.5 · 5×5</div>' +
+           '<div class="phgrid" style="--i:2">' + '<i></i>'.repeat(6) + '</div>' +
+           '<div class="stamp" style="--i:3"><svg><use href="#tunduk"/></svg>6 фото<br>за 50 сом</div>'},
+    {h: "История болезни на 20 страниц?", p: "Печать с двух сторон — в два раза меньше бумаги в сумке.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">2<small>стороны</small></div><div class="pu" style="--i:1">одного листа</div><div class="sp" style="--i:2"></div><div class="pn" style="--i:3">и брошюры — сложил пополам и готово</div>'},
+  ];
+}
 function docs(){
   const D = [];
   D.push({h: "Реферат на 12 страниц — за минуту", p: "Загрузил с телефона, оплатил, забрал. Без очереди в копицентре.",
@@ -1560,11 +1604,27 @@ function docs(){
   }
   if(sheetsTotal > 0) D.push({h: "Нами уже пользуются", p: "Столько листов студенты напечатали в терминалах АкБарак.",
     html: '<div class="doc-h" style="--i:0">Уже напечатано</div>' + lines(3, 1, [100, 80, 90]) +
-          '<div class="big-n" style="--i:4">' + sheetsTotal.toLocaleString('ru-RU') + '</div><div class="doc-sub" style="--i:5">листов в терминалах АкБарак</div>'});
-  return D;
+          '<div class="big-n" style="--i:4" data-count="' + sheetsTotal + '">0</div><div class="doc-sub" style="--i:5">листов в терминалах АкБарак</div>'});
+  // Перемешиваем: шутка/цена → обычный лист → …, чтобы заставка не была однообразной
+  const J = jokes(), out = [];
+  for(let i = 0; i < Math.max(D.length, J.length); i++){
+    if(J[i]) out.push(J[i]);
+    if(D[i]) out.push(D[i]);
+  }
+  return out;
 }
 
 let docIdx = 0, docTimer = null, attractOn = false;
+/* Число «Уже напечатано» набегает от нуля — так его замечают издалека */
+function countUp(el){
+  if(!el) return;
+  const to = +el.dataset.count || 0, t0 = performance.now() + 1300, dur = 1800;
+  (function step(t){
+    const k = Math.max(0, Math.min(1, (t - t0) / dur)), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(to * e).toLocaleString('ru-RU');
+    if(k < 1 && el.isConnected) requestAnimationFrame(step);
+  })(performance.now());
+}
 function printDoc(){
   // каждый второй лист заставки — видео-инструкция (без звука), если видео есть
   if(VIDEOS.length && docIdx % 2 === 1 && Date.now() > vidBrokenUntil) return attractVideo();
@@ -1577,6 +1637,7 @@ function printDoc(){
     $('sayH').textContent = d.h; $('sayP').textContent = d.p;
     $('sayH').classList.remove('fade'); $('sayP').classList.remove('fade');
     feed(sheet);
+    countUp($('docInk').querySelector('[data-count]'));
     docIdx++;
   }, attractOn && docIdx ? 900 : 0);
 }
