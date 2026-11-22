@@ -1846,6 +1846,7 @@ tgbot.register(app, {
     "txt_page_count": txt_page_count, "gopay": PAY, "gopay_fallback": gopay, "sync_payment": sync_payment, "PRICES": PRICES, "SIDES": SIDES,
     "COLOR_ENABLED": COLOR_ENABLED, "DUPLEX_ENABLED": DUPLEX_ENABLED, "DEFAULT_TERMINAL": DEFAULT_TERMINAL,
     "MAX_PAGES": MAX_PAGES, "SITE_URL": SITE_URL, "STATUS_RU": STATUS_RU, "admin_ok": _admin_key_ok, "color_ok": color_ok,
+    "photo_price": photo_price,
 })
 
 

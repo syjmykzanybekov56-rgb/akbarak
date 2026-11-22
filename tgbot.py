@@ -241,6 +241,16 @@ TX = {
     "price_color": ("🎨 Печать цвет — <b>{c} сом</b>/стр\n", "🎨 Түстүү басуу — <b>{c} сом</b>/бет\n",
                     "🎨 Colour print — <b>{c} som</b>/page\n"),
     "receipt": ("ЧЕК", "ЧЕК", "RECEIPT"),
+    "ph_as": ("Как печатать картинку?", "Сүрөттү кантип басуу керек?", "How to print the picture?"),
+    "ph_doc": ("📄 Документ A4", "📄 Документ A4", "📄 A4 document"),
+    "ph_10x15": ("🖼 Фото 10×15", "🖼 Сүрөт 10×15", "🖼 Photo 10×15"),
+    "ph_passport": ("🪪 Фото на документы", "🪪 Документке сүрөт", "🪪 ID photo"),
+    "ph_line_10x15": ("🖼 Фото 10×15 · глянцевая бумага", "🖼 Сүрөт 10×15 · жылтырак кагаз", "🖼 Photo 10×15 · glossy paper"),
+    "ph_line_passport": ("🪪 Фото на документы 3.5×4.5 · 6 шт на листе", "🪪 Документке сүрөт 3.5×4.5 · баракта 6 даана",
+                         "🪪 ID photo 3.5×4.5 · 6 per sheet"),
+    "ph_hint": ("<i>Лицо по центру, светлый фон — обрежем сами.</i>", "<i>Жүз ортодо, ачык фон — өзүбүз кесебиз.</i>",
+                "<i>Face centred, light background — we crop it.</i>"),
+    "sheets_x": ("{p} × {c} лист.", "{p} × {c} барак", "{p} × {c} sheets"),
     "pages_x": ("{p} стр × {c} коп.", "{p} бет × {c} нуска", "{p} pages × {c} copies"),
     "st_paid": ("Оплата", "Төлөм", "Paid"), "st_print": ("Печать", "Басуу", "Printing"),
     "st_done": ("Готово", "Даяр", "Done"),
@@ -466,8 +476,28 @@ def hello(lang):
     return T("hello", lang, prices=price_line(lang))
 
 
+PHOTO_FORMATS = {"10x15": "Фото 10×15 см", "passport": "Паспортное 3.5×4.5 см"}
+
+
+def is_image(d):
+    return (d.get("file_path") or "").lower().endswith((".jpg", ".jpeg", ".png"))
+
+
+def photo_fmt(d):
+    return PHOTO_FORMATS.get(d.get("photo") or "")
+
+
 def draft_text(d, lang):
     line = "┄" * 18
+    if photo_fmt(d):
+        return (f"🧾 <b>{T('receipt', lang)} · АкБарак</b>\n{line}\n"
+                f"📄 <b>{esc(d['file_name'])}</b>\n\n"
+                f"{T('ph_line_' + d['photo'], lang)}\n"
+                f"🔁 {T('copies', lang)}: <b>{d['copies']}</b>\n"
+                f"📍 {T('terminal', lang)}: <b>{esc(d['terminal'])}</b>\n"
+                f"{line}\n"
+                f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>\n"
+                f"{T('ph_hint', lang) if d['photo'] == 'passport' else ''}")
     mode = T("color" if d["color"] else "bw", lang) + " · " + T(d["sides"], lang)
     if d.get("page_range"):
         pages_line = T("range_line", lang, r=esc(d["page_range"]), p=d["pages"], n=d.get("real_pages") or d["pages"])
@@ -485,6 +515,8 @@ def draft_text(d, lang):
 
 
 def draft_total(d):
+    if photo_fmt(d):
+        return (H["photo_price"](photo_fmt(d)) or 0) * d["copies"]
     return H["order_total"]("print", "color" if d["color"] else "bw", d["sides"], d["pages"], d["copies"])
 
 
@@ -492,12 +524,18 @@ def draft_kb(d, lang, multi=False):
     """multi=True — файлов несколько: оплата одна, в корзине внизу."""
     i = d["id"]
     kb = []
-    if H["color_ok"](d["terminal"]):
+    if is_image(d) and H["color_ok"](d["terminal"]):
+        cur = d.get("photo") or ""
+        kb.append([btn(("✅ " if not cur else "") + T("ph_doc", lang), f"d:{i}:ph_")])
+        kb.append([btn(("✅ " if cur == k else "") + T("ph_" + k, lang) +
+                       f" · {H['photo_price'](PHOTO_FORMATS[k])} {T('som', lang)}", f"d:{i}:ph_{k}")
+                   for k in ("10x15", "passport")])
+    if H["color_ok"](d["terminal"]) and not photo_fmt(d):
         kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw"),
                    btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color")])
     kb.append([btn("−", f"d:{i}:minus"), btn(f"🔁 {d['copies']}", f"d:{i}:noop"), btn("+", f"d:{i}:plus")])
     real = d.get("real_pages") or d["pages"]
-    if real > 1:
+    if real > 1 and not photo_fmt(d):
         label = T("range_btn", lang, r=d["page_range"]) if d.get("page_range") else T("range_btn_all", lang)
         row = [btn(label, f"d:{i}:range")]
         if d.get("page_range"):
@@ -540,9 +578,9 @@ def get_draft(draft_id, chat_id):
 def save_draft(d):
     conn = H["db"]()
     conn.execute("UPDATE tg_drafts SET copies=?, color=?, sides=?, terminal=?, msg_id=?, order_id=?, pages=?, "
-                 "page_range=? WHERE id=?",
+                 "page_range=?, photo=? WHERE id=?",
                  (d["copies"], d["color"], d["sides"], d["terminal"], d.get("msg_id"), d.get("order_id"), d["pages"],
-                  d.get("page_range"), d["id"]))
+                  d.get("page_range"), d.get("photo"), d["id"]))
     conn.commit()
     conn.close()
 
@@ -599,6 +637,10 @@ def cart_text(ds, lang):
     line = "┄" * 18
     rows = []
     for n, d in enumerate(ds, 1):
+        if photo_fmt(d):
+            rows.append(f"{n}. {T('ph_' + d['photo'], lang)} — <b>{esc(d['file_name'])}</b>\n"
+                        f"     × {d['copies']} — <b>{draft_total(d)} {T('som', lang)}</b>")
+            continue
         mode = T("color" if d["color"] else "bw", lang)
         if d["sides"] != "single":
             mode += " · " + T(d["sides"], lang)
@@ -823,6 +865,12 @@ def on_callback(cq):
         with chat_lock(chat_id):
             refresh_cart(chat_id, lang)
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
+    elif action.startswith("ph_") and is_image(d):
+        k = action[3:]
+        if k in PHOTO_FORMATS and H["color_ok"](d["terminal"]):
+            d["photo"], d["color"], d["sides"] = k, 1, "single"
+        else:
+            d["photo"] = None
     elif action == "noop":
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     elif action == "range":
@@ -858,11 +906,11 @@ def print_free(chat_id, ds, lang="ru"):
     for d in ds:
         cur = conn.execute(
             "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
-            "paid_at, group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "paid_at, group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range, photo_format) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (d["file_name"], d["file_path"], "color" if d["color"] and H["color_ok"](d["terminal"]) else "bw",
-             d["pages"], d["copies"], 0, "free", "new", H["now"](), H["now"](), group_id, d["terminal"], "print",
-             token, d["sides"], str(chat_id), d.get("page_range")))
+             d["pages"], d["copies"], 0, "free", "new", H["now"](), H["now"](), group_id, d["terminal"],
+             "photo" if photo_fmt(d) else "print", token, d["sides"], str(chat_id), d.get("page_range"), photo_fmt(d)))
         ids.append(cur.lastrowid)
         conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (cur.lastrowid, d["id"]))
     conn.commit()
@@ -885,11 +933,11 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
     conn = H["db"]()
     cur = conn.execute(
         "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
-        "group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range, photo_format) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (d["file_name"], d["file_path"], "color" if d["color"] else "bw", d["pages"], d["copies"], total, "gopay",
-         "pending_payment", H["now"](), uuid.uuid4().hex, d["terminal"], "print", token, d["sides"], str(chat_id),
-         d.get("page_range")))
+         "pending_payment", H["now"](), uuid.uuid4().hex, d["terminal"], "photo" if photo_fmt(d) else "print",
+         token, d["sides"], str(chat_id), d.get("page_range"), photo_fmt(d)))
     order_id = cur.lastrowid
     conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (order_id, d["id"]))
     conn.commit()
@@ -945,11 +993,11 @@ def pay_all(cq, chat_id, msg_id, lang="ru"):
         total += t
         cur = conn.execute(
             "INSERT INTO orders (file_name, file_path, print_type, pages, copies, total, payment, status, created_at, "
-            "group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "group_id, terminal_id, order_type, access_token, sides, tg_chat_id, page_range, photo_format) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (d["file_name"], d["file_path"], "color" if d["color"] else "bw", d["pages"], d["copies"], t, "gopay",
-             "pending_payment", H["now"](), group_id, d["terminal"], "print", token, d["sides"], str(chat_id),
-             d.get("page_range")))
+             "pending_payment", H["now"](), group_id, d["terminal"], "photo" if photo_fmt(d) else "print",
+             token, d["sides"], str(chat_id), d.get("page_range"), photo_fmt(d)))
         ids.append(cur.lastrowid)
         conn.execute("UPDATE tg_drafts SET order_id=? WHERE id=?", (cur.lastrowid, d["id"]))
     conn.commit()
@@ -1147,7 +1195,7 @@ def register(app, helpers):
     conn.execute("CREATE TABLE IF NOT EXISTS tg_carts (chat_id TEXT PRIMARY KEY, msg_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_wait (chat_id TEXT PRIMARY KEY, draft_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_owners (chat_id TEXT PRIMARY KEY)")
-    for col in ("page_range TEXT", "real_pages INTEGER"):
+    for col in ("page_range TEXT", "real_pages INTEGER", "photo TEXT"):
         try:
             conn.execute(f"ALTER TABLE tg_drafts ADD COLUMN {col}")
         except Exception:
