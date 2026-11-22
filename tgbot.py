@@ -53,12 +53,31 @@ LAST_ERROR = {"text": ""}
 
 # ─────────────────────── Telegram API ───────────────────────
 
+def _strip_new(data):
+    """Убирает из клавиатуры поля style/disabled. True — если было что убрать."""
+    changed = False
+    for row in (data.get("reply_markup") or {}).get("inline_keyboard") or []:
+        for b in row:
+            if b.pop("style", None):
+                changed = True
+            if "disabled" in b:
+                b.pop("disabled")
+                b.setdefault("callback_data", "noop:0:noop")
+                changed = True
+    return changed
+
+
 def tg(method, **data):
     if not TOKEN:
         return None
     try:
         r = requests.post(f"{API}/{method}", json=data, timeout=20)
         j = r.json()
+        if not j.get("ok") and "reply_markup" in data and _strip_new(data):
+            # Новые поля кнопок (цвет, неактивная) не приняли — повторяем с обычными кнопками
+            log.warning("TG %s: %s — повторяю без цветных кнопок", method, j.get("description"))
+            r = requests.post(f"{API}/{method}", json=data, timeout=20)
+            j = r.json()
         if not j.get("ok"):
             log.warning("TG %s: %s", method, j.get("description"))
             LAST_ERROR["text"] = f"{method}: {j.get('description')}"
@@ -144,9 +163,15 @@ def send_photos(chat_id, images, caption=None, kb=None):
         return None
 
 
-def btn(text, data=None, url=None, web_app=None):
+def btn(text, data=None, url=None, web_app=None, style=None, off=False):
+    """style: "success" — зелёная, "danger" — красная, "primary" — синяя (выбранный вариант).
+    off=True — неактивная кнопка (серая, ничего не делает): счётчик, подсказка, «−» при 1 копии."""
     b = {"text": text}
-    if web_app:
+    if style in ("success", "danger", "primary"):
+        b["style"] = style
+    if off:
+        b["disabled"] = {}
+    elif web_app:
         b["web_app"] = {"url": web_app}
     elif url:
         b["url"] = url
@@ -539,16 +564,21 @@ def draft_kb(d, lang, multi=False):
     kb = []
     if is_image(d) and H["color_ok"](d["terminal"]):
         cur = d.get("photo") or ""
-        kb.append([btn(("✅ " if not cur else "") + T("ph_doc", lang), f"d:{i}:ph_")])
+        kb.append([btn(("✅ " if not cur else "") + T("ph_doc", lang), f"d:{i}:ph_", style="primary" if not cur else None)])
         kb.append([btn(("✅ " if cur == "10x15" else "") + T("ph_10x15", lang) +
-                       f" · {H['photo_price'](PHOTO_FORMATS['10x15'])} {T('som', lang)}", f"d:{i}:ph_10x15")])
+                       f" · {H['photo_price'](PHOTO_FORMATS['10x15'])} {T('som', lang)}", f"d:{i}:ph_10x15",
+                       style="primary" if cur == "10x15" else None)])
         kb.append([btn(T("ph_passport", lang) + f" · {H['photo_price'](PHOTO_FORMATS['passport'])} "
-                       f"{T('som', lang)} ↓", f"d:{i}:noop")])
-        kb.append([btn(("✅ " if cur == k else "") + DOC_LABEL[k][0], f"d:{i}:ph_{k}") for k in DOC_KEYS])
+                       f"{T('som', lang)} ↓", off=True)])
+        kb.append([btn(("✅ " if cur == k else "") + DOC_LABEL[k][0], f"d:{i}:ph_{k}",
+                       style="primary" if cur == k else None) for k in DOC_KEYS])
     if H["color_ok"](d["terminal"]) and not photo_fmt(d):
-        kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw"),
-                   btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color")])
-    kb.append([btn("−", f"d:{i}:minus"), btn(f"🔁 {d['copies']}", f"d:{i}:noop"), btn("+", f"d:{i}:plus")])
+        kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw",
+                       style="primary" if not d["color"] else None),
+                   btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color",
+                       style="primary" if d["color"] else None)])
+    kb.append([btn("−", f"d:{i}:minus", off=d["copies"] <= 1), btn(f"🔁 {d['copies']}", off=True),
+               btn("+", f"d:{i}:plus", off=d["copies"] >= 20)])
     real = d.get("real_pages") or d["pages"]
     if real > 1 and not photo_fmt(d):
         label = T("range_btn", lang, r=d["page_range"]) if d.get("page_range") else T("range_btn_all", lang)
@@ -557,19 +587,20 @@ def draft_kb(d, lang, multi=False):
             row.append(btn(T("range_all", lang), f"d:{i}:allpages"))
         kb.append(row)
     if H["DUPLEX_ENABLED"] and d["pages"] > 1:
-        kb.append([btn(("✅ " if d["sides"] == k else "") + T("s_" + k, lang), f"d:{i}:s_{k}")
+        kb.append([btn(("✅ " if d["sides"] == k else "") + T("s_" + k, lang), f"d:{i}:s_{k}",
+                       style="primary" if d["sides"] == k else None)
                    for k in ("single", "duplex", "booklet")])
     terms = terminal_ids()
     if len(terms) > 1:
         kb.append([btn(f"📍 {T('terminal', lang)}: {d['terminal']} ({T('change', lang)})", f"d:{i}:term")])
     if multi:
-        kb.append([btn(T("in_cart", lang), f"d:{i}:noop")])
-        kb.append([btn(T("remove", lang), f"d:{i}:cancel")])
+        kb.append([btn(T("in_cart", lang), off=True)])
+        kb.append([btn(T("remove", lang), f"d:{i}:cancel", style="danger")])
         return kb
-    kb.append([btn(f"💳 {T('pay', lang)} {draft_total(d)} {T('som', lang)}", f"d:{i}:pay")])
+    kb.append([btn(f"💳 {T('pay', lang)} {draft_total(d)} {T('som', lang)}", f"d:{i}:pay", style="success")])
     if is_owner(d.get("chat_id")):
-        kb.append([btn(T("free_btn", lang), f"d:{i}:free")])
-    kb.append([btn(T("cancel", lang), f"d:{i}:cancel")])
+        kb.append([btn(T("free_btn", lang), f"d:{i}:free", style="primary")])
+    kb.append([btn(T("cancel", lang), f"d:{i}:cancel", style="danger")])
     return kb
 
 
@@ -671,10 +702,10 @@ def cart_text(ds, lang):
 
 def cart_kb(ds, lang):
     total = sum(draft_total(d) for d in ds)
-    kb = [[btn(f"💳 {T('pay_all', lang)} — {total} {T('som', lang)}", "c:0:pay")]]
+    kb = [[btn(f"💳 {T('pay_all', lang)} — {total} {T('som', lang)}", "c:0:pay", style="success")]]
     if ds and is_owner(ds[0].get("chat_id")):
-        kb.append([btn(T("free_btn", lang), "c:0:free")])
-    kb.append([btn(T("clear", lang), "c:0:clear")])
+        kb.append([btn(T("free_btn", lang), "c:0:free", style="primary")])
+    kb.append([btn(T("clear", lang), "c:0:clear", style="danger")])
     return kb
 
 
@@ -787,6 +818,8 @@ def on_callback(cq):
     except ValueError:
         return tg("answerCallbackQuery", callback_query_id=cq["id"])
     lang = get_lang(chat_id, (cq.get("from") or {}).get("language_code"))
+    if action == "noop":                               # подпись / счётчик (на старых клиентах — обычная кнопка)
+        return tg("answerCallbackQuery", callback_query_id=cq["id"])
 
     if kind == "l" and action in LANGS:                # выбор языка
         set_lang(chat_id, action)
@@ -980,7 +1013,7 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
     conn.close()
     edit(chat_id, msg_id,
          draft_text(d, lang) + "\n\n" + T("pay_go", lang, id=order_id),
-         [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"])],
+         [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"], style="success")],
           [btn(T("check", lang), f"o:{order_id}:check")]])
     tg("answerCallbackQuery", callback_query_id=cq["id"])
 
@@ -1043,7 +1076,7 @@ def pay_all(cq, chat_id, msg_id, lang="ru"):
             edit(chat_id, d["msg_id"], draft_text(d, lang))
     cart_msg(chat_id, None, clear=True)
     edit(chat_id, msg_id, cart_text(ds, lang) + "\n\n" + T("pay_go", lang, id=first),
-         [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"])],
+         [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"], style="success")],
           [btn(T("check", lang), f"o:{first}:check")]])
     tg("answerCallbackQuery", callback_query_id=cq["id"])
 
