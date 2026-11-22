@@ -93,21 +93,29 @@ HEAD = {(35, 45): (0.75, 0.07), (30, 40): (0.70, 0.08), (25, 35): (0.68, 0.08), 
 
 
 def print_boost(img):
-    """Струйная печать на глянце выходит бледнее, чем фото на экране телефона: поднимаем
-    контраст и насыщенность и чуть затемняем полутона. Сила — AKBARAK_PHOTO_BOOST (0 — выкл., 1 — обычно)."""
+    """Струйная печать на глянце бледнее экрана телефона. Усиливаем только то, чего фото не хватает:
+    измеряем контраст и насыщенность и тянем их к норме обычного «хорошего» фото, не дальше.
+    Нормальное фото почти не меняется, бледное — оживает, тени не «слипаются» в чёрное.
+    Сила — AKBARAK_PHOTO_BOOST (0 — выкл., 1 — обычно)."""
+    from PIL import ImageStat
     try:
         k = float(os.getenv("AKBARAK_PHOTO_BOOST", "1"))
     except ValueError:
         k = 1.0
     if k <= 0:
         return img
-    img = ImageOps.autocontrast(img, cutoff=0.4)
-    img = ImageEnhance.Contrast(img).enhance(1 + 0.14 * k)
-    img = ImageEnhance.Color(img).enhance(1 + 0.18 * k)
-    g = 1 + 0.10 * k                                     # гамма > 1 — полутона плотнее, белый фон остаётся белым
-    lut = [round(255 * (i / 255) ** g) for i in range(256)]
-    img = img.point(lut * 3)
-    return img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
+    clamp = lambda v, lo, hi: max(lo, min(hi, v))
+    L = ImageStat.Stat(img.convert("L"))
+    std, mean = L.stddev[0], L.mean[0]
+    sat = ImageStat.Stat(img.convert("HSV").split()[1]).mean[0]
+    c = 1 + (clamp(78 / max(std, 1), 1.0, 1.35) - 1) * k
+    s = 1 + (clamp(52 / max(sat, 1), 1.0, 1.3) - 1) * k
+    img = ImageEnhance.Contrast(img).enhance(c)
+    img = ImageEnhance.Color(img).enhance(s)
+    if mean > 150:                                       # засвеченное — уплотняем полутона, белый остаётся белым
+        g = 1 + 0.08 * k
+        img = img.point([round(255 * (i / 255) ** g) for i in range(256)] * 3)
+    return img.filter(ImageFilter.UnsharpMask(radius=1.0, percent=45, threshold=3))
 
 
 def find_face(img):
