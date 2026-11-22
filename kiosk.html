@@ -303,6 +303,8 @@
   .ink.joke .j2{font-family:var(--disp);font-weight:800;font-size:5.2vw;color:var(--gold-d);margin-top:3vh;letter-spacing:-.04em;
     transform:rotate(-4deg);display:inline-block}
   .ink.joke .j3{font-size:1.15vw;color:var(--text-dim);font-weight:700;margin-top:3vh}
+  .ink.joke .j4{font-family:var(--disp);font-weight:800;font-size:3vw;line-height:1.1;color:var(--gold-d);margin-top:2.6vh;
+    letter-spacing:-.03em;transform:rotate(-3deg);display:inline-block}
   .ink.joke s{text-decoration-thickness:.5vh;text-decoration-color:#D9534F}
   .memo{background:#fff;padding:.8vw .8vw 0;box-shadow:0 .6vh 2vh rgba(14,35,64,.25);transform:rotate(-5deg);width:78%;margin:0 auto}
   .memo.m2{transform:rotate(6deg) translate(12%,0);width:60%;margin-top:-1vh}
@@ -1582,6 +1584,28 @@ function jokes(){
      html: '<div class="memo" style="--i:0"><div class="mph"><i></i><i></i><i></i></div><div class="mcap">наш курс ♥ 2026</div></div>' +
            '<div class="memo m2" style="--i:1"><div class="mph"><i></i><i></i></div><div class="mcap">после сессии</div></div>' +
            '<div class="j3" style="--i:2;margin-top:4vh">10×15 · глянец · ' + ((CFG.prices || {}).photo_10x15 || 15) + ' сом</div>'},
+    {h: "Нужно распечатать историю болезни?", p: "Сколько бы страниц там ни было.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Ну и пусть.</div><div style="--i:1"><span class="j4">Слава богу,<br>не от руки</span></div>'},
+    {h: "Пара через 5 минут, а реферат в телефоне", p: "Отправь файл по QR — лист выйдет за минуту.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">5<small>мин</small></div><div class="pu" style="--i:1">хватит с запасом</div>'},
+    {h: "Отработка, отработка, отработка…", p: "Бланк заявления на отработку уже готов в «Шаблонах».", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Хоть бланки</div><div style="--i:1"><span class="j4">у нас готовые</span></div>'},
+    {h: "Сдал всё, кроме распечатки", p: "Отправь файл — и это тоже сдано.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Это мы</div><div style="--i:1"><span class="j4">решим ✓</span></div>'},
+    {h: "Почерк врача ещё не выработался?", p: "Ничего, он придёт с опытом. А пока — печатай.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Печатай —</div><div style="--i:1"><span class="j4">потом успеешь</span></div>'},
+    {h: "Диагноз: срочно нужна распечатка", p: "Лечение простое и без рецепта.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">5<small>сом</small></div><div class="pu" style="--i:1">за страницу — весь курс лечения</div>'},
+    {h: "Анатомия: 300 страниц методички", p: "С двух сторон — 150 листов вместо 300.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">150 листов</div><div style="--i:1"><span class="j4">Сапин бы одобрил</span></div>'},
+    {h: "Пульс учащённый, сессия через неделю", p: "Дыши ровно. С распечатками поможем.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Дыши.</div><div style="--i:1"><span class="j4">методички<br>распечатаем</span></div>'},
+    {h: "Принтер в общаге один — и тот у соседа на практике", p: "А терминал АкБарак всегда на месте.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">А мы</div><div style="--i:1"><span class="j4">всегда тут</span></div>'},
+    {h: "«Кто распечатает?» — в общем чате", p: "С телефона по QR или через @PrintKGMA_bot.", cls: 'joke',
+     html: '<div class="j1" style="--i:0">Сам.</div><div style="--i:1"><span class="j4">за минуту</span></div>'},
+    {h: "Копицентр закрылся в 18:00", p: "А терминал работает и ночью, и в выходные.", cls: 'promo',
+     html: '<div class="pk" style="--i:0">24<small>/7</small></div><div class="pu" style="--i:1">а мы — нет</div>'},
     {h: "История болезни на 20 страниц?", p: "Печать с двух сторон — в два раза меньше бумаги в сумке.", cls: 'promo',
      html: '<div class="pk" style="--i:0">2<small>стороны</small></div><div class="pu" style="--i:1">одного листа</div><div class="sp" style="--i:2"></div><div class="pn" style="--i:3">и брошюры — сложил пополам и готово</div>'},
   ];
@@ -1620,11 +1644,9 @@ function docs(){
     html: '<div class="doc-h" style="--i:0">Уже напечатано</div>' + lines(3, 1, [100, 80, 90]) +
           '<div class="big-n" style="--i:4" data-count="' + sheetsTotal + '">0</div><div class="doc-sub" style="--i:5">листов в терминалах АкБарак</div>'});
   // Перемешиваем: шутка/цена → обычный лист → …, чтобы заставка не была однообразной
+  // шутка → обычный лист → шутка → … (обычные листы повторяются по кругу между шутками)
   const J = jokes(), out = [];
-  for(let i = 0; i < Math.max(D.length, J.length); i++){
-    if(J[i]) out.push(J[i]);
-    if(D[i]) out.push(D[i]);
-  }
+  J.forEach((j, i) => { out.push(j); if(D.length) out.push(D[i % D.length]); });
   return out;
 }
 
