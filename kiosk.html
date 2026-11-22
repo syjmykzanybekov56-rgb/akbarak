@@ -96,7 +96,7 @@
 
   #home .feeder{right:3.2vw;top:13vh;bottom:16vh;width:27vw}
   .qrsheet .ink{align-items:center;text-align:center;justify-content:center}
-  .qrsheet h3{font-family:var(--disp);font-weight:800;font-size:1.75vw;letter-spacing:-.02em;line-height:1.15}
+  .qrsheet h3{text-wrap:balance;font-family:var(--disp);font-weight:800;font-size:1.75vw;letter-spacing:-.02em;line-height:1.15}
   .qrsheet .q{margin:3vh 0 2.6vh;display:flex;justify-content:center;width:100%}
   /* QR всегда с белыми полями по бокам: не шире 74% листа, на любом экране ровно по центру */
   .qrsheet .q img,.qrsheet .q canvas{width:74% !important;height:auto !important;aspect-ratio:1;max-width:32vh;image-rendering:pixelated}
@@ -520,7 +520,7 @@
   <div class="feeder">
     <div class="slot"></div>
     <div class="tray"><div class="sheet qrsheet" id="homeSheet"><div class="ink">
-      <h3 style="--i:0">Сканируй<br>и печатай</h3>
+      <h3 style="--i:0">Сканируй и печатай</h3>
       <div class="q" id="qrHome" style="--i:1"></div>
       <small style="--i:2">Без регистрации и приложений.<br>Оплата МБанк, О!Деньги и другие.</small>
       <div class="tgline" style="--i:3"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#2AABEE"/><path d="M5.4 11.8l11.3-4.4c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.3c-.2.2-.3.3-.6.3l.2-2.9 5.3-4.8c.2-.2 0-.3-.3-.1l-6.6 4.1-2.8-.9c-.6-.2-.6-.6.1-.9z" fill="#fff"/></svg><span><span>или отправь файл в Telegram</span><b>@PrintKGMA_bot</b></span></div>
@@ -558,7 +558,7 @@
   <div class="stage">
     <div class="say">
       <div><h2 id="sayH"></h2><p id="sayP"></p></div>
-      <div class="call"><div class="q" id="qrAttract"></div><div><b>Сканируй<br>и печатай</b><span>или коснись экрана</span></div></div>
+      <div class="call"><div class="q" id="qrAttract"></div><div><b>Сканируй и печатай</b><span>или коснись экрана</span></div></div>
     </div>
   </div>
   <div class="feeder">
@@ -883,7 +883,7 @@ function copyScanPick(){
        BIGBTN("copyScan('copy')", 'i-copy', 'Копия', '<span>Ксерокс документа или ID-карты</span> · <span>' + (p.copy_bw || 6) + ' сом за стр.</span>') +
        BIGBTN("copyScan('scan')", 'i-scan', 'Скан', '<span>Файл сразу в телефон</span> · <span>' + (p.scan_bw || 6) + ' сом за стр.</span>') +
        '</div>');
-  paper('<h3 style="--i:0">Сканируй<br>и выбирай в телефоне</h3><div class="q" id="qrCs" style="--i:1"></div><small style="--i:2">Сначала положи лист на стекло</small>');
+  paper('<h3 style="--i:0">Сканируй и выбирай в телефоне</h3><div class="q" id="qrCs" style="--i:1"></div><small style="--i:2">Сначала положи лист на стекло</small>');
   qr($('qrCs'), orderUrl(), 512);
   setTimer(SVC_SEC, 'Вернёмся на главный экран через %s с', goHome);
 }
@@ -901,7 +901,7 @@ function photoScreen(){
          '<span style="font-size:1.1vw;color:#55657D">' + s[1] + '</span></span></div>').join('') +
        '</div><p class="lead2" style="margin-top:2.6vh;font-size:1.2vw">Фото 10×15 — 15 сом. Лицо по центру, светлый фон — обрежем сами.</p>' +
        '<div class="lnks">' + vidLink('photo') + '</div>');
-  paper('<h3 style="--i:0">Сканируй<br>и загрузи фото</h3><div class="q" id="qrPhoto" style="--i:1"></div><small style="--i:2">или отправь фото в Telegram<br><b>@PrintKGMA_bot</b></small>');
+  paper('<h3 style="--i:0">Сканируй и загрузи фото</h3><div class="q" id="qrPhoto" style="--i:1"></div><small style="--i:2">или отправь фото в Telegram<br><b>@PrintKGMA_bot</b></small>');
   qr($('qrPhoto'), orderUrl('photo'), 512);
   setTimer(SVC_SEC + 30, 'Вернёмся на главный экран через %s с', goHome);
 }
@@ -916,7 +916,7 @@ async function printToScreen(){
        '<div class="wait"><div class="spin"></div>Ждём файл с телефона…</div>' +
        '<div class="lnks"><button class="switch" onclick="printOnPhone()">Удобнее всё сделать в телефоне</button>' + vidLink('print') + '</div>');
   runSteps(steps);
-  paper('<h3 style="--i:0">Сканируй<br>и выбери файл</h3><div class="q" id="qrSess" style="--i:1"></div><small style="--i:2">Файл появится на этом экране</small>');
+  paper('<h3 style="--i:0">Сканируй и выбери файл</h3><div class="q" id="qrSess" style="--i:1"></div><small style="--i:2">Файл появится на этом экране</small>');
   setTimer(150, 'Вернёмся на главный экран через %s с', goHome);
   try{
     const d = await api('/kiosk/session', {terminal: TERMINAL});
@@ -942,7 +942,7 @@ function printOnPhone(){
   pane(BACK + head('Печать', s.price) + stepsHtml(s.steps) +
        '<button class="switch" onclick="printToScreen()">Отправить файл на этот экран</button>');
   runSteps(s.steps);
-  paper('<h3 style="--i:0">Сканируй,<br>чтобы распечатать</h3><div class="q" id="qrPh" style="--i:1"></div><small style="--i:2">Всё делается в телефоне</small>');
+  paper('<h3 style="--i:0">Сканируй, чтобы распечатать</h3><div class="q" id="qrPh" style="--i:1"></div><small style="--i:2">Всё делается в телефоне</small>');
   qr($('qrPh'), orderUrl('print'), 512);
   setTimer(SVC_SEC, 'Вернёмся на главный экран через %s с', goHome);
 }
@@ -1399,7 +1399,7 @@ function csPhone(key){
   pane(BACK + head(s.title, s.price) + LIDNOTE + stepsHtml(s.steps) +
        '<button class="switch" onclick="copyScan(\'' + key + '\')">Заказать на этом экране</button>');
   runSteps(s.steps);
-  paper('<h3 style="--i:0">' + s.qrTitle.replace(', ', ',<br>') + '</h3><div class="q" id="qrPh" style="--i:1"></div><small style="--i:2">' + s.note + '</small>');
+  paper('<h3 style="--i:0">' + s.qrTitle + '</h3><div class="q" id="qrPh" style="--i:1"></div><small style="--i:2">' + s.note + '</small>');
   qr($('qrPh'), orderUrl(key), 512);
   setTimer(SVC_SEC, 'Вернёмся на главный экран через %s с', goHome);
 }
@@ -1426,7 +1426,7 @@ async function payOrder(){
        '<div class="wait"><div class="spin"></div>Ждём оплату…</div>' +
        '<div class="acts"><button class="btn ghost" onclick="cancelAndHome()">Отменить заказ</button></div>');
   runSteps(steps);
-  paper('<h3 style="--i:0">Сканируй<br>для оплаты</h3><div class="q" id="qrPay" style="--i:1"></div><small style="--i:2">Сумма: ' + cur.total + ' сом<br>Оплачивая, вы принимаете публичную оферту: akbarak.vercel.app/oferta.html</small>');
+  paper('<h3 style="--i:0">Сканируй для оплаты</h3><div class="q" id="qrPay" style="--i:1"></div><small style="--i:2">Сумма: ' + cur.total + ' сом<br>Оплачивая, вы принимаете публичную оферту: akbarak.vercel.app/oferta.html</small>');
   setTimer(240, 'Заказ отменится через %s с без оплаты', cancelAndHome, false);
   await makePayQr(cur.orderId);
   clearInterval(pollT);
