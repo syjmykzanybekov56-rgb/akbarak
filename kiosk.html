@@ -168,7 +168,26 @@
   .rng button:active{background:rgba(var(--fg),.22)} .rng button:disabled{opacity:.3}
   .rng output{font-family:var(--disp);font-weight:800;font-size:1.6vw;min-width:2.8vw;text-align:center;color:var(--txt);font-variant-numeric:tabular-nums}
   .rng i{font-style:normal;margin:0 .3vw}
-  .files.ranged{max-height:30vh;overflow:auto}
+  .files.ranged{max-height:34vh;overflow:auto}
+  #svc .stage > .pane{min-width:0}
+  .ordwrap{display:flex;flex-direction:column;height:100%;min-width:0}
+  .ordwrap .files{margin:.6vh 0 2.4vh}
+  .ordwrap .files li{flex-wrap:wrap;row-gap:1.2vh;padding:1.4vh 1.2vw;min-width:0}
+  .ordwrap .files li span{min-width:0}
+  .ordwrap .rng{flex-basis:100%;padding-left:3vw;gap:.5vw}
+  .ordwrap .rng b{font-weight:700;color:var(--text-dim);margin-right:.6vw}
+  .ordwrap .rng button{width:3.2vw;height:3.2vw}
+  .ordwrap .opts{gap:1.6vw;row-gap:1.6vh!important;margin:0 0 1.6vh;flex-wrap:nowrap!important}
+  .ordwrap .opts > div{flex:none}
+  .ordwrap .stepper{gap:.5vw}
+  .ordwrap .stepper button{width:3.8vw;height:3.8vw}
+  .ordwrap .stepper output{min-width:2.6vw;font-size:2.4vw}
+  .ordwrap .sides{gap:.4vw}
+  .ordwrap .sides button{height:3.8vw;padding:0 .9vw;font-size:1.05vw}
+  .ordwrap .opt-l{margin-bottom:.6vh;font-size:1.05vw}
+  .ordwrap .svchead{margin-bottom:1vh}
+  .ordwrap .files.ranged{max-height:min(34vh, 100vh - 64vh)}
+  .ordwrap .acts .btn{height:6.4vh}
   .sum small{font-family:var(--body);font-size:1.3vw;color:var(--text-dim);font-weight:700;letter-spacing:0;margin-left:.6vw}
   .acts{display:flex;align-items:center;gap:1.4vw;margin-top:auto}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:1vw;padding:2.6vh 3vw;border-radius:999px;font-weight:800;font-size:1.5vw}
@@ -1008,10 +1027,10 @@ function showOrder(d){
   const pages = cur.files.reduce((a, f) => a + f.pages, 0);
   cur.pages = pages;
   const ranged = cur.files.some(f => !f.image && f.real > 1);
-  pane(head('Ваш заказ', ruPages(pages)) +
+  pane('<div class="ordwrap">' + head('Ваш заказ', ruPages(pages)) +
     '<ul class="files' + (ranged ? ' ranged' : '') + '">' + cur.files.map((f, n) => '<li><svg><use href="#i-copy"/></svg><span>' + esc(f.name) + '</span>' +
       (!f.image && f.real > 1
-        ? '<div class="rng">стр.' +
+        ? '<small>' + ruPages(f.real) + '</small><div class="rng"><b>Какие страницы:</b><i>с</i>' +
             '<button id="rf' + n + 'm" data-hold="rng(' + n + ',\'from\',-1)">−</button><output id="rf' + n + '">1</output><button id="rf' + n + 'p" data-hold="rng(' + n + ',\'from\',1)">+</button>' +
             '<i>по</i>' +
             '<button id="rt' + n + 'm" data-hold="rng(' + n + ',\'to\',-1)">−</button><output id="rt' + n + '">' + f.real + '</output><button id="rt' + n + 'p" data-hold="rng(' + n + ',\'to\',1)">+</button>' +
@@ -1025,8 +1044,8 @@ function showOrder(d){
       (cur.duplex ? '<div><div class="opt-l">Стороны</div><div class="sides" id="sidesSel">' +
         [['single', 'Одна'], ['duplex', 'Две'], ['booklet', 'Брошюра']].map(([k, t]) =>
           '<button data-s="' + k + '" onclick="setSides(\'' + k + '\')">' + t + '</button>').join('') + '</div></div>' : '') +
-      '<div><div class="opt-l">К оплате</div><div class="sum" id="sumVal"></div></div></div>' +
-    '<div class="acts"><button class="btn main" id="payBtn" onclick="payOrder()"></button><button class="btn ghost" onclick="cancelAndHome()">Отменить</button></div>');
+      '<div style="display:none"><div class="sum" id="sumVal"></div></div></div>' +
+    '<div class="acts"><button class="btn main" id="payBtn" onclick="payOrder()"></button><button class="btn ghost" onclick="cancelAndHome()">Отменить</button></div></div>');
   bindHold();
   drawOrder();
   paper(previewHtml(), '');
