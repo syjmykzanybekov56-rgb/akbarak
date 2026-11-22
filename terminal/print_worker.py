@@ -77,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v33 фото: умная коррекция цвета"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-23 v34 библиотеки для фото ставятся в фоне"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -1509,6 +1509,28 @@ def kiosk_guard_loop():
             log.debug("kiosk guard: %s", e)
 
 
+def install_photo_libs():
+    """QR Instagram и поиск лица для фото на документы. Ставим в фоне, печать не ждёт.
+    Пока библиотеки нет, фото печатаются без QR и с обычной обрезкой."""
+    for mod, pkg, why in (("qrcode", "qrcode", "QR Instagram на фото"),
+                          ("cv2", "opencv-python-headless<5", "поиск лица на фото на документы")):
+        try:
+            __import__(mod)
+            continue
+        except ImportError:
+            pass
+        log.info("Фоном ставлю %s (%s) — печать при этом работает", pkg, why)
+        try:
+            r = subprocess.run([sys.executable, "-m", "pip", "install", pkg, "--quiet", "--disable-pip-version-check"],
+                               capture_output=True, text=True, timeout=1200)
+            if r.returncode == 0:
+                log.info("✓ %s установлен", pkg)
+            else:
+                log.warning("Не удалось поставить %s: %s", pkg, (r.stderr or r.stdout or "").strip()[-300:])
+        except Exception as e:
+            log.warning("Не удалось поставить %s: %s", pkg, e)
+
+
 def main():
     log.info("🖨 АкБарак авто-печать запущена (версия %s). Терминал: %s, принтер: %s", VERSION, TERMINAL_ID, PRINTER_NAME)
     log.info("SumatraPDF: %s", "найден" if os.path.exists(SUMATRA) else "НЕ НАЙДЕН!")
@@ -1517,16 +1539,7 @@ def main():
     log.info("Лотки принтера: %s", ", ".join(printer_bins(PRINTER_NAME)) or "не удалось узнать")
     log.info("Обычная A4 → лоток: %s", pick_bin(PRINTER_NAME, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN") or "по настройкам принтера")
     ensure_photo_printer()
-    for mod, pkg, why in (("qrcode", "qrcode", "QR Instagram на фото"),
-                          ("cv2", "opencv-python-headless<5", "поиск лица на фото на документы")):
-        try:
-            __import__(mod)
-        except ImportError:
-            log.info("Ставлю библиотеку %s (%s), 1–3 минуты...", pkg, why)
-            try:
-                subprocess.run([sys.executable, "-m", "pip", "install", pkg, "--quiet"], timeout=600)
-            except Exception as e:
-                log.warning("Не удалось поставить %s: %s", pkg, e)
+    threading.Thread(target=install_photo_libs, daemon=True).start()   # в фоне: печать работает сразу
     _pp, _pb, _ = photo_target()
     log.info("Фото 10×15 → принтер «%s», лоток: %s", _pp, _pb or "по настройкам принтера")
     if _pp == PRINTER_NAME:
