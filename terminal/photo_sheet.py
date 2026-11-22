@@ -10,7 +10,7 @@
 
 from datetime import datetime
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 DPI = 300
 SHEET_MM = (152, 102)              # 10×15 (точнее 4×6″) — лист в горизонтальной ориентации
@@ -85,13 +85,65 @@ def _font(px, bold=False):
     return ImageFont.load_default()
 
 
+# Стандарты: какую долю высоты фото занимает голова (от подбородка до макушки)
+# и сколько места над макушкой. 35×45 — паспорт/шенген (голова 32–36 мм), 50×50 — виза США.
+HEAD = {(35, 45): (0.75, 0.07), (30, 40): (0.70, 0.08), (25, 35): (0.68, 0.08), (50, 50): (0.60, 0.10)}
+
+
+def find_face(img):
+    """Самое крупное лицо на фото: (x, y, w, h) или None. Нужен opencv-python-headless."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return None
+    small = img.copy()
+    k = 1.0
+    if max(small.size) > 1200:
+        k = 1200 / max(small.size)
+        small = small.resize((round(small.width * k), round(small.height * k)))
+    g0 = cv2.cvtColor(np.array(small), cv2.COLOR_RGB2GRAY)
+    found = []
+    m = max(40, min(small.size) // 10)
+    for g in (g0, cv2.equalizeHist(g0)):     # сначала как есть, затем с выравниванием яркости (тёмные фото)
+        for name in ("haarcascade_frontalface_default.xml", "haarcascade_frontalface_alt2.xml"):
+            cc = cv2.CascadeClassifier(cv2.data.haarcascades + name)
+            if cc.empty():                   # в OpenCV 5 файлов каскадов нет — нужен opencv-python-headless<5
+                continue
+            found = cc.detectMultiScale(g, scaleFactor=1.06, minNeighbors=5, minSize=(m, m))
+            if len(found):
+                break
+        if len(found):
+            break
+    if not len(found):
+        return None
+    x, y, w, h = max(found, key=lambda f: f[2] * f[3])
+    return x / k, y / k, w / k, h / k
+
+
 def crop_to(img, w_mm, h_mm, focus=(0.5, 0.42)):
-    """Обрезает фото под пропорцию документа. focus — где на кадре лицо (доли ширины/высоты).
-    На сайте студент двигает рамку сам и передаёт focus; по умолчанию — чуть выше центра."""
+    """Обрезает фото под документ. Если нашли лицо — как в фотосалоне: голова нужного размера
+    по стандарту, по центру, над макушкой небольшой отступ (не хватает фона — добавляем белый).
+    Лицо не нашли — режем по пропорции вокруг точки focus (доли ширины/высоты)."""
     img = ImageOps.exif_transpose(img).convert("RGB")
     target = w_mm / h_mm
     w, h = img.size
-    if w / h > target:                       # кадр шире нужного — режем бока
+    face = find_face(img)
+    if face:
+        fx, fy, fw, fh = face
+        head_k, top_k = HEAD.get((w_mm, h_mm), (0.70, 0.08))
+        head = fh * 1.45                     # рамка детектора — брови…подбородок; с волосами голова ≈ в 1.45 раза выше
+        chin = fy + fh * 1.04
+        crown = chin - head
+        ch = head / head_k                   # высота кадра
+        cw = ch * target
+        top = crown - ch * top_k
+        left = fx + fw / 2 - cw / 2
+        box = tuple(round(v) for v in (left, top, left + cw, top + ch))
+        bg = Image.new("RGB", (box[2] - box[0], box[3] - box[1]), "white")
+        bg.paste(img, (-box[0], -box[1]))
+        img = bg
+    elif w / h > target:                     # кадр шире нужного — режем бока
         nw = round(h * target)
         x = min(max(round(focus[0] * w - nw / 2), 0), w - nw)
         img = img.crop((x, 0, x + nw, h))
@@ -99,7 +151,9 @@ def crop_to(img, w_mm, h_mm, focus=(0.5, 0.42)):
         nh = round(w / target)
         y = min(max(round(focus[1] * h - nh / 2), 0), h - nh)
         img = img.crop((0, y, w, y + nh))
-    return img.resize((mm(w_mm), mm(h_mm)), Image.LANCZOS)
+    img = img.resize((mm(w_mm), mm(h_mm)), Image.LANCZOS)
+    img = ImageOps.autocontrast(img, cutoff=0.5)                     # чуть живее цвета, как в фотосалоне
+    return img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=60, threshold=2))
 
 
 def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=INSTAGRAM_URL, focus=(0.5, 0.42),

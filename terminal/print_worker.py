@@ -77,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v30 номер AnyDesk в админке"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v31 фото на документы: поиск лица и обрезка по стандарту"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -1512,11 +1512,16 @@ def main():
     log.info("Лотки принтера: %s", ", ".join(printer_bins(PRINTER_NAME)) or "не удалось узнать")
     log.info("Обычная A4 → лоток: %s", pick_bin(PRINTER_NAME, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN") or "по настройкам принтера")
     ensure_photo_printer()
-    try:
-        import qrcode  # noqa: F401  — QR на листе фото на документы
-    except ImportError:
-        log.info("Ставлю библиотеку qrcode (QR Instagram на фото)...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "qrcode", "--quiet"], timeout=300)
+    for mod, pkg, why in (("qrcode", "qrcode", "QR Instagram на фото"),
+                          ("cv2", "opencv-python-headless<5", "поиск лица на фото на документы")):
+        try:
+            __import__(mod)
+        except ImportError:
+            log.info("Ставлю библиотеку %s (%s), 1–3 минуты...", pkg, why)
+            try:
+                subprocess.run([sys.executable, "-m", "pip", "install", pkg, "--quiet"], timeout=600)
+            except Exception as e:
+                log.warning("Не удалось поставить %s: %s", pkg, e)
     _pp, _pb, _ = photo_target()
     log.info("Фото 10×15 → принтер «%s», лоток: %s", _pp, _pb or "по настройкам принтера")
     if _pp == PRINTER_NAME:
