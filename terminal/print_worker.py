@@ -77,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v29 фото на документы: все размеры + QR Instagram"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v30 номер AnyDesk в админке"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -460,11 +460,35 @@ def manual_duplex():
 
 
 CMD_RESULT = None
+_ANYDESK = {"id": None, "at": 0}
+
+
+def anydesk_id():
+    """Номер AnyDesk этого компьютера — админка открывает по нему удалённый доступ. Узнаём раз в час."""
+    if time.time() - _ANYDESK["at"] < 3600:
+        return _ANYDESK["id"]
+    _ANYDESK["at"] = time.time()
+    for exe in (os.path.join(os.getenv("ProgramFiles(x86)", r"C:\Program Files (x86)"), "AnyDesk", "AnyDesk.exe"),
+                os.path.join(os.getenv("ProgramFiles", r"C:\Program Files"), "AnyDesk", "AnyDesk.exe")):
+        if not os.path.exists(exe):
+            continue
+        try:
+            out = subprocess.run([exe, "--get-id"], capture_output=True, text=True, timeout=20).stdout
+            digits = "".join(ch for ch in (out or "") if ch.isdigit())
+            if 6 <= len(digits) <= 12:
+                _ANYDESK["id"] = digits
+                return digits
+        except Exception as e:
+            log.debug("AnyDesk id: %s", e)
+    return _ANYDESK["id"]
 
 
 def send_heartbeat(status):
     global CMD_RESULT
     body = {"terminal": TERMINAL_ID, "printer_status": status, "color": printer_is_color()}
+    ad = anydesk_id()
+    if ad:
+        body["anydesk"] = ad
     if CMD_RESULT:
         body["cmd_result"] = CMD_RESULT
     resp = api("POST", "/heartbeat", json=body, timeout=10)

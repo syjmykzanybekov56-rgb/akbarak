@@ -200,6 +200,7 @@ def init_db():
         "ALTER TABLE terminals ADD COLUMN supply_alerted TEXT DEFAULT ''",
         "ALTER TABLE terminals ADD COLUMN cmd TEXT",
         "ALTER TABLE terminals ADD COLUMN cmd_result TEXT",
+        "ALTER TABLE terminals ADD COLUMN anydesk TEXT",
     ]:
         try:
             conn.execute(stmt)
@@ -1351,6 +1352,9 @@ def heartbeat():
     out = {"success": True}
     if data.get("cmd_result"):
         conn.execute("UPDATE terminals SET cmd_result=? WHERE id=?", (str(data["cmd_result"])[:200], terminal))
+    anydesk = "".join(ch for ch in str(data.get("anydesk") or "") if ch.isdigit())[:12]
+    if anydesk:
+        conn.execute("UPDATE terminals SET anydesk=? WHERE id=?", (anydesk, terminal))
     row = conn.execute("SELECT cmd FROM terminals WHERE id=?", (terminal,)).fetchone()
     if row and row["cmd"]:
         out["cmd"] = row["cmd"]
@@ -1694,7 +1698,7 @@ def admin_summary():
         st = terminals_rev.get(t["id"], {"orders": 0, "revenue": 0, "today": 0})
         term_out.append({"id": t["id"], "online": online, "printer": t["printer_status"] or "ok", "color": t.get("color"),
                          "last_seen": ls.strftime("%d.%m %H:%M:%S") if ls else "—", **st,
-                         "supplies": sup.get(t["id"]), "cmd_result": t.get("cmd_result")})
+                         "supplies": sup.get(t["id"]), "cmd_result": t.get("cmd_result"), "anydesk": t.get("anydesk")})
     q = {r["status"]: r["c"] for r in queue}
     return jsonify({
         "now": local_now.strftime("%d.%m.%Y %H:%M"),
