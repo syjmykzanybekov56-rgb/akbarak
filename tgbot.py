@@ -1154,7 +1154,7 @@ def my_orders(chat_id, lang="ru"):
 
 
 # ─────────────────────── Интерактивная карточка (HTML-виджет) ───────────────────────
-WIDGETS = os.getenv("TG_WIDGETS", "owner")   # owner — только владельцу (тест), all — всем, off — выключить
+WIDGETS = os.getenv("TG_WIDGETS", "off")   # off — выкл. (Telegram пока не пускает обычных ботов: INPUT_MEDIA_WIDGET_NOT_ALLOWED), owner — только владельцу, all — всем
 
 
 def use_widget(chat_id):
