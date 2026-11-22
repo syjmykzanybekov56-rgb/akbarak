@@ -640,6 +640,7 @@ const TERMINAL = Q.get('t') || 'kgma-1';
 const IDLE_SEC = Number(Q.get('idle')) || 60;     // заставка через N секунд без касаний
 const SVC_SEC  = 40;                              // экран услуги закрывается сам через N секунд
 let vidBrokenUntil = 0;                           // до этого времени видео в заставке не показываем (оно не играло)
+const ATTRACT_VIDEO = false;                     // true — снова показывать видео-инструкции в заставке
 const DOC_SEC  = 7;                               // сколько держится каждый лист в заставке
 
 const NEWS = [
@@ -1640,7 +1641,8 @@ function countUp(el){
 }
 function printDoc(){
   // каждый второй лист заставки — видео-инструкция (без звука), если видео есть
-  if(VIDEOS.length && docIdx % 2 === 1 && Date.now() > vidBrokenUntil) return attractVideo();
+  // Видео-инструкции в заставке не крутим (по просьбе владельца) — они открываются только кнопкой «Видео».
+  if(ATTRACT_VIDEO && VIDEOS.length && docIdx % 2 === 1 && Date.now() > vidBrokenUntil) return attractVideo();
   const list = docs(), d = list[docIdx % list.length], sheet = $('docSheet');
   sheet.classList.add('out');
   $('sayH').classList.add('fade'); $('sayP').classList.add('fade');
