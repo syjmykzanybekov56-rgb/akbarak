@@ -411,6 +411,8 @@
     <symbol id="i-down" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
       <rect x="18" y="6" width="28" height="52" rx="5"/></g>
       <path d="M32 18v20M24 30l8 8 8-8" fill="none" stroke="#E0B44C" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-photo" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="12" y="8" width="40" height="48" rx="3"/><circle cx="32" cy="27" r="8"/><path d="M20 48c2-8 22-8 24 0"/></g></symbol>
     <symbol id="i-doc" viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
       <path d="M12 6h26l10 10v42H12z"/><path d="M38 6v10h10"/><path d="M19 28h20M19 35h14"/></g>
       <path d="M30 50l14-14 5 5-14 14h-5z" fill="#E0B44C"/></symbol>
@@ -438,13 +440,13 @@
           <div><svg><use href="#i-print"/></svg><h2>Печать</h2><div class="price"><b>5</b> сом за стр.</div></div>
           <div class="go">PDF, Word, фото<span><svg><use href="#i-arrow"/></svg></span></div>
         </button>
-        <button class="tile" onclick="openSvc('copy')">
-          <div><svg><use href="#i-copy"/></svg><h2>Копия</h2><div class="price"><b>6</b> сом за стр.</div></div>
-          <div class="go">Ксерокс документа<span><svg><use href="#i-arrow"/></svg></span></div>
+        <button class="tile" onclick="openSvc('copyscan')">
+          <div><svg><use href="#i-copy"/></svg><h2>Копия и скан</h2><div class="price"><b>6</b> сом за стр.</div></div>
+          <div class="go">Ксерокс или файл в телефон<span><svg><use href="#i-arrow"/></svg></span></div>
         </button>
-        <button class="tile" onclick="openSvc('scan')">
-          <div><svg><use href="#i-scan"/></svg><h2>Скан</h2><div class="price"><b>6</b> сом за стр.</div></div>
-          <div class="go">Файл в телефон<span><svg><use href="#i-arrow"/></svg></span></div>
+        <button class="tile" onclick="openSvc('photo')">
+          <div><svg><use href="#i-photo"/></svg><h2>Фото</h2><div class="price"><b>50</b> сом · 6 шт</div></div>
+          <div class="go">На документы 3×4, 3.5×4.5<span><svg><use href="#i-arrow"/></svg></span></div>
         </button>
         <button class="tile" onclick="openSvc('docs')">
           <div><svg><use href="#i-doc"/></svg><h2>Шаблоны</h2><div class="price"><b>5</b> сом за лист</div></div>
@@ -762,7 +764,46 @@ function openSvc(key){
   if(Date.now() < blockUntil) return;   // касание, которое разбудило экран, не открывает услугу
   disarmIdle(); stopFlow(); cur = {};
   show('svc');
-  if(key === 'print') printToScreen(); else if(key === 'docs') docsScreen(); else copyScan(key);
+  if(key === 'print') printToScreen(); else if(key === 'docs') docsScreen();
+  else if(key === 'copyscan') copyScanPick(); else if(key === 'photo') photoScreen(); else copyScan(key);
+}
+
+/* Копия и скан: сначала выбор, что нужно */
+const BIGBTN = (fn, icon, title, sub) =>
+  '<button class="tplbtn" style="padding:4vh 1.8vw;gap:1.6vw" onclick="' + fn + '">' +
+  '<svg style="width:4.2vw;height:4.2vw;flex:none"><use href="#' + icon + '"/></svg>' +
+  '<span><b style="display:block;font-size:2.3vw;margin-bottom:.8vh">' + title + '</b>' +
+  '<span style="font-size:1.25vw;color:#55657D">' + sub + '</span></span></button>';
+function copyScanPick(){
+  stopFlow();
+  const p = CFG.prices || {};
+  pane(BACK + head('Копия и скан', 'выбери, что нужно') +
+       '<div class="tpllist" style="grid-template-columns:1fr;max-height:none;gap:2.4vh;margin-top:3vh">' +
+       BIGBTN("copyScan('copy')", 'i-copy', 'Копия', 'Ксерокс документа или ID-карты · ' + (p.copy_bw || 6) + ' сом за стр.') +
+       BIGBTN("copyScan('scan')", 'i-scan', 'Скан', 'Файл сразу в телефон · ' + (p.scan_bw || 6) + ' сом за стр.') +
+       '</div>');
+  paper('<h3 style="--i:0">Сканируй<br>и выбирай в телефоне</h3><div class="q" id="qrCs" style="--i:1"></div><small style="--i:2">Сначала положи лист на стекло</small>');
+  qr($('qrCs'), orderUrl(), 512);
+  setTimer(SVC_SEC, 'Вернёмся на главный экран через %s с', goHome);
+}
+
+/* Фото на документы: фото загружается с телефона, лист 10×15 выходит здесь */
+function photoScreen(){
+  stopFlow();
+  const sizes = [["3×4", "студенческий, личное дело", "6 шт"], ["3.5×4.5", "паспорт, виза, анкеты", "6 шт"],
+                 ["2.5×3.5", "удостоверения, пропуска", "6 шт"], ["5×5", "виза США", "2 шт"]];
+  pane(BACK + head('Фото', '50 сом за лист') +
+       '<p class="lead2" style="margin:1vh 0 3vh;font-size:1.4vw">Наведи камеру на код справа → выбери размер → загрузи своё фото и оплати. ' +
+       'Лист 10×15 с линиями реза выйдет здесь.</p>' +
+       '<div class="tpllist" style="max-height:none;gap:2vh 1.2vw">' +
+       sizes.map(s => '<div class="tplbtn" style="padding:2.6vh 1.4vw;gap:1.2vw"><svg style="width:3vw;height:3vw;flex:none"><use href="#i-photo"/></svg>' +
+         '<span><b style="display:block;font-size:1.9vw;margin-bottom:.5vh">' + s[0] + ' · ' + s[2] + '</b>' +
+         '<span style="font-size:1.1vw;color:#55657D">' + s[1] + '</span></span></div>').join('') +
+       '</div><p class="lead2" style="margin-top:2.6vh;font-size:1.2vw">Фото 10×15 — 15 сом. Лицо по центру, светлый фон — обрежем сами.</p>' +
+       '<div class="lnks">' + vidLink('photo') + '</div>');
+  paper('<h3 style="--i:0">Сканируй<br>и загрузи фото</h3><div class="q" id="qrPhoto" style="--i:1"></div><small style="--i:2">или отправь фото в Telegram<br><b>@PrintKGMA_bot</b></small>');
+  qr($('qrPhoto'), orderUrl('photo'), 512);
+  setTimer(SVC_SEC + 30, 'Вернёмся на главный экран через %s с', goHome);
 }
 
 /* Печать: файл с телефона появляется на экране */
