@@ -216,7 +216,24 @@
   .ad-price{font-family:var(--disp);font-weight:800;font-size:2.2vw;color:var(--navy);margin-top:1vh}
   .ad-call{margin-top:1.4vh;font-weight:800;font-size:1.25vw;color:var(--gold-d)}
   /* Предпросмотр файла на листе */
-  .pv{display:flex;flex-direction:column;height:100%;gap:1.4vh}
+  .pv{display:flex;flex-direction:column;height:100%;gap:1.2vh}
+  .sheet.pvsheet .ink{inset:3.5% 4% 3%}
+  .pv-box{cursor:zoom-in}
+  .pv-zoom{position:absolute;right:.8vw;bottom:.8vw;display:flex;align-items:center;gap:.4vw;background:rgba(14,35,64,.86);color:#fff;
+    border-radius:2vw;padding:.7vh .9vw;font-size:.95vw;font-weight:800;z-index:2;pointer-events:none}
+  .pv-zoom svg{width:1.3vw;height:1.3vw;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round}
+  .pv-close{display:none}
+  .pvzoom{position:fixed;inset:0;z-index:60;background:rgba(9,20,36,.9);display:none;align-items:center;justify-content:center}
+  .pvzoom.on{display:flex}
+  .pvzoom-in{height:96vh;width:min(92vw, 96vh * .8);background:#fff;border-radius:1.2vw;padding:2vh 2vw;display:flex}
+  .pvzoom-in .pv{width:100%;height:100%}
+  .pvzoom-in .pv-box{cursor:default;background:#E9EDF3}
+  .pvzoom-in .pv-zoom{display:none}
+  .pvzoom-in .pv-files{font-size:1.4vw}
+  .pvzoom-in .pv-nav button,.pvzoom-in .pv-files button{width:5.4vw;height:5.4vw;font-size:2.8vw}
+  .pvzoom-in .pv-nav output{font-size:2.2vw}
+  .pvzoom-in .pv-close{display:flex;align-items:center;justify-content:center;gap:.6vw;align-self:center;margin-top:.4vh;
+    background:var(--gold);color:#14283D;border:0;border-radius:3vw;padding:1.4vh 3vw;font:inherit;font-weight:800;font-size:1.4vw}
   .pv-files{display:flex;align-items:center;gap:.8vw;font-weight:800;font-size:1.05vw}
   .pv-files span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
   .pv-box{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
@@ -230,7 +247,7 @@
   .pv-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;
     padding:2vw;font-weight:700;font-size:1.1vw;color:var(--navy)}
   .pv-nav{display:flex;align-items:center;justify-content:space-between;gap:1vw}
-  .pv-nav button,.pv-files button{width:4.6vw;height:4.6vw;flex:none;border-radius:50%;background:var(--navy);color:#fff;
+  .pv-nav button,.pv-files button{width:3.8vw;height:3.8vw;flex:none;border-radius:50%;background:var(--navy);color:#fff;
     font-size:2.4vw;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center}
   .pv-nav button:disabled,.pv-files button:disabled{opacity:.25}
   .pv-nav output{font-family:var(--disp);font-weight:800;font-size:1.7vw;color:var(--navy)}
@@ -550,6 +567,9 @@
   </div>
 </section>
 
+<!-- ═══════════ ПРЕДПРОСМОТР НА ВЕСЬ ЭКРАН ═══════════ -->
+<div class="pvzoom" id="pvZoom" onclick="if(event.target === this) pvZoomClose()"><div class="pvzoom-in" id="pvZoomIn"></div></div>
+
 <!-- ═══════════ ЕСТЬ ВОПРОСЫ ═══════════ -->
 <div class="helpov" id="helpOv" onclick="if(event.target === this) closeHelp()">
   <div class="helpbox">
@@ -793,7 +813,7 @@ const BACK = '<button class="back" onclick="cancelAndHome()"><svg><use href="#i-
 const head = (t, p) => '<div class="svchead"><h1>' + t + '</h1><div class="pr">' + (p || '') + '</div></div>';
 const ruPages = n => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? 'страница' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'страницы' : 'страниц');
 
-function pane(html){ $('pane').innerHTML = html; }
+function pane(html){ pvZoomClose(true); $('pane').innerHTML = html; }
 function paper(html, cls){ $('svcSheet').className = 'sheet ' + (cls === undefined ? 'qrsheet' : cls); $('svcInk').innerHTML = html; feed($('svcSheet')); }
 
 function setTimer(sec, label, onExpire, resettable = true){
@@ -1048,7 +1068,7 @@ function showOrder(d){
     '<div class="acts"><button class="btn main" id="payBtn" onclick="payOrder()"></button><button class="btn ghost" onclick="cancelAndHome()">Отменить</button></div></div>');
   bindHold();
   drawOrder();
-  paper(previewHtml(), '');
+  paper(previewHtml(), 'pvsheet');
   loadPreview(0);
   setTimer(150, 'Заказ отменится через %s с без действий', cancelAndHome);
 }
@@ -1061,10 +1081,29 @@ function previewHtml(){
   return '<div class="pv" style="--i:0">' +
     (many ? '<div class="pv-files"><button id="pvFprev" onclick="pvFile(-1)">‹</button><span id="pvName"></span>' +
             '<button id="pvFnext" onclick="pvFile(1)">›</button></div>' : '') +
-    '<div class="pv-box" id="pvBox"><canvas id="pvCanvas"></canvas><img id="pvImg" alt=""><div id="pvDoc"></div>' +
-      '<div class="pv-msg" id="pvMsg">Загружаем страницы…</div></div>' +
+    '<div class="pv-box" id="pvBox" onclick="pvZoomOpen()"><canvas id="pvCanvas"></canvas><img id="pvImg" alt=""><div id="pvDoc"></div>' +
+      '<div class="pv-msg" id="pvMsg">Загружаем страницы…</div>' +
+      '<span class="pv-zoom"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6"/></svg><b>Увеличить</b></span></div>' +
     '<div class="pv-nav"><button id="pvPrev" onclick="pvPage(-1)">‹</button><output id="pvInfo">1 / 1</output>' +
-      '<button id="pvNext" onclick="pvPage(1)">›</button></div></div>';
+      '<button id="pvNext" onclick="pvPage(1)">›</button></div>' +
+    '<button class="pv-close" onclick="pvZoomClose()">✕ <span>Закрыть</span></button></div>';
+}
+/* Предпросмотр на весь экран: переносим тот же блок в оверлей и перерисовываем крупно */
+function pvZoomOpen(){
+  const el = document.querySelector('#svcInk .pv');
+  if(!el || $('pvZoom').classList.contains('on')) return;
+  el.style.animation = 'none'; el.style.opacity = '1';
+  $('pvZoomIn').appendChild(el); $('pvZoom').classList.add('on');
+  setTimeout(() => { try{ pvRender(); }catch(e){} }, 30);
+}
+function pvZoomClose(drop){
+  const z = $('pvZoom'); if(!z || !z.classList.contains('on')) return;
+  const el = $('pvZoomIn').querySelector('.pv');
+  z.classList.remove('on');
+  if(!el) return;
+  if(drop){ el.remove(); return; }
+  $('svcInk').appendChild(el);
+  setTimeout(() => { try{ pvRender(); }catch(e){} }, 30);
 }
 function pvShow(el){ ['pvCanvas', 'pvImg', 'pvDoc'].forEach(id => $(id).style.display = id === el ? 'block' : 'none'); }
 function pvMessage(t){ if(t) pvShow(null); $('pvMsg').textContent = t; $('pvMsg').style.display = t ? 'flex' : 'none'; }
