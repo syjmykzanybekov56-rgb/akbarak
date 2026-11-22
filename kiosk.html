@@ -345,11 +345,10 @@
   @keyframes howpulse{50%{transform:scale(1.09);opacity:.45}}
   .howbtn i:after{content:"";border-left:2.2vw solid var(--gold);border-top:1.35vw solid transparent;border-bottom:1.35vw solid transparent;margin-left:.6vw}
   .howbtn.on{display:flex}
-  .askbtn{display:flex;align-items:center;gap:.9vw;background:var(--paper);border:0;border-radius:2vw;padding:1.1vh 1.6vw 1.1vh 1vh;
-    box-shadow:0 .2vh 0 #D3DAE3,0 1vh 2.4vh rgba(20,40,61,.10);font:inherit;color:var(--text-dim);text-align:left;cursor:pointer}
-  .askbtn .qm{width:4.4vh;height:4.4vh;border-radius:50%;background:var(--gold);color:#fff;display:grid;place-items:center;font-size:2.6vh;font-weight:800;flex:none}
-  .askbtn b{display:block;color:var(--navy);font-size:1.25vw}
-  .askbtn span:last-child{font-weight:600;font-size:.85vw;line-height:1.35}
+  .askbtn{display:flex;align-items:center;gap:.7vw;background:#fff;border:0;border-radius:3vw;padding:.7vh 1.3vw .7vh .7vh;
+    box-shadow:0 .6vh 1.6vh rgba(0,0,0,.18);font:inherit;cursor:pointer;white-space:nowrap}
+  .askbtn .qm{width:3.6vh;height:3.6vh;border-radius:50%;background:var(--gold);color:#fff;display:grid;place-items:center;font-size:2.2vh;font-weight:800;flex:none}
+  .askbtn b{color:#14283D;font-size:1.05vw;font-weight:800}
   .count{white-space:nowrap;order:1} .count b{font-size:1.5vw} .foot .news{order:2;flex:0 1 14vw;min-width:0;max-width:14vw;margin-right:auto} .foot .franchise{order:3;flex:none;white-space:nowrap}
   .helpov{position:fixed;inset:0;z-index:55;background:rgba(9,20,36,.82);display:none;align-items:center;justify-content:center}
   .helpov.on{display:flex}
@@ -445,7 +444,7 @@
 <section id="home" class="view room on">
   <header class="bar">
     <div class="logo"><svg><use href="#mark"/></svg><div class="wm"><span class="a">Ак</span>Барак</div></div>
-    <div class="right"><div data-ak-lang="big"></div><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
+    <div class="right"><button class="askbtn" onclick="openHelp()"><span class="qm">?</span><b>Есть вопросы?</b></button><div data-ak-lang="big"></div><div class="chip js-chip"><i></i><span class="js-chiptxt">Принтер готов</span></div><div class="clock js-clock">--:--</div></div>
   </header>
 
   <div class="stage">
@@ -488,7 +487,6 @@
   </div>
 
   <footer class="foot">
-    <button class="help askbtn" onclick="openHelp()"><span class="qm">?</span><span><b>Есть вопросы?</b>Нажми — Telegram, Instagram, WhatsApp</span></button>
     <div class="news"><span class="js-news"></span></div>
     <div class="count js-count">Уже напечатано <b class="js-total">…</b> листов</div>
     <div class="franchise"><span><b>Терминал в ваш вуз</b>наведи камеру —<br>условия партнёрства</span><div class="q" id="qrPartner"></div></div>
