@@ -382,6 +382,29 @@ function supHtml(t){const s=t.supplies||{};let h='';
   else h+=`<div class="ln"><span>${t.color===0?'Тонер':'Чернила'}</span><b style="opacity:.6">отметьте после заправки</b></div>`;
   if(t.cmd_result) h+=`<div class="ln"><span>Обслуживание</span><b>${H(t.cmd_result)}</b></div>`;
   return h;}
+/* Открыть терминал в AnyDesk. Если AnyDesk на этом устройстве не установлен, браузер молчит —
+   тогда через 2 с показываем номер, его можно скопировать и вставить в AnyDesk вручную. */
+function openAnyDesk(id){
+  const nice = id.replace(/(\d{3})(?=\d)/g, '$1 ');
+  let left = false;
+  const onBlur = () => { left = true; };
+  window.addEventListener('blur', onBlur, {once: true});
+  try{ copyText(id); }catch(e){}
+  location.href = 'anydesk:' + id;
+  setTimeout(() => {
+    window.removeEventListener('blur', onBlur);
+    if(left) return;
+    alert('AnyDesk не открылся сам.\n\nНомер терминала: ' + nice + ' (уже скопирован).\n\n' +
+          'Откройте AnyDesk, вставьте номер в поле «Удалённое рабочее место» и нажмите «Подключиться».\n\n' +
+          'Чтобы кнопка открывала AnyDesk сама: на ноутбуке установите AnyDesk (в окне AnyDesk слева «Установить AnyDesk»), ' +
+          'на телефоне — приложение AnyDesk из Play Market / App Store.');
+  }, 2000);
+}
+function copyText(t){
+  if(navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t);
+  const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select();
+  document.execCommand('copy'); a.remove();
+}
 function drawTerms(){
   const sel=$('termSel'), cur=sel.value;
   sel.innerHTML='<option value="">Все терминалы</option>'+S.terminals.map(t=>`<option${t.id===cur?' selected':''}>${H(t.id)}</option>`).join('');
@@ -403,9 +426,10 @@ function drawTerms(){
       ${t.color!==0?`<button class="btn ghost" data-cmd="nozzle" data-t="${H(t.id)}">🔎 Проверка дюз</button><button class="btn ghost" data-cmd="clean" data-t="${H(t.id)}">🧽 Прочистка дюз</button>`:''}
       <button class="btn ghost" data-cmd="kiosk_off" data-t="${H(t.id)}">🔓 Свернуть экран</button><button class="btn ghost" data-cmd="kiosk_on" data-t="${H(t.id)}">🔒 Вернуть экран</button>
       ${t.anydesk
-        ? `<a class="btn ghost" href="anydesk:${H(t.anydesk)}" title="Открыть терминал в AnyDesk (${H(t.anydesk)})" style="text-decoration:none">🖥 Экран ↗</a>`
+        ? `<button class="btn ghost" data-anydesk="${H(t.anydesk)}" title="Открыть терминал в AnyDesk">🖥 Экран ↗</button>`
         : `<a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" title="AnyDesk ещё не подключён — откроется веб-версия экрана" style="text-decoration:none">Экран ↗</a>`}
     </div></div>`).join('');
+  $('terms').querySelectorAll('[data-anydesk]').forEach(b=>b.onclick=()=>openAnyDesk(b.dataset.anydesk));
   $('terms').querySelectorAll('[data-paper]').forEach(b=>b.onclick=async()=>{
     const n=prompt('Сколько листов сейчас в лотке принтера '+b.dataset.paper+'?','100'); if(!n) return;
     try{ await api('/admin/api/supplies/'+encodeURIComponent(b.dataset.paper),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paper:parseInt(n)})}); toast('Записал: '+n+' листов'); refresh(); }catch(e){ toast(e.message,true); }
