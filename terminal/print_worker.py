@@ -77,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-22 v28 фото 10×15 с заднего лотка"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-22 v29 фото на документы: все размеры + QR Instagram"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -281,11 +281,19 @@ def photo_printer(a5=False):
     return None
 
 
+DOC_SIZES = {          # как написано в заказе (см) → размер в photo_sheet.py (мм)
+    "3.5x4.5": "35x45", "3x4": "30x40", "2.5x3.5": "25x35", "5x5": "50x50",
+}
+
+
 def photo_kind(fmt):
-    """Формат из заказа → passport / 10x15 / 15x21."""
-    f = (fmt or "").lower().replace("×", "x").replace(" ", "")
-    if "паспорт" in f or "3.5x4.5" in f or "35x45" in f:
-        return "passport"
+    """Формат из заказа → 10x15 / 15x21 / doc:<размер> (фото на документы листом 10×15)."""
+    f = (fmt or "").lower().replace("×", "x").replace(" ", "").replace(",", ".")
+    for cm, key in DOC_SIZES.items():
+        if cm in f:
+            return "doc:" + key
+    if "паспорт" in f or "документ" in f:
+        return "doc:35x45"
     if "15x21" in f:
         return "15x21"
     return "10x15"
@@ -423,9 +431,9 @@ def prepare_photo(src, kind, oid):
         return src
     from PIL import Image, ImageOps
     out = os.path.join(tempfile.gettempdir(), f"akbarak_photo_{oid}.jpg")
-    if kind == "passport":
+    if kind.startswith("doc:"):
         from photo_sheet import make_sheet
-        make_sheet(src, out, size="35x45", order_id=oid)
+        make_sheet(src, out, size=kind[4:], order_id=oid)
         img = Image.open(out).convert("RGB")
         if img.width > img.height:
             img = img.rotate(90, expand=True)
@@ -1480,6 +1488,11 @@ def main():
     log.info("Лотки принтера: %s", ", ".join(printer_bins(PRINTER_NAME)) or "не удалось узнать")
     log.info("Обычная A4 → лоток: %s", pick_bin(PRINTER_NAME, PLAIN_BIN_WORDS, "AKBARAK_PLAIN_BIN") or "по настройкам принтера")
     ensure_photo_printer()
+    try:
+        import qrcode  # noqa: F401  — QR на листе фото на документы
+    except ImportError:
+        log.info("Ставлю библиотеку qrcode (QR Instagram на фото)...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "qrcode", "--quiet"], timeout=300)
     _pp, _pb, _ = photo_target()
     log.info("Фото 10×15 → принтер «%s», лоток: %s", _pp, _pb or "по настройкам принтера")
     if _pp == PRINTER_NAME:

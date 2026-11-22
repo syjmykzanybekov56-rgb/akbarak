@@ -18,8 +18,11 @@ SIZES = {                          # мм, сетка (колонки, ряды)
     "35x45": ((35, 45), (3, 2)),   # паспорт, виза, большинство документов
     "30x40": ((30, 40), (3, 2)),   # личное дело, студенческий, справки
     "30x40x8": ((30, 40), (4, 2)), # 8 штук помельче
-    "25x35": ((25, 35), (4, 2)),
+    "25x35": ((25, 35), (3, 2)),   # 6 штук, с QR
+    "50x50": ((50, 50), (2, 1)),   # виза США — 2 штуки
 }
+INSTAGRAM_URL = "https://instagram.com/akbarak_kg"
+QR_CAPTION = ("Мы в Instagram", "akbarak_kg")
 GOLD, NAVY, GRID = (245, 166, 35), (13, 34, 64), (150, 150, 150)
 
 
@@ -99,7 +102,8 @@ def crop_to(img, w_mm, h_mm, focus=(0.5, 0.42)):
     return img.resize((mm(w_mm), mm(h_mm)), Image.LANCZOS)
 
 
-def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=None, focus=(0.5, 0.42)):
+def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=INSTAGRAM_URL, focus=(0.5, 0.42),
+               qr_caption=QR_CAPTION):
     (pw, ph), (cols, rows) = SIZES[size]
     W, H = mm(SHEET_MM[0]), mm(SHEET_MM[1])
     sheet = Image.new("RGB", (W, H), "white")
@@ -165,14 +169,17 @@ def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=None, f
                          (f"Заказ #{order_id}" if order_id else "", mm(2.9), False)):
             if t:
                 d.text((cx, y), t, font=fit(t, px, b), fill=NAVY, anchor="mt"); y += mm(4.6)
-        if qr_url:
+        try:
             import qrcode
+        except ImportError:
+            qrcode = None
+        if qr_url and qrcode:
             q = qrcode.QRCode(border=1, box_size=10)
             q.add_data(qr_url); q.make(fit=True)
             side = min(pwid - mm(2), H - y - mm(14))
             qi = q.make_image(fill_color=NAVY, back_color="white").convert("RGB").resize((side, side), Image.NEAREST)
             sheet.paste(qi, (cx - side // 2, H - side - mm(11)))
-            for i, t in enumerate(("Цифровая копия —", "скачать по QR")):
+            for i, t in enumerate(qr_caption):
                 d.text((cx, H - mm(9.5) + i * mm(3)), t, font=fit(t, mm(2.4)), fill=NAVY, anchor="mt")
 
     sheet.save(out_path, quality=95, dpi=(DPI, DPI))

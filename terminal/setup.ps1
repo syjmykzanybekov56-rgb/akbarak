@@ -95,7 +95,7 @@ Refresh-Path
 Step '3/8 Библиотеки Python'
 if ($Py) {
     & $Py -m pip install --upgrade pip --quiet --disable-pip-version-check
-    & $Py -m pip install requests pywin32 pillow pypdf --quiet --disable-pip-version-check
+    & $Py -m pip install requests pywin32 pillow pypdf qrcode --quiet --disable-pip-version-check
     & $Py -c "import requests, win32print, PIL, pypdf" 2>$null
     if ($LASTEXITCODE -eq 0) { Ok 'requests, pywin32, pillow, pypdf' } else { Warn 'Библиотеки Python не установились (pip install requests pywin32 pillow pypdf)' }
 } else { Warn 'Библиотеки пропущены — нет Python' }

@@ -246,8 +246,10 @@ TX = {
     "ph_10x15": ("🖼 Фото 10×15", "🖼 Сүрөт 10×15", "🖼 Photo 10×15"),
     "ph_passport": ("🪪 Фото на документы", "🪪 Документке сүрөт", "🪪 ID photo"),
     "ph_line_10x15": ("🖼 Фото 10×15 · глянцевая бумага", "🖼 Сүрөт 10×15 · жылтырак кагаз", "🖼 Photo 10×15 · glossy paper"),
-    "ph_line_passport": ("🪪 Фото на документы 3.5×4.5 · 6 шт на листе", "🪪 Документке сүрөт 3.5×4.5 · баракта 6 даана",
-                         "🪪 ID photo 3.5×4.5 · 6 per sheet"),
+    "ph_line_doc": ("🪪 Фото на документы {s} · {n} шт на листе", "🪪 Документке сүрөт {s} · баракта {n} даана",
+                    "🪪 ID photo {s} · {n} per sheet"),
+    "ph_pick_doc": ("🪪 Фото на документы (50 сом) — выберите размер:", "🪪 Документке сүрөт (50 сом) — өлчөмдү тандаңыз:",
+                    "🪪 ID photo (50 som) — choose a size:"),
     "ph_hint": ("<i>Лицо по центру, светлый фон — обрежем сами.</i>", "<i>Жүз ортодо, ачык фон — өзүбүз кесебиз.</i>",
                 "<i>Face centred, light background — we crop it.</i>"),
     "sheets_x": ("{p} × {c} лист.", "{p} × {c} барак", "{p} × {c} sheets"),
@@ -476,7 +478,11 @@ def hello(lang):
     return T("hello", lang, prices=price_line(lang))
 
 
-PHOTO_FORMATS = {"10x15": "Фото 10×15 см", "passport": "Паспортное 3.5×4.5 см"}
+PHOTO_FORMATS = {"10x15": "Фото 10×15 см", "passport": "Паспортное 3.5×4.5 см",
+                 "d30x40": "Фото на документы 3×4 см", "d25x35": "Фото на документы 2.5×3.5 см",
+                 "d50x50": "Фото на документы 5×5 см"}
+DOC_KEYS = ("d30x40", "passport", "d25x35", "d50x50")
+DOC_LABEL = {"d30x40": ("3×4", 6), "passport": ("3.5×4.5", 6), "d25x35": ("2.5×3.5", 6), "d50x50": ("5×5", 2)}
 
 
 def is_image(d):
@@ -487,17 +493,24 @@ def photo_fmt(d):
     return PHOTO_FORMATS.get(d.get("photo") or "")
 
 
+def ph_line(d, lang):
+    if d["photo"] == "10x15":
+        return T("ph_line_10x15", lang)
+    size, n = DOC_LABEL[d["photo"]]
+    return T("ph_line_doc", lang, s=size, n=n)
+
+
 def draft_text(d, lang):
     line = "┄" * 18
     if photo_fmt(d):
         return (f"🧾 <b>{T('receipt', lang)} · АкБарак</b>\n{line}\n"
                 f"📄 <b>{esc(d['file_name'])}</b>\n\n"
-                f"{T('ph_line_' + d['photo'], lang)}\n"
+                f"{ph_line(d, lang)}\n"
                 f"🔁 {T('copies', lang)}: <b>{d['copies']}</b>\n"
                 f"📍 {T('terminal', lang)}: <b>{esc(d['terminal'])}</b>\n"
                 f"{line}\n"
                 f"💰 {T('total', lang)}: <b>{draft_total(d)} {T('som', lang)}</b>\n"
-                f"{T('ph_hint', lang) if d['photo'] == 'passport' else ''}")
+                f"{T('ph_hint', lang) if d['photo'] in DOC_KEYS else ''}")
     mode = T("color" if d["color"] else "bw", lang) + " · " + T(d["sides"], lang)
     if d.get("page_range"):
         pages_line = T("range_line", lang, r=esc(d["page_range"]), p=d["pages"], n=d.get("real_pages") or d["pages"])
@@ -527,9 +540,11 @@ def draft_kb(d, lang, multi=False):
     if is_image(d) and H["color_ok"](d["terminal"]):
         cur = d.get("photo") or ""
         kb.append([btn(("✅ " if not cur else "") + T("ph_doc", lang), f"d:{i}:ph_")])
-        kb.append([btn(("✅ " if cur == k else "") + T("ph_" + k, lang) +
-                       f" · {H['photo_price'](PHOTO_FORMATS[k])} {T('som', lang)}", f"d:{i}:ph_{k}")
-                   for k in ("10x15", "passport")])
+        kb.append([btn(("✅ " if cur == "10x15" else "") + T("ph_10x15", lang) +
+                       f" · {H['photo_price'](PHOTO_FORMATS['10x15'])} {T('som', lang)}", f"d:{i}:ph_10x15")])
+        kb.append([btn(T("ph_passport", lang) + f" · {H['photo_price'](PHOTO_FORMATS['passport'])} "
+                       f"{T('som', lang)} ↓", f"d:{i}:noop")])
+        kb.append([btn(("✅ " if cur == k else "") + DOC_LABEL[k][0], f"d:{i}:ph_{k}") for k in DOC_KEYS])
     if H["color_ok"](d["terminal"]) and not photo_fmt(d):
         kb.append([btn(("● " if not d["color"] else "○ ") + "⚫ " + T("BW", lang), f"d:{i}:bw"),
                    btn(("● " if d["color"] else "○ ") + "🎨 " + T("COLOR", lang), f"d:{i}:color")])
@@ -638,7 +653,7 @@ def cart_text(ds, lang):
     rows = []
     for n, d in enumerate(ds, 1):
         if photo_fmt(d):
-            rows.append(f"{n}. {T('ph_' + d['photo'], lang)} — <b>{esc(d['file_name'])}</b>\n"
+            rows.append(f"{n}. {ph_line(d, lang)} — <b>{esc(d['file_name'])}</b>\n"
                         f"     × {d['copies']} — <b>{draft_total(d)} {T('som', lang)}</b>")
             continue
         mode = T("color" if d["color"] else "bw", lang)
