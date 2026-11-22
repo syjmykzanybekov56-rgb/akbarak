@@ -829,7 +829,7 @@ body{background:var(--bg);display:flex;justify-content:center;font-family:'Golos
         <div><div class="photo-name">Фото 10×15</div><div class="photo-sub">Глянцевая бумага</div></div>
         <div class="photo-price">15 сом</div>
       </button>
-      <button class="photo-card" onclick="selectPhoto('Фото 15×21 см',25)">
+      <button class="photo-card" style="display:none" onclick="selectPhoto('Фото 15×21 см',25)">
         <div class="photo-ico" style="background:rgba(168,85,247,0.1)">📸</div>
         <div><div class="photo-name">Фото 15×21</div><div class="photo-sub">Глянцевая бумага</div></div>
         <div class="photo-price">25 сом</div>
@@ -982,7 +982,7 @@ const SERVER = "https://akbarak-production.up.railway.app";
 // Какие услуги доступны на текущем принтере.
 // Pantum M6500W — только ч/б: цвет и фото выключены. Поставите цветной принтер —
 // включите здесь (true) и на сервере переменную COLOR_ENABLED=1.
-const FEATURES = { color: false, photo: false };
+const FEATURES = { color: false, photo: true };
 
 document.addEventListener('DOMContentLoaded', () => {
   // Цветной скан делает сам сканер — его не прячем. Цветную печать и копию показываем,
