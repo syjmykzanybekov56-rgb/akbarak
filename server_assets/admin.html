@@ -402,8 +402,9 @@ function drawTerms(){
       <button class="btn ghost" data-ink="${H(t.id)}" data-kind="${t.color===0?'toner':'ink'}">💧 ${t.color===0?'Заменил картридж':'Заправил чернила'}</button>
       ${t.color!==0?`<button class="btn ghost" data-cmd="nozzle" data-t="${H(t.id)}">🔎 Проверка дюз</button><button class="btn ghost" data-cmd="clean" data-t="${H(t.id)}">🧽 Прочистка дюз</button>`:''}
       <button class="btn ghost" data-cmd="kiosk_off" data-t="${H(t.id)}">🔓 Свернуть экран</button><button class="btn ghost" data-cmd="kiosk_on" data-t="${H(t.id)}">🔒 Вернуть экран</button>
-      ${t.anydesk?`<a class="btn gold" href="anydesk:${H(t.anydesk)}" style="text-decoration:none">🖥 AnyDesk ${H(t.anydesk.replace(/(\d{3})(?=\d)/g,'$1 '))}</a>`:`<span class="btn ghost" style="opacity:.55;cursor:default" title="Номер появится, когда на терминале запустится воркер v30 с установленным AnyDesk">🖥 AnyDesk: номер ещё не пришёл</span>`}
-      <a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" style="text-decoration:none">Экран ↗</a>
+      ${t.anydesk
+        ? `<a class="btn ghost" href="anydesk:${H(t.anydesk)}" title="Открыть терминал в AnyDesk (${H(t.anydesk)})" style="text-decoration:none">🖥 Экран ↗</a>`
+        : `<a class="btn ghost" href="https://akbarak.vercel.app/kiosk.html?t=${encodeURIComponent(t.id)}" target="_blank" rel="noopener" title="AnyDesk ещё не подключён — откроется веб-версия экрана" style="text-decoration:none">Экран ↗</a>`}
     </div></div>`).join('');
   $('terms').querySelectorAll('[data-paper]').forEach(b=>b.onclick=async()=>{
     const n=prompt('Сколько листов сейчас в лотке принтера '+b.dataset.paper+'?','100'); if(!n) return;
