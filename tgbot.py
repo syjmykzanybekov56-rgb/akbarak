@@ -173,7 +173,9 @@ def btn(text, data=None, url=None, web_app=None, style=None, off=False):
     if style in ("success", "danger", "primary"):
         b["style"] = style
     if off:
-        b["disabled"] = {}
+        # Неактивные кнопки (Bot API 10.3) старые и десктопные Telegram не показывают — весь чек
+        # превращается в «This message is not supported». Поэтому это обычная кнопка, которая ничего не делает.
+        b["callback_data"] = "n:0:noop"
     elif web_app:
         b["web_app"] = {"url": web_app}
     elif url:
