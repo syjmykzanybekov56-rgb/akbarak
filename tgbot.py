@@ -15,10 +15,13 @@ import logging
 import os
 import secrets
 import threading
+import time
 import uuid
 
 import requests
 from flask import jsonify, request
+
+import tg_widget
 
 log = logging.getLogger("akbarak.tg")
 
@@ -796,7 +799,18 @@ def _add_draft(chat_id, path, file_name, pages, color, wait, lang):
             kb = [[btn(T("preview_all", lang), f"d:{d['id']}:preview")]] if pages > 1 else None
             send_photos(chat_id, img, T("preview_cap", lang, n=pages), kb)
     multi = len(before) >= 1
-    m = send(chat_id, draft_text(d, lang), draft_kb(d, lang, multi))
+    m = None
+    if not multi and use_widget(chat_id):            # интерактивная карточка (HTML-виджет), пока для владельца
+        m = tg("sendWidget", chat_id=chat_id, html=tg_widget.html(lang), caption=f"🧾 {d['file_name']}"[:200],
+               chat_data=widget_state(d, lang))
+        if m:
+            conn = H["db"]()
+            conn.execute("UPDATE tg_drafts SET widget=1 WHERE id=?", (d["id"],))
+            conn.commit()
+            conn.close()
+            d["widget"] = 1
+    if not m:
+        m = send(chat_id, draft_text(d, lang), draft_kb(d, lang, multi))
     if m:
         d["msg_id"] = m["message_id"]
         save_draft(d)
@@ -970,12 +984,8 @@ def print_free(chat_id, ds, lang="ru"):
     return ids
 
 
-def pay(cq, d, chat_id, msg_id, lang="ru"):
-    if d["color"] and not H["color_ok"](d["terminal"]):
-        d["color"] = 0
-        save_draft(d)
-        edit(chat_id, msg_id, draft_text(d, lang), draft_kb(d, lang))
-        return tg("answerCallbackQuery", callback_query_id=cq["id"], show_alert=True, text=T("only_bw_pay", lang))
+def make_payment(d, chat_id):
+    """Создаёт заказ и платёж для одного файла. (order_id, total, payment) или None, если платёж не создался."""
     total = draft_total(d)
     token = secrets.token_urlsafe(16)
     conn = H["db"]()
@@ -1005,12 +1015,25 @@ def pay(cq, d, chat_id, msg_id, lang="ru"):
         conn.execute("UPDATE tg_drafts SET order_id=NULL WHERE id=?", (d["id"],))
         conn.commit()
         conn.close()
-        return tg("answerCallbackQuery", callback_query_id=cq["id"],
-                  text=T("pay_fail", lang), show_alert=True)
+        return None
     conn = H["db"]()
     conn.execute("UPDATE orders SET gopay_payment_id=? WHERE id=?", (payment.get("payment_id"), order_id))
     conn.commit()
     conn.close()
+    return order_id, total, payment
+
+
+def pay(cq, d, chat_id, msg_id, lang="ru"):
+    if d["color"] and not H["color_ok"](d["terminal"]):
+        d["color"] = 0
+        save_draft(d)
+        edit(chat_id, msg_id, draft_text(d, lang), draft_kb(d, lang))
+        return tg("answerCallbackQuery", callback_query_id=cq["id"], show_alert=True, text=T("only_bw_pay", lang))
+    made = make_payment(d, chat_id)
+    if not made:
+        return tg("answerCallbackQuery", callback_query_id=cq["id"],
+                  text=T("pay_fail", lang), show_alert=True)
+    order_id, total, payment = made
     edit(chat_id, msg_id,
          draft_text(d, lang) + "\n\n" + T("pay_go", lang, id=order_id),
          [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"], style="success")],
@@ -1126,7 +1149,97 @@ def my_orders(chat_id, lang="ru"):
     send(chat_id, f"<b>{T('my_orders', lang)}</b>\n" + "\n".join(lines))
 
 
+# ─────────────────────── Интерактивная карточка (HTML-виджет) ───────────────────────
+WIDGETS = os.getenv("TG_WIDGETS", "owner")   # owner — только владельцу (тест), all — всем, off — выключить
+
+
+def use_widget(chat_id):
+    return WIDGETS == "all" or (WIDGETS == "owner" and is_owner(chat_id))
+
+
+def widget_state(d, lang, z="d", order_id=None):
+    return tg_widget.state(d, draft_total(d), is_owner(d.get("chat_id")), H["color_ok"](d["terminal"]),
+                           H["DUPLEX_ENABLED"], z=z, order_id=order_id, rev=int(time.time()))
+
+
+def widget_push(chat_id, msg_id, data):
+    return tg("editMessageWidgetData", chat_id=chat_id, message_id=msg_id, chat_data=data)
+
+
+def on_widget_query(q):
+    chat_id = (q.get("chat") or {}).get("id") or (q.get("from") or {}).get("id")
+    msg_id = q.get("message_id")
+    code = (q.get("data") or "")[:64]
+    lang = get_lang(chat_id, (q.get("from") or {}).get("language_code"))
+    answer = lambda: tg("answerWidgetQuery", widget_query_id=q["id"], data="ok")
+    conn = H["db"]()
+    row = conn.execute("SELECT * FROM tg_drafts WHERE chat_id=? AND msg_id=?", (str(chat_id), msg_id)).fetchone()
+    conn.close()
+    d = dict(row) if row else None
+    if not d or d.get("order_id"):
+        return answer()
+    if code == "c+":
+        d["copies"] = min(20, d["copies"] + 1)
+    elif code == "c-":
+        d["copies"] = max(1, d["copies"] - 1)
+    elif code in ("k0", "k1"):
+        d["color"] = 1 if code == "k1" and H["color_ok"](d["terminal"]) else 0
+    elif code.startswith("s:") and H["DUPLEX_ENABLED"] and code[2:] in H["SIDES"]:
+        d["sides"] = code[2:]
+    elif code.startswith("f:") and is_image(d):
+        k = code[2:]
+        if k in PHOTO_FORMATS and H["color_ok"](d["terminal"]):
+            d["photo"], d["color"], d["sides"] = k, 1, "single"
+        else:
+            d["photo"] = None
+    elif code == "x":
+        H["remove"](d["file_path"])
+        conn = H["db"]()
+        conn.execute("DELETE FROM tg_drafts WHERE id=?", (d["id"],))
+        conn.commit()
+        conn.close()
+        answer()
+        return widget_push(chat_id, msg_id, widget_state(d, lang, z="x"))
+    elif code == "free" and is_owner(chat_id):
+        save_draft(d)
+        oid = print_free(chat_id, [d], lang)[0]
+        answer()
+        return widget_push(chat_id, msg_id, widget_state(d, lang, z="p", order_id=oid))
+    elif code == "pay":
+        if d["color"] and not H["color_ok"](d["terminal"]):
+            d["color"] = 0
+        save_draft(d)
+        made = make_payment(d, chat_id)
+        answer()
+        if not made:
+            return send(chat_id, T("pay_fail", lang))
+        oid, total, payment = made
+        widget_push(chat_id, msg_id, widget_state(d, lang, z="w", order_id=oid))
+        return send(chat_id, T("pay_go", lang, id=oid),
+                    [[btn(f"💳 {T('pay', lang)} {total} {T('som', lang)}", url=payment["checkout_url"], style="success")],
+                     [btn(T("check", lang), f"o:{oid}:check")]])
+    save_draft(d)
+    answer()
+    widget_push(chat_id, msg_id, widget_state(d, lang))
+
+
+def widget_orders(ids, event):
+    """Обновляет полоску «Оплачен → Печатается → Готово» в карточках этих заказов."""
+    z = {"paid": "p", "printing": "r", "printed": "ok", "failed": "f", "rejected": "x"}.get(event)
+    if not z or not ids:
+        return
+    conn = H["db"]()
+    q = ",".join("?" * len(ids))
+    rows = conn.execute(f"SELECT * FROM tg_drafts WHERE widget=1 AND order_id IN ({q})", list(ids)).fetchall()
+    conn.close()
+    for r in rows:
+        d = dict(r)
+        widget_push(d["chat_id"], d["msg_id"], widget_state(d, get_lang(d["chat_id"]), z=z, order_id=d["order_id"]))
+
+
 def on_update(u):
+    if "widget_query" in u:
+        return on_widget_query(u["widget_query"])
     if "callback_query" in u:
         return on_callback(u["callback_query"])
     m = u.get("message") or {}
@@ -1205,6 +1318,10 @@ def order_event(order_ids, event):
             by_chat = {}                                  # заказы одной оплаты — одним сообщением
             for r in rows:
                 by_chat.setdefault((r["tg_chat_id"], r["terminal_id"]), []).append(r["id"])
+            try:
+                widget_orders(ids, event)
+            except Exception as e:
+                log.error("widget_orders: %s", e)
             for (chat, term), oids in by_chat.items():
                 lang = get_lang(chat)
                 text = T("ev_" + event, lang, id=", #".join(str(i) for i in oids), term=esc(term))
@@ -1232,6 +1349,20 @@ def cleanup():
 
 # ─────────────────────── Регистрация в Flask ───────────────────────
 
+ALLOWED_UPDATES = ["message", "callback_query", "widget_query"]
+
+
+def _ensure_updates():
+    """Если вебхук уже стоит, но без widget_query — переставляем тот же адрес с нужными типами."""
+    try:
+        info = tg("getWebhookInfo") or {}
+        if info.get("url") and set(ALLOWED_UPDATES) - set(info.get("allowed_updates") or ["message", "callback_query"]):
+            tg("setWebhook", url=info["url"], secret_token=SECRET, allowed_updates=ALLOWED_UPDATES)
+            log.info("Вебхук: включил приём нажатий из виджетов")
+    except Exception as e:
+        log.error("ensure_updates: %s", e)
+
+
 def register(app, helpers):
     H.update(helpers)
     conn = H["db"]()
@@ -1243,7 +1374,7 @@ def register(app, helpers):
     conn.execute("CREATE TABLE IF NOT EXISTS tg_carts (chat_id TEXT PRIMARY KEY, msg_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_wait (chat_id TEXT PRIMARY KEY, draft_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS tg_owners (chat_id TEXT PRIMARY KEY)")
-    for col in ("page_range TEXT", "real_pages INTEGER", "photo TEXT"):
+    for col in ("page_range TEXT", "real_pages INTEGER", "photo TEXT", "widget INTEGER"):
         try:
             conn.execute(f"ALTER TABLE tg_drafts ADD COLUMN {col}")
         except Exception:
@@ -1256,6 +1387,7 @@ def register(app, helpers):
     conn.close()
     if TOKEN:   # кнопка мини-приложения в меню бота — ставим при каждом запуске сервера, без ручной настройки
         threading.Thread(target=set_menu_button, daemon=True).start()
+        threading.Thread(target=_ensure_updates, daemon=True).start()
 
     @app.route("/tg/webhook", methods=["POST"])
     def tg_webhook():
@@ -1286,7 +1418,7 @@ def register(app, helpers):
                 hint = "Telegram не принял токен. Проверьте TG_CLIENT_BOT_TOKEN на Railway: без пробелов и переносов строк, целиком."
             return jsonify({"success": False, "error": hint or "Telegram не отвечает"}), 400
         ok = tg("setWebhook", url=base.rstrip("/") + "/tg/webhook", secret_token=SECRET,
-                allowed_updates=["message", "callback_query"], drop_pending_updates=True)
+                allowed_updates=ALLOWED_UPDATES, drop_pending_updates=True)
         CMDS = {"ru": ("Как печатать", "Мои заказы", "Помощь", "Язык"),
                 "ky": ("Кантип басуу", "Буйрутмаларым", "Жардам", "Тил"),
                 "en": ("How to print", "My orders", "Help", "Language")}
