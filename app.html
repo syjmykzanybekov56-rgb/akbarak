@@ -1941,7 +1941,7 @@ function tgLink(){ const l = (window.I18N && I18N.lang) || 'ru'; return 'https:/
           pl=document.getElementById('how-vplayer'), cap=document.getElementById('how-vcap');
     function show(i){
       [...tabs.children].forEach((b,j)=>{b.classList.toggle('on',i===j);b.setAttribute('aria-selected',i===j)});
-      pl.src=list[i].src; cap.textContent=list[i].text||'';
+      pl.src=((window.I18N&&I18N.lang==='ky'&&list[i].src_ky)||list[i].src); cap.textContent=list[i].text||'';
     }
     list.forEach((v,i)=>{const b=document.createElement('button');b.type='button';b.className='vids-tab';b.setAttribute('role','tab');
       b.textContent='▶ '+(v.tab||v.title);b.onclick=()=>{show(i);pl.play().catch(()=>{})};tabs.appendChild(b)});

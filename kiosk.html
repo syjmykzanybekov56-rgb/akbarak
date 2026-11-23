@@ -699,7 +699,7 @@ function playVid(i){
   $('vidBox').classList.toggle('wide', v.wide === true);
   $('vidTabs').innerHTML = VIDEOS.length > 1 ? VIDEOS.map((x, n) =>
     '<button class="' + (n === i ? 'on' : '') + '" onclick="playVid(' + n + ')">' + esc(x.tab || x.title || ('Видео ' + (n + 1))) + '</button>').join('') : '';
-  el.muted = false; el.src = v.src; el.currentTime = 0;
+  el.muted = false; el.src = (I18N.lang === 'ky' && v.src_ky) || v.src; el.currentTime = 0;   // кыргызская озвучка
   el.play().catch(() => { el.muted = true; el.play().catch(() => {}); });
 }
 const HELP_LINKS = {qrTg: "https://t.me/PrintKGMA_bot", qrIg: "https://instagram.com/akbarak_kg",

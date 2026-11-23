@@ -391,7 +391,7 @@ fetch('/videos.json',{cache:'no-cache'}).then(r=>r.json()).then(d=>{
   list.forEach(v=>{
     const c=document.createElement('div'); c.className='vcard';
     const vid=document.createElement('video'); vid.controls=true; vid.playsInline=true; vid.preload='metadata';
-    vid.src=v.src+(v.src.includes('#')?'':'#t=0.1'); vid.setAttribute('aria-label',v.title||'');
+    const s=(window.I18N&&I18N.lang==='ky'&&v.src_ky)||v.src; vid.src=s+(s.includes('#')?'':'#t=0.1'); vid.setAttribute('aria-label',v.title||'');
     const b=document.createElement('b'); b.textContent=v.title||v.tab||'';
     const t=document.createElement('span'); t.textContent=v.text||'';
     c.append(vid,b,t); g.appendChild(c);
