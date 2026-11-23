@@ -77,7 +77,7 @@ SUMATRA = _find_sumatra()
 TERMINAL_ID = os.getenv("AKBARAK_TERMINAL", "kgma-1")
 CHECK_INTERVAL = 5          # секунд между проверками очереди
 HEARTBEAT_INTERVAL = 30     # секунд между отчётами о состоянии принтера
-VERSION = "2026-11-23 v34 библиотеки для фото ставятся в фоне"   # видно в окне при запуске — так проверяете, что стоит новая версия
+VERSION = "2026-11-23 v35 контроль очереди печати: без двойной печати"   # видно в окне при запуске — так проверяете, что стоит новая версия
 SCAN_DPI = 200          # 200 dpi: текст чёткий, а сканирует почти вдвое быстрее, чем 300
 SCAN_WAIT_MIN = 5            # сколько ждать, пока студент положит следующий лист
 
@@ -942,7 +942,7 @@ def expand_copies(pdf_path, copies, page_range=None, even=False):
 
 
 def print_file(path, copies=1, page_range=None, color=False, sides="single", printer=None, tray=None, fit=False,
-               paper=None):
+               paper=None, clean=True):
     """Возвращает None при успехе или текст ошибки.
     printer/tray — куда печатать; по умолчанию основной принтер и кассета с обычной A4.
     sides: single — с одной стороны; duplex — переворот по длинному краю;
@@ -963,7 +963,7 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single", pri
             finally:
                 _remove(many)
         for n in range(copies):                    # картинка: отдельное задание на каждую копию
-            err = print_file(path, 1, page_range, color, sides, printer, tray, fit, paper)
+            err = print_file(path, 1, page_range, color, sides, printer, tray, fit, paper, clean=n == 0)
             if err:
                 return f"копия {n + 1} из {copies}: {err}"
         return None
@@ -987,6 +987,10 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single", pri
     if page_range:
         settings += f",{page_range}"
     cmd = [SUMATRA, "-print-to", printer, "-print-settings", settings, "-silent", path]
+    doc = os.path.basename(path)
+    gone = cancel_jobs(printer, doc) if clean else 0   # старое застрявшее задание этого же файла (перепечатка) — убрать,
+    if gone:                                 # иначе принтер, «очнувшись», напечатает и его, и новое
+        log.warning("Убрал из очереди «%s» %s старых заданий «%s» — не будет двойной печати", printer, gone, doc)
     for attempt in (1, 2):
         log.info("Печать (попытка %s): %s", attempt, " ".join(cmd))
         try:
@@ -994,13 +998,81 @@ def print_file(path, copies=1, page_range=None, color=False, sides="single", pri
         except subprocess.TimeoutExpired:
             return "SumatraPDF не ответил за 3 минуты"
         if result.returncode == 0:
-            return None
+            return wait_job(printer, doc)
         log.warning("SumatraPDF вернул код %s", result.returncode)
         time.sleep(3)
     st = printer_status()
     why = f" Windows сообщает: {st}." if st != "ok" else ""
     return (f"Windows не принял задание на принтер «{printer}» (SumatraPDF, код {result.returncode}).{why} "
             "Проверьте: принтер включён, в Windows «Готов», пробная страница печатается.")
+
+
+# ─────────────── Очередь печати Windows: ждём, пока задание реально напечатается ───────────────
+JOB_BAD = {0x2: "ошибка", 0x20: "принтер не в сети", 0x40: "нет бумаги", 0x200: "очередь заблокирована",
+           0x400: "нужно вмешательство (замятие / крышка / чернила)"}
+
+
+def _jobs(printer):
+    import win32print
+    h = win32print.OpenPrinter(printer)
+    try:
+        return h, win32print.EnumJobs(h, 0, 999, 1)
+    except Exception:
+        win32print.ClosePrinter(h)
+        raise
+
+
+def cancel_jobs(printer, doc):
+    """Удаляет из очереди принтера задания с этим файлом. Сколько удалил."""
+    try:
+        import win32print
+        h, jobs = _jobs(printer)
+    except Exception:
+        return 0
+    n = 0
+    try:
+        for j in jobs:
+            if doc and doc in (j.get("pDocument") or ""):
+                try:
+                    win32print.SetJob(h, j["JobId"], 0, None, win32print.JOB_CONTROL_DELETE)
+                    n += 1
+                except Exception as e:
+                    log.warning("Не смог удалить задание %s из очереди: %s", j.get("JobId"), e)
+    finally:
+        win32print.ClosePrinter(h)
+    return n
+
+
+def wait_job(printer, doc, limit=None):
+    """Ждём, пока задание уйдёт из очереди Windows. Если оно висит с ошибкой (нет бумаги, замятие,
+    принтер не в сети) дольше 40 с — удаляем его и возвращаем текст ошибки: заказ станет «не напечатан»,
+    а перепечатка из админки не даст двойного листа. None — напечатано (или проверить нельзя)."""
+    limit = limit or int(os.getenv("AKBARAK_JOB_WAIT", "240"))
+    t0, bad_since, last = time.time(), None, ""
+    while time.time() - t0 < limit:
+        try:
+            import win32print
+            h, jobs = _jobs(printer)
+            win32print.ClosePrinter(h)
+        except Exception:
+            return None                                   # очередь не читается — не мешаем печати
+        mine = [j for j in jobs if doc in (j.get("pDocument") or "")]
+        if not mine:
+            return None                                   # ушло на принтер
+        st = mine[0].get("Status") or 0
+        bad = [txt for bit, txt in JOB_BAD.items() if st & bit]
+        if bad:
+            last = ", ".join(bad)
+            bad_since = bad_since or time.time()
+            if time.time() - bad_since > 40:
+                cancel_jobs(printer, doc)
+                return f"принтер не напечатал: {last}. Задание убрано из очереди, чтобы не было двойной печати"
+        else:
+            bad_since = None
+        time.sleep(2)
+    log.warning("Задание «%s» всё ещё в очереди «%s» через %s с (%s) — считаю отправленным", doc, printer, limit,
+                last or "без ошибки")
+    return None
 
 
 def _remove(*paths):
