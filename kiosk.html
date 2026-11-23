@@ -828,7 +828,10 @@ homeQrs();
       if(!r.ok) return;
       const t = sig(await r.text());
       if(base === null){ base = t; return; }
-      if(t !== base && (view === 'home' || view === 'attract')) location.reload();
+      if(t !== base && (view === 'home' || view === 'attract')){
+        // новая версия: открываем адрес с меткой времени — так браузер точно не возьмёт старую из кэша
+        const u = new URL(location.href); u.searchParams.set('r', Date.now()); location.replace(u.toString());
+      }
     }catch(e){}
   }
   check();

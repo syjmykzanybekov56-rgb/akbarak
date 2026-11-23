@@ -25,6 +25,38 @@ SIZES = {                          # мм, сетка (колонки, ряды)
 }
 INSTAGRAM_URL = "https://instagram.com/akbarak_kg"
 QR_CAPTION = ("Мы в Instagram", "akbarak_kg")
+INSTAGRAM_QR = (  # готовый QR на instagram.com/akbarak_kg — рисуем сами, библиотека qrcode не нужна
+    "11111110010111001011001111111",
+    "10000010100010111101101000001",
+    "10111010011011101001001011101",
+    "10111010010111110010001011101",
+    "10111010101010100111101011101",
+    "10000010011001000001101000001",
+    "11111110101010101010101111111",
+    "00000000010001101111100000000",
+    "10101010000110110101100010010",
+    "00110101111000110100111001001",
+    "00111010001001000110001010111",
+    "01111001001110010100100000010",
+    "01111011011110001101111101011",
+    "00101101111011011100111001001",
+    "11110010000110111010011101011",
+    "00100101000011101110001101010",
+    "01010011100010111100111101011",
+    "01101000101100110110101001101",
+    "10100010000111000110101000011",
+    "01111000110110001100111011010",
+    "10100010101110001101111110000",
+    "00000000101111001101100010111",
+    "11111110010110100011101011011",
+    "10000010000111100111100011010",
+    "10111010100110111100111110001",
+    "10111010001001101000000110111",
+    "10111010111001000111000111001",
+    "10000010011001101111110000010",
+    "11111110111110110001111000011",
+)
+PINK = (193, 53, 132)          # фирменный розовый Instagram
 GOLD, NAVY, GRID = (245, 166, 35), (13, 34, 64), (150, 150, 150)
 
 
@@ -138,7 +170,7 @@ def find_face(img):
             cc = cv2.CascadeClassifier(cv2.data.haarcascades + name)
             if cc.empty():                   # в OpenCV 5 файлов каскадов нет — нужен opencv-python-headless<5
                 continue
-            found = cc.detectMultiScale(g, scaleFactor=1.06, minNeighbors=5, minSize=(m, m))
+            found = cc.detectMultiScale(g, scaleFactor=1.06, minNeighbors=7, minSize=(m, m))
             if len(found):
                 break
         if len(found):
@@ -146,6 +178,12 @@ def find_face(img):
     if not len(found):
         return None
     x, y, w, h = max(found, key=lambda f: f[2] * f[3])
+    W, H = small.size
+    # Защита от ложных «лиц» (узор, ухо, складки): лицо должно быть не меньше 15 % кадра
+    # и его центр — в средней части снимка. Иначе режем по центру, как раньше.
+    cx, cy = (x + w / 2) / W, (y + h / 2) / H
+    if w < 0.15 * min(W, H) or not (0.15 < cx < 0.85 and 0.1 < cy < 0.8):
+        return None
     return x / k, y / k, w / k, h / k
 
 
@@ -181,6 +219,27 @@ def crop_to(img, w_mm, h_mm, focus=(0.5, 0.42)):
         img = img.crop((0, y, w, y + nh))
     img = img.resize((mm(w_mm), mm(h_mm)), Image.LANCZOS)
     return print_boost(img)
+
+
+def qr_image(url, side):
+    """QR розовым. Instagram — из готовой матрицы; другой адрес — через библиотеку qrcode, если она есть."""
+    rows = INSTAGRAM_QR if url == INSTAGRAM_URL else None
+    if rows is None:
+        try:
+            import qrcode
+            q = qrcode.QRCode(border=0)
+            q.add_data(url); q.make(fit=True)
+            rows = ["".join("1" if v else "0" for v in r) for r in q.get_matrix()]
+        except Exception:
+            return None
+    n = len(rows) + 2                                  # +1 модуль белой рамки с каждой стороны
+    small = Image.new("RGB", (n, n), "white")
+    px = small.load()
+    for yy, r in enumerate(rows):
+        for xx, ch in enumerate(r):
+            if ch == "1":
+                px[xx + 1, yy + 1] = PINK
+    return small.resize((side, side), Image.NEAREST)
 
 
 def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=INSTAGRAM_URL, focus=(0.5, 0.42),
@@ -250,18 +309,13 @@ def make_sheet(photo_path, out_path, size="35x45", order_id=None, qr_url=INSTAGR
                          (f"Заказ #{order_id}" if order_id else "", mm(2.9), False)):
             if t:
                 d.text((cx, y), t, font=fit(t, px, b), fill=NAVY, anchor="mt"); y += mm(4.6)
-        try:
-            import qrcode
-        except ImportError:
-            qrcode = None
-        if qr_url and qrcode:
-            q = qrcode.QRCode(border=1, box_size=10)
-            q.add_data(qr_url); q.make(fit=True)
+        if qr_url:
             side = min(pwid - mm(2), H - y - mm(14))
-            qi = q.make_image(fill_color=NAVY, back_color="white").convert("RGB").resize((side, side), Image.NEAREST)
-            sheet.paste(qi, (cx - side // 2, H - side - mm(11)))
-            for i, t in enumerate(qr_caption):
-                d.text((cx, H - mm(9.5) + i * mm(3)), t, font=fit(t, mm(2.4)), fill=NAVY, anchor="mt")
+            qi = qr_image(qr_url, side)
+            if qi is not None:
+                sheet.paste(qi, (cx - side // 2, H - side - mm(11)))
+                for i, t in enumerate(qr_caption):
+                    d.text((cx, H - mm(9.5) + i * mm(3)), t, font=fit(t, mm(2.4), i == 1), fill=PINK, anchor="mt")
 
     sheet.save(out_path, quality=95, dpi=(DPI, DPI))
     return out_path
