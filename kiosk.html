@@ -315,6 +315,11 @@
   .mph i:nth-child(2)::before,.mph i:nth-child(2)::after{background:#C2413A}
   .mph i:nth-child(3)::before,.mph i:nth-child(3)::after{background:#2E7D5B}
   .mcap{font-family:"Segoe Script","Comic Sans MS",cursive;color:#14283D;font-size:1.25vw;text-align:center;padding:1vh 0 1.4vh}
+  .ink.meme{inset:0;padding:8% 8%;background:#14283D;color:#fff;justify-content:center;text-align:center;gap:2.6vh}
+  .ink.meme .mt{font-family:var(--disp);font-weight:700;font-size:1.7vw;color:#E0B44C}
+  .ink.meme .mc{background:#fff;border-radius:1vw;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;margin:0 6%}
+  .ink.meme .mc svg{width:46%;height:auto;color:#14283D}
+  .ink.meme .mx{font-family:var(--disp);font-weight:700;font-size:1.75vw;line-height:1.25}
   .phgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.8vw;margin:3vh 0 2vh}
   .phgrid i{aspect-ratio:3/4;border-radius:.3vw;background:#E9EEF5;position:relative;overflow:hidden;border:1px dashed #B8C2CF}
   .phgrid i::before{content:"";position:absolute;left:30%;top:20%;width:40%;aspect-ratio:1;border-radius:50%;background:#9AA7B8}
@@ -1563,51 +1568,26 @@ const lines = (n, from = 0, widths = [100, 94, 98, 88, 96, 72]) =>
 
 /* Шутки и крупные цены для заставки — перемешиваются с обычными листами */
 function jokes(){
-  const P = CFG.prices || {}, pp = P.print_bw || 5;
+  // Старые шутки убраны по просьбе владельца; остались мемы «Быть студентом-медиком — это…»
   return [
-    {h: "Отработка в 8:00, а дома нет принтера?", p: "Распечатай здесь — по дороге на пару, за минуту.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Без паники.</div><div style="--i:1"><span class="j2">бар ак!</span></div><div class="j3" style="--i:2">белый лист всегда есть</div>'},
-    {h: "Методичку скинули в чат в 23:59", p: "А терминал работает, пока ты спишь. И в выходные тоже.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">24/7</div><div class="sp" style="--i:1"></div><div class="pu" style="--i:2">без выходных и обеда</div>'},
-    {h: "«Принесите в печатном виде»", p: "Самая частая фраза преподавателя. Мы готовы.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">' + pp + '<small>сом</small></div><div class="pu" style="--i:1">за страницу</div><div class="sp" style="--i:2"></div>' +
-           '<div class="pn" style="--i:3">Сумма видна до оплаты.<br>МБанк, О!Деньги и другие банки</div>'},
-    {h: "Флешка осталась дома?", p: "Она больше не нужна: отправь файл с телефона по QR или в Telegram.", cls: 'joke',
-     html: '<div class="j1" style="--i:0"><s>Флешка</s></div><div class="j1" style="--i:1;margin-top:2vh">Телефон ✓</div><div class="j3" style="--i:2">QR или @PrintKGMA_bot</div>'},
-    {h: "Очередь в копицентре на перемене…", p: "…или одна минута здесь. Выбор очевиден.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">1<small>мин</small></div><div class="pu" style="--i:1">и лист у тебя в руках</div><div class="sp" style="--i:2"></div><div class="pn" style="--i:3">без очереди и без флешки</div>'},
-    {h: "Нужно фото 3×4 к завтрашнему дню?", p: "Сфоткайся на телефон у светлой стены — 6 фото на документы за 50 сом.", cls: '',
-     html: '<div class="doc-h" style="--i:0">Фото на документы</div><div class="doc-sub" style="--i:1">3×4 · 3.5×4.5 · 2.5×3.5 · 5×5</div>' +
-           '<div class="phgrid" style="--i:2">' + '<i></i>'.repeat(6) + '</div>' +
-           '<div class="stamp" style="--i:3"><svg><use href="#tunduk"/></svg>6 фото<br>за 50 сом</div>'},
-    {h: "Фото с друзьями — на память", p: "Распечатай лучшие кадры курса на глянцевой бумаге 10×15. Повесь в общаге или подари.", cls: 'joke',
-     html: '<div class="memo" style="--i:0"><div class="mph"><i></i><i></i><i></i></div><div class="mcap">наш курс ♥ 2026</div></div>' +
-           '<div class="memo m2" style="--i:1"><div class="mph"><i></i><i></i></div><div class="mcap">после сессии</div></div>' +
-           '<div class="j3" style="--i:2;margin-top:4vh">10×15 · глянец · ' + ((CFG.prices || {}).photo_10x15 || 15) + ' сом</div>'},
-    {h: "Нужно распечатать историю болезни?", p: "Сколько бы страниц там ни было.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Ну и пусть.</div><div style="--i:1"><span class="j4">Слава богу,<br>не от руки</span></div>'},
-    {h: "Пара через 5 минут, а реферат в телефоне", p: "Отправь файл по QR — лист выйдет за минуту.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">5<small>мин</small></div><div class="pu" style="--i:1">хватит с запасом</div>'},
-    {h: "Отработка, отработка, отработка…", p: "Бланк заявления на отработку уже готов в «Шаблонах».", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Хоть бланки</div><div style="--i:1"><span class="j4">у нас готовые</span></div>'},
-    {h: "Сдал всё, кроме распечатки", p: "Отправь файл — и это тоже сдано.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Это мы</div><div style="--i:1"><span class="j4">решим ✓</span></div>'},
-    {h: "Почерк врача ещё не выработался?", p: "Ничего, он придёт с опытом. А пока — печатай.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Печатай —</div><div style="--i:1"><span class="j4">потом успеешь</span></div>'},
-    {h: "Диагноз: срочно нужна распечатка", p: "Лечение простое и без рецепта.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">5<small>сом</small></div><div class="pu" style="--i:1">за страницу — весь курс лечения</div>'},
-    {h: "Анатомия: 300 страниц методички", p: "С двух сторон — 150 листов вместо 300.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">150 листов</div><div style="--i:1"><span class="j4">Сапин бы одобрил</span></div>'},
-    {h: "Пульс учащённый, сессия через неделю", p: "Дыши ровно. С распечатками поможем.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Дыши.</div><div style="--i:1"><span class="j4">методички<br>распечатаем</span></div>'},
-    {h: "Принтер в общаге один — и тот у соседа на практике", p: "А терминал АкБарак всегда на месте.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">А мы</div><div style="--i:1"><span class="j4">всегда тут</span></div>'},
-    {h: "«Кто распечатает?» — в общем чате", p: "С телефона по QR или через @PrintKGMA_bot.", cls: 'joke',
-     html: '<div class="j1" style="--i:0">Сам.</div><div style="--i:1"><span class="j4">за минуту</span></div>'},
-    {h: "Копицентр закрылся в 18:00", p: "А терминал работает и ночью, и в выходные.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">24<small>/7</small></div><div class="pu" style="--i:1">а мы — нет</div>'},
-    {h: "История болезни на 20 страниц?", p: "Печать с двух сторон — в два раза меньше бумаги в сумке.", cls: 'promo',
-     html: '<div class="pk" style="--i:0">2<small>стороны</small></div><div class="pu" style="--i:1">одного листа</div><div class="sp" style="--i:2"></div><div class="pn" style="--i:3">и брошюры — сложил пополам и готово</div>'},
+    {h: "Быть студентом-медиком — это…", p: "знать 206 костей, но не помнить, где ключи. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 30a7 7 0 1 1 9-9l26 26a7 7 0 1 1 9 9 7 7 0 1 1-9 9L27 39a7 7 0 1 1-9-9z"/><path d="M60 22l6-6m-4 10l8-4" /></svg></div><div class="mx" style="--i:2">знать 206 костей,<br>но не помнить, где ключи</div>'},
+    {h: "Быть студентом-медиком — это…", p: "ставить диагноз всей родне по фото в WhatsApp. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="26" y="8" width="28" height="56" rx="5"/><path d="M36 56h8"/><path d="M33 26h14M33 34h10"/><circle cx="58" cy="14" r="6"/><path d="M58 11v3l2 2"/></svg></div><div class="mx" style="--i:2">ставить диагноз всей родне<br>по фото в WhatsApp</div>'},
+    {h: "Быть студентом-медиком — это…", p: "спать 4 часа и объяснять пациенту вред недосыпа. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M52 44A22 22 0 1 1 30 16a17 17 0 0 0 22 28z"/><path d="M50 14h8l-8 9h8M60 4h5l-5 6h5"/></svg></div><div class="mx" style="--i:2">спать 4 часа и объяснять пациенту<br>вред недосыпа</div>'},
+    {h: "Быть студентом-медиком — это…", p: "иметь почерк, который не читаешь даже ты. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 58l6-16 28-28 10 10-28 28-16 6z"/><path d="M44 18l10 10"/><path d="M18 70c6-6 10 2 16-3s9 3 14-2 8 2 12-1"/></svg></div><div class="mx" style="--i:2">иметь почерк,<br>который не читаешь даже ты</div>'},
+    {h: "Быть студентом-медиком — это…", p: "сдавать отработку за пропущенную отработку. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 30a18 18 0 0 1 32-6"/><path d="M52 14v10H42"/><path d="M60 46a18 18 0 0 1-32 6"/><path d="M28 62V52h10"/></svg></div><div class="mx" style="--i:2">сдавать отработку<br>за пропущенную отработку</div>'},
+    {h: "Быть студентом-медиком — это…", p: "засыпать над Сапиным, а просыпаться в Синельникове. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16h22a8 8 0 0 1 8 8v40a6 6 0 0 0-6-6H12z"/><path d="M68 16H50a8 8 0 0 0-8 8v40a6 6 0 0 1 6-6h20z"/><path d="M50 30h12M50 38h12"/></svg></div><div class="mx" style="--i:2">засыпать над Сапиным,<br>а просыпаться в Синельникове</div>'},
+    {h: "Быть студентом-медиком — это…", p: "мыть руки по схеме ВОЗ — даже дома после хлеба. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 60V34a4 4 0 0 1 8 0v14"/><path d="M32 46V26a4 4 0 0 1 8 0v20"/><path d="M40 46V28a4 4 0 0 1 8 0v20"/><path d="M48 48v-12a4 4 0 0 1 8 0v14c0 10-6 16-16 16h-4c-8 0-12-4-12-10"/><path d="M60 10c0 0-6 7-6 11a6 6 0 0 0 12 0c0-4-6-11-6-11z"/></svg></div><div class="mx" style="--i:2">мыть руки по схеме ВОЗ —<br>даже дома после хлеба</div>'},
+    {h: "Быть студентом-медиком — это…", p: "слышать «у меня болит голова» и сразу думать о дифдиагнозе. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10v16a14 14 0 0 0 28 0V10"/><path d="M36 40v8a14 14 0 0 0 28 0v-6"/><circle cx="64" cy="36" r="6"/><path d="M18 10h8M46 10h8"/></svg></div><div class="mx" style="--i:2">слышать «у меня болит голова»<br>и сразу думать о дифдиагнозе</div>'},
+    {h: "Быть студентом-медиком — это…", p: "знать, что кофе — не завтрак, и всё равно завтракать кофе. А распечатать всё это — 5 сом за страницу.", cls: 'meme',
+     html: '<div class="mt" style="--i:0">Быть студентом-медиком — это</div><div class="mc" style="--i:1"><svg viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 30h40v18a16 16 0 0 1-16 16h-8a16 16 0 0 1-16-16z"/><path d="M54 34h4a8 8 0 0 1 0 16h-5"/><path d="M26 10c-3 4 3 8 0 12M38 10c-3 4 3 8 0 12"/></svg></div><div class="mx" style="--i:2">знать, что кофе — не завтрак,<br>и всё равно завтракать кофе</div>'},
   ];
 }
 function docs(){
@@ -1645,7 +1625,9 @@ function docs(){
           '<div class="big-n" style="--i:4" data-count="' + sheetsTotal + '">0</div><div class="doc-sub" style="--i:5">листов в терминалах АкБарак</div>'});
   // Перемешиваем: шутка/цена → обычный лист → …, чтобы заставка не была однообразной
   // шутка → обычный лист → шутка → … (обычные листы повторяются по кругу между шутками)
-  const J = jokes(), out = [];
+  // мемы «Быть студентом-медиком» перемешиваем с остальными шутками, чтобы не шли подряд
+  const all = jokes(), M = all.filter(j => j.cls === 'meme'), R = all.filter(j => j.cls !== 'meme'), J = [], out = [];
+  for(let i = 0; i < Math.max(M.length, R.length); i++){ if(R[i]) J.push(R[i]); if(M[i]) J.push(M[i]); }
   J.forEach((j, i) => { out.push(j); if(D.length) out.push(D[i % D.length]); });
   return out;
 }
